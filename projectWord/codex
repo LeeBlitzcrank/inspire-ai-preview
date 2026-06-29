@@ -1,0 +1,96 @@
+好，所有文件就位。总结一下这次新增的 auth 服务：
+
+---
+
+## inspire-auth 模块概览
+
+**14 个新文件**
+
+```
+inspire-auth/
+├── pom.xml                                          # 依赖：spring-boot-starter-web + validation
+│                                                    #       mybatis-plus + mysql-connector + jjwt
+│                                                    #       spring-security-crypto（仅 BCrypt）
+│
+├── src/main/java/com/inspire/platform/auth/
+│   ├── InspireAuthApplication.java                  # 启动类，scanBasePackages 扫到 common 模块
+│   ├── config/
+│   │   └── MyBatisPlusConfig.java                   # MapperScan + MetaObjectHandler 自动填充
+│   ├── controller/
+│   │   └── AuthController.java                      # 3 个接口：register / login / userinfo
+│   ├── entity/
+│   │   └── User.java                                # 对应 user 表，雪花ID
+│   ├── mapper/
+│   │   └── UserMapper.java                          # MyBatis-Plus BaseMapper
+│   ├── service/
+│   │   ├── AuthService.java                         # 接口
+│   │   └── impl/AuthServiceImpl.java                # 实现：注册+登录+JWT签发+雪花ID
+│   └── dto/
+│       ├── RegisterRequest.java                     # @Valid 校验：密码 6-16 位
+│       ├── LoginRequest.java                        # @Valid 校验
+│       └── TokenResponse.java                       # { token, userId, username }
+│
+└── src/main/resources/
+    ├── application.yml                              # 配置：JWT 密钥（与网关一致）、MyBatis-Plus
+    ├── application-dev.yml                          # 数据源：localhost:3306 Docker MySQL
+    └── schema.sql                                   # 首次启动自动建 user 表
+```
+
+**common 模块扩充：**
+
+```
+inspire-common/src/main/java/com/inspire/platform/common/
+├── exception/
+│   ├── BusinessException.java                       # 业务异常
+│   └── GlobalExceptionHandler.java                  # 全局异常 -> Result 格式
+```
+
+---
+
+## 接口列表
+
+| 方法 | 路径 | 说明 | 是否登录 |
+|------|------|------|---------|
+| POST | `/api/auth/register` | 注册 | 否（白名单） |
+| POST | `/api/auth/login` | 登录 | 否（白名单） |
+| GET | `/api/auth/userinfo` | 获取当前用户信息 | 是 |
+
+## 启动测试
+
+先编译整个项目，然后分别启动网关和 auth 服务（两个终端）：
+
+```bash
+# 终端1：编译 + 启动网关
+cd "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/backend"
+mvn install -DskipTests
+mvn spring-boot:run -pl inspire-gateway
+```
+
+```bash
+# 终端2：启动 auth 服务
+cd "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/backend"
+mvn spring-boot:run -pl inspire-auth
+```
+
+然后测试全链路：
+
+```bash
+# 注册（走网关 → 路由到 auth 服务）
+curl -s -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"123456","confirmPassword":"123456"}'
+
+# 登录
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"123456"}'
+
+# 获取用户信息（带上 token）
+curl -s http://localhost:8080/api/auth/userinfo \
+  -H "X-Inspire-UserId: <196312085385187329>"
+```
+
+注意：Docker MySQL 要先跑着，账号密码如果在 dev 配置里不是 `root/root`，改成你实际的。你先编译看看有没有报错？
+
+
+

@@ -1,0 +1,30 @@
+# 编译产物
+target/
+*.class
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+# 操作系统
+.DS_Store
+Thumbs.db
+# 环境配置（包含敏感信息）
+*.env
+application-local.yml
+# 日志
+*.log
+logs/
+# Maven wrapper
+mvnw
+mvnw.cmd
+.mvn/
+# 临时文件
+*.tmp
+*.swp
+*.swo
+*~

@@ -1,0 +1,48 @@
+# =============================================
+# 生产环境配置 - 中间件集群
+# =============================================
+
+server:
+  port: 8080
+
+spring:
+  data:
+    redis:
+      sentinel:
+        master: redis-sentinel-master
+        nodes:
+          - 192.168.1.20:26379
+          - 192.168.1.21:26379
+          - 192.168.1.22:26379
+      password: Redis@Inspire2026
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+
+  # 生产数据库（MyBatis-Plus 多数据源：主库写入 + 从库查询）
+  datasource:
+    master:
+      url: jdbc:mysql://192.168.1.10:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      username: inspire_rw
+      password: Inspire@2026
+    slave1:
+      url: jdbc:mysql://192.168.1.11:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      username: inspire_rw
+      password: Inspire@2026
+
+# 路由指向生产服务（K8s 或注册中心服务名）
+routes:
+  auth-service: http://inspire-auth:8081
+  ai-service: http://inspire-ai:8082
+  core-service: http://inspire-core:8083
+  recommend-service: http://inspire-recommend:8084
+  admin-service: http://inspire-admin:8085
+
+# 生产日志
+logging:
+  level:
+    com.inspire: info
+    org.springframework.cloud.gateway: warn
