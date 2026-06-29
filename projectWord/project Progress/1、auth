@@ -1,5 +1,3 @@
-好，所有文件就位。总结一下这次新增的 auth 服务：
-
 ---
 
 ## inspire-auth 模块概览
@@ -92,5 +90,9 @@ curl -s http://localhost:8080/api/auth/userinfo \
 
 注意：Docker MySQL 要先跑着，账号密码如果在 dev 配置里不是 `root/root`，改成你实际的。你先编译看看有没有报错？
 
+# 等启动完成后，另一个终端测试
+TOKEN="eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxOTYzMTIwODUzODUxODczMjkiLCJ1c2VybmFtZSI6InRlc3R1c2VyIiwiaWF0IjoxNzgyNDk0MDU5LCJleHAiOjE3ODMwOTg4NTl9.xI_mmBIiIpvAavAnsVcMZ0noK_HUJEU9vo_CZjcUYNdChcczLrMofSiQP-575EQW"
 
+curl -s http://localhost:8080/api/auth/userinfo \
+  -H "Authorization: Bearer $TOKEN"
 
