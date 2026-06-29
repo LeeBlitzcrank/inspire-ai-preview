@@ -1,0 +1,16 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: inspire-ai
+  profiles:
+    active: dev
+
+inspire:
+  ai:
+    mock-enabled: true
+
+logging:
+  level:
+    com.inspire: debug

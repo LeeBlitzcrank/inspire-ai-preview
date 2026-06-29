@@ -16,6 +16,7 @@
         <module>inspire-common</module>
         <module>inspire-gateway</module>
         <module>inspire-auth</module>
+        <module>inspire-ai</module>
     </modules>
 
     <parent>
