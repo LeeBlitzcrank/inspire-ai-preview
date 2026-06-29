@@ -16,6 +16,13 @@ service.interceptors.response.use(
     res => res.data,
     err => {
       ElMessage.error(err.response?.data?.msg || '服务异常')
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('isLogin')
+        localStorage.removeItem('userAccount')
+        localStorage.removeItem('userId')
+        window.location.href = '/login'
+      }
       return Promise.reject(err)
     }
 )

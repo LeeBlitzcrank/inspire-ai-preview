@@ -6,6 +6,8 @@ const InspireDetail = () => import('@/pages/InspireDetail.vue')
 const Login = () => import('@/pages/Login.vue')
 const Register = () => import('@/pages/Register.vue')
 const Create = () => import('@/pages/Create.vue')
+const ForgotPassword = () => import('@/pages/ForgotPassword.vue')
+const ResetPasswordPage = () => import('@/pages/ResetPassword.vue')
 
 const routes = [
   { path: '/', name: 'Index', component: Index },
@@ -14,6 +16,8 @@ const routes = [
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
+  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
+  { path: '/reset-password', name: 'ResetPassword', component: ResetPasswordPage },
   { path: '/create', name: 'Create', component: Create, meta: { needLogin: true } }
 ]
 const router = createRouter({

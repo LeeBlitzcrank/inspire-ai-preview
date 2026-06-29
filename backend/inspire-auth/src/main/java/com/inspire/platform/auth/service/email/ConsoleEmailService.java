@@ -20,9 +20,15 @@ public class ConsoleEmailService implements EmailService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
+    @org.springframework.beans.factory.annotation.Value("${inspire.app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:}")
+    private String mailUsername;
+
     @Override
     public void sendPasswordResetEmail(String to, String token) {
-        String resetLink = "http://localhost:8080/reset-password?token=" + token;
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
         String subject = "【灵思集】密码重置通知";
         String text = """
             <html><body>
@@ -38,6 +44,7 @@ public class ConsoleEmailService implements EmailService {
                 MimeMessage msg = mailSender.createMimeMessage();
                 MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
                 helper.setTo(to);
+                helper.setFrom(mailUsername);
                 helper.setSubject(subject);
                 helper.setText(text, true);
                 mailSender.send(msg);

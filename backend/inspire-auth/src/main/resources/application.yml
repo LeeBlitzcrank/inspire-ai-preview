@@ -7,17 +7,27 @@ spring:
   profiles:
     active: dev
 
-  # SQL 初始化（首次启动自动建表）
+  # SQL 初始化
   sql:
     init:
       mode: always
       schema-locations: classpath:schema.sql
       continue-on-error: true
 
+  # 邮件配置（找回密码用）
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 45257209@qq.com
+    password: csqrlhvdxuewbghe
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
 mybatis-plus:
   global-config:
     db-config:
-      id-type: none       # 雪花ID由代码生成
+      id-type: none
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
@@ -27,9 +37,10 @@ mybatis-plus:
 
 inspire:
   jwt:
-    # 与网关相同的密钥，确保颁发的 Token 可以被网关校验
     secret: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
     expiration: 604800000
+  app:
+    frontend-url: http://localhost:5173
 
 logging:
   level:

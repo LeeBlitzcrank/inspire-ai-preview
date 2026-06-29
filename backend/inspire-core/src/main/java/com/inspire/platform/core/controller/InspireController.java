@@ -49,6 +49,13 @@ public class InspireController {
         return Result.success(inspireService.listMyDrafts(userId));
     }
 
+    @Operation(summary = "我的收藏", description = "当前用户收藏的灵感列表")
+    @GetMapping("/my/collects")
+    public Result<List<InspireVO>> myCollects(
+            @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId) {
+        return Result.success(inspireService.listMyCollects(userId));
+    }
+
     @Operation(summary = "创建灵感", description = "status=0保存草稿，status=1直接发布")
     @PostMapping
     public Result<InspireMain> create(

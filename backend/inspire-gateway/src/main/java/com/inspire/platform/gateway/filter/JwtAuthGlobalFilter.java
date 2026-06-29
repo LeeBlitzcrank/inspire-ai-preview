@@ -61,10 +61,20 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpResponse response = exchange.getResponse();
         String path = request.getURI().getPath();
 
-        // 1. 白名单路径直接放行
+        // 1. 白名单路径直接放行，但仍尝试解析Token设置用户信息
         if (isWhiteList(path)) {
+            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+                Claims claims = jwtUtil.validateToken(authHeader.substring(7));
+                if (claims != null) {
+                    request = request.mutate()
+                        .header("X-Inspire-UserId", claims.getSubject())
+                        .header("X-Inspire-Username", claims.get("username", String.class) == null ? "" : claims.get("username", String.class))
+                        .build();
+                }
+            }
             log.debug("白名单路径放行: {}", path);
-            return chain.filter(exchange);
+            return chain.filter(exchange.mutate().request(request).build());
         }
 
         // 2. 从请求头获取 Token

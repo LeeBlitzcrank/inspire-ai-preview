@@ -10,8 +10,8 @@
     <div class="user-header">
       <div class="avatar">👤</div>
       <div class="user-info">
-        <h2>灵感爱好者</h2>
-        <p>收藏、管理你的全部创意灵感</p>
+        <h2>{{ userInfo.username || '灵感爱好者' }}</h2>
+        <p v-if="userInfo.email">{{ userInfo.email }}</p>
       </div>
     </div>
     <div class="stat-wrap">
@@ -21,10 +21,23 @@
         <div class="stat-label">{{ item.label }}</div>
       </div>
     </div>
-    <div class="my-title">我的收藏灵感</div>
-    <div class="list-wrap">
-      <InspireCard v-for="item in myCollectList" :key="item.id" :item="item" @collect="cancelCollect" />
+
+    <!-- 选项卡 -->
+    <div class="tab-bar">
+      <div class="tab-item" :class="{active: activeTab==='published'}" @click="activeTab='published'">我的发布</div>
+      <div class="tab-item" :class="{active: activeTab==='collects'}" @click="switchToCollects">我的收藏</div>
     </div>
+
+    <div v-if="loading" class="empty-sub">加载中...</div>
+    <div class="list-wrap" v-else-if="activeTab==='published'">
+      <InspireCard v-for="item in publishedList" :key="item.id" :item="item" />
+      <div v-if="publishedList.length === 0" class="empty-sub">暂无发布</div>
+    </div>
+    <div class="list-wrap" v-else>
+      <InspireCard v-for="item in collectList" :key="item.id" :item="item" @collect="handleUncollect" />
+      <div v-if="collectList.length === 0" class="empty-sub">暂无收藏</div>
+    </div>
+
     <div class="logout-wrap">
       <el-button type="text" class="logout-btn" @click="handleLogout">退出登录</el-button>
     </div>
@@ -35,155 +48,73 @@ import { ref, onMounted } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getUserInfo, getMyInspires, getMyCollects, uncollectInspire } from '@/api/inspire'
 const router = useRouter()
-const allData = [
-  {id:1,img:"https://picsum.photos/id/102/300/160",title:"家常鸡腿做法大全",content:"包含清炖、红烧、油炸、卤制多种做法，食材简单易获取，新手也能一次成功。",viewCount:1234,collectCount:233,heatScore:987},
-  {id:2,img:"https://picsum.photos/id/103/300/160",title:"家庭火锅底料搭配技巧",content:"番茄、牛油、清汤三种锅底调配，蘸料搭配完整方案。",viewCount:889,collectCount:156,heatScore:860},
-  {id:6,img:"https://picsum.photos/id/202/300/160",title:"科学跑步减脂计划",content:"不伤膝盖慢跑节奏，完整热身拉伸流程。",viewCount:668,collectCount:98,heatScore:820},
-  {id:11,img:"https://picsum.photos/id/302/300/160",title:"高分悬疑电影推荐",content:"反转细腻、逻辑完整优质悬疑片合集。",viewCount:1123,collectCount:210,heatScore:940},
-  {id:16,img:"https://picsum.photos/id/402/300/160",title:"清爽夏日穿搭灵感",content:"低饱和简约搭配，学生通勤通用。",viewCount:988,collectCount:166,heatScore:880},
-  {id:21,img:"https://picsum.photos/id/502/300/160",title:"短视频万能文案模板",content:"美食、生活、好物通用高完播文案。",viewCount:2241,collectCount:532,heatScore:990},
-]
-const statList = ref([
-  { id:1, num:0, label:'收藏灵感' },
-  { id:2, num:5, label:'灵感分类' },
-  { id:3, num:0, label:'总浏览量' },
-])
-const myCollectList = ref([])
-const getCollectList = () => localStorage.getItem('collectList') ? JSON.parse(localStorage.getItem('collectList')) : []
-const loadCollectData = () => {
-  const ids = getCollectList()
-  myCollectList.value = allData.filter(item => ids.includes(item.id))
-  statList.value[0].num = myCollectList.value.length
-  statList.value[2].num = myCollectList.value.reduce((sum, item) => sum + item.viewCount, 0)
+const userInfo = ref({})
+const publishedList = ref([])
+const collectList = ref([])
+const loading = ref(false)
+const activeTab = ref('published')
+const statList = ref([{ id:1, num:0, label:'总发布' }, { id:2, num:0, label:'总收藏' }, { id:3, num:0, label:'总浏览量' }])
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const [userRes, pubRes, colRes] = await Promise.all([
+      getUserInfo(), getMyInspires(), getMyCollects()
+    ])
+    userInfo.value = userRes.data || {}
+    publishedList.value = pubRes.data || []
+    collectList.value = colRes.data || []
+    statList.value[0].num = publishedList.value.length
+    statList.value[1].num = collectList.value.length
+    statList.value[2].num = publishedList.value.reduce((s, i) => s + (i.viewCount || 0), 0)
+  } catch (e) {} finally { loading.value = false }
+})
+
+const switchToCollects = async () => {
+  activeTab.value = 'collects'
+  try {
+    const res = await getMyCollects()
+    collectList.value = res.data || []
+    statList.value[1].num = collectList.value.length
+  } catch (e) {}
 }
-const cancelCollect = (targetId) => {
-  let list = getCollectList().filter(id => id !== targetId)
-  localStorage.setItem('collectList', JSON.stringify(list))
-  ElMessage.success('已取消收藏')
-  loadCollectData()
+const handleUncollect = async (id) => {
+  try {
+    await uncollectInspire(id)
+    collectList.value = collectList.value.filter(i => i.id !== id)
+    statList.value[1].num = collectList.value.length
+    ElMessage.success('已取消收藏')
+  } catch (e) {}
 }
+
 const handleLogout = () => {
-  localStorage.removeItem('isLogin')
-  localStorage.removeItem('userAccount')
-  ElMessage.success('已退出登录')
-  router.push('/login')
+  localStorage.removeItem('token'); localStorage.removeItem('isLogin')
+  localStorage.removeItem('userAccount'); localStorage.removeItem('userId')
+  ElMessage.success('已退出登录'); router.push('/login')
 }
-onMounted(() => loadCollectData())
 </script>
 <style scoped>
-.personal-page {
-  width: 94%;
-  max-width: 620px;
-  margin: 0 auto;
-  padding: 16px 0 80px;
-  background: #fbfcfe;
-  min-height: 100vh;
-}
-.top-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0 16px;
-}
-.left-logo {
-  font-size: 26px;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
-.right-icons {
-  display: flex;
-  gap: 20px;
-}
-.icon-item {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
-.user-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 30px;
-}
-.avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-}
-.user-info h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #1d1d1f;
-}
-.user-info p {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: #86868b;
-}
-.stat-wrap {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 12px;
-  margin-bottom: 36px;
-}
-.stat-card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 20px 10px;
-  text-align: center;
-}
-.stat-num {
-  font-size: 24px;
-  font-weight: 500;
-  color: #1d1d1f;
-}
-.stat-line {
-  width: 30px;
-  height: 2px;
-  background: #409eff;
-  margin: 10px auto;
-}
-.stat-label {
-  font-size: 13px;
-  color: #86868b;
-}
-.my-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1d1d1f;
-  margin-bottom: 16px;
-}
-.list-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.logout-wrap {
-  margin-top: 40px;
-  text-align: center;
-}
-.logout-btn {
-  color: #f56c6c;
-  font-size: 14px;
-}
+.personal-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
+.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 0 16px; }
+.left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.right-icons { display:flex; gap:20px; }
+.icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.user-header { display:flex; align-items:center; gap:16px; margin-bottom:30px; }
+.avatar { width:64px; height:64px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.user-info h2 { margin:0; font-size:20px; color:#1d1d1f; }
+.user-info p { margin:4px 0 0; font-size:14px; color:#86868b; }
+.stat-wrap { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+.stat-card { background:#fff; border-radius:14px; padding:20px 10px; text-align:center; }
+.stat-num { font-size:24px; font-weight:500; color:#1d1d1f; }
+.stat-line { width:30px; height:2px; background:#409eff; margin:10px auto; }
+.stat-label { font-size:13px; color:#86868b; }
+.tab-bar { display:flex; background:#f4f7fd; border-radius:12px; padding:4px; margin-bottom:20px; }
+.tab-item { flex:1; text-align:center; padding:10px; font-size:15px; color:#666; cursor:pointer; border-radius:10px; transition:0.25s; }
+.tab-item.active { background:#fff; color:#409eff; font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.list-wrap { display:flex; flex-direction:column; gap:14px; }
+.logout-wrap { margin-top:40px; text-align:center; }
+.logout-btn { color:#f56c6c; font-size:14px; }
+.empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
 </style>

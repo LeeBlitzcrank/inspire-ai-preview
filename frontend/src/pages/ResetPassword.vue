@@ -1,0 +1,66 @@
+<template>
+  <div class="reset-page">
+    <div class="top-nav">
+      <div class="left-logo" @click="$router.push('/')">🍎</div>
+      <div class="right-icons">
+        <div class="icon-item" @click="$router.push('/search')">🔍</div>
+        <div class="icon-item" @click="$router.push('/login')">👤</div>
+      </div>
+    </div>
+    <div class="form-box">
+      <h2 class="title">重置密码</h2>
+      <p class="desc">请设置你的新密码</p>
+      <div class="input-group"><el-input v-model="form.password" placeholder="请输入新密码" show-password></el-input></div>
+      <div class="input-group"><el-input v-model="form.confirm" placeholder="请确认新密码" show-password></el-input></div>
+      <el-button class="btn" type="primary" :loading="loading" @click="handleSubmit">重置密码</el-button>
+      <div class="tip" v-if="success">密码重置成功！<span class="link" @click="$router.push('/login')">前往登录</span></div>
+      <div class="tip" v-if="!hasToken">请从邮件中的重置链接进入此页面</div>
+    </div>
+  </div>
+</template>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { resetPassword } from '@/api/inspire'
+const route = useRoute()
+const form = ref({ token: '', password: '', confirm: '' })
+const loading = ref(false)
+const success = ref(false)
+const hasToken = ref(false)
+
+onMounted(() => {
+  if (route.query.token) {
+    form.value.token = route.query.token
+    hasToken.value = true
+  }
+})
+
+const handleSubmit = async () => {
+  const { password, confirm } = form.value
+  if (!hasToken.value) return ElMessage.warning('无效的重置链接')
+  if (!password) return ElMessage.warning('请输入新密码')
+  if (password !== confirm) return ElMessage.warning('两次密码不一致')
+  if (password.length < 6 || password.length > 16) return ElMessage.warning('密码长度6-16位')
+  loading.value = true
+  try {
+    const res = await resetPassword({ token: form.value.token, newPassword: password })
+    if (res.code === 200) success.value = true
+    else ElMessage.error(res.msg || '重置失败')
+  } catch (e) {} finally { loading.value = false }
+}
+</script>
+<style scoped>
+.reset-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
+.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 0 16px; }
+.left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.right-icons { display:flex; gap:20px; }
+.icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.form-box { background:#fff; border-radius:20px; padding:36px 24px; margin-top:30px; }
+.title { font-size:24px; font-weight:500; text-align:center; margin:0 0 8px; color:#1d1d1f; }
+.desc { text-align:center; font-size:14px; color:#86868b; margin-bottom:32px; }
+.input-group { margin-bottom:16px; }
+.btn { width:100%; height:46px; border-radius:14px; font-size:16px; background:#409eff; border:none; }
+.tip { text-align:center; margin-top:20px; font-size:14px; color:#86868b; }
+.link { color:#409eff; cursor:pointer; }
+</style>
