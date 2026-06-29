@@ -54,6 +54,14 @@ spring:
             - Path=/api/admin/**
           filters:
             - StripPrefix=1
+        # 搜索服务
+        - id: inspire-search
+          uri: ${routes.search-service:http://localhost:8086}
+          predicates:
+            - Path=/api/search/**
+          filters:
+            - StripPrefix=1
+
         # Swagger UI（透传到 auth 服务）
         - id: inspire-swagger
           uri: ${routes.auth-service:http://localhost:8081}
@@ -63,7 +71,7 @@ inspire:
   jwt:
     secret: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
     expiration: 604800000
-    white-list: /api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/swagger-ui/**,/v3/api-docs/**
+    white-list: /api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/api/search/public/**,/swagger-ui/**,/v3/api-docs/**
 
 logging:
   level:

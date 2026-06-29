@@ -18,6 +18,7 @@
         <module>inspire-auth</module>
         <module>inspire-ai</module>
         <module>inspire-core</module>
+        <module>inspire-search</module>
     </modules>
 
     <parent>

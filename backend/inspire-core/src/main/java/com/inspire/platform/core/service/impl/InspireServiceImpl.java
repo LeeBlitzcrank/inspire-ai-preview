@@ -7,6 +7,7 @@ import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
+import com.inspire.platform.core.service.es.EsSyncService;
 import com.inspire.platform.core.service.InspireService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class InspireServiceImpl implements InspireService {
     private final InspireContentMapper contentMapper;
     private final CollectMapper collectMapper;
     private final LikeMapper likeMapper;
+    private final EsSyncService esSyncService;
 
     // ==================== 公开接口 ====================
 
@@ -101,6 +103,7 @@ public class InspireServiceImpl implements InspireService {
         content.setInspireId(main.getId());
         content.setContent(req.getContent());
         contentMapper.insert(content);
+        esSyncService.sync(main);
         log.info("灵感创建: id={}, userId={}, status={}", main.getId(), userId, main.getStatus());
         return main;
     }
@@ -124,6 +127,7 @@ public class InspireServiceImpl implements InspireService {
             if (content != null) { content.setContent(req.getContent()); contentMapper.updateById(content); }
             else { InspireContent nc = new InspireContent(); nc.setInspireId(id); nc.setContent(req.getContent()); contentMapper.insert(nc); }
         }
+        esSyncService.sync(main);
         return main;
     }
 
@@ -135,6 +139,7 @@ public class InspireServiceImpl implements InspireService {
             throw new BusinessException("只能删除自己的灵感");
         main.setDeleted(1);
         mainMapper.updateById(main);
+        esSyncService.delete(main.getId());
     }
 
     // ==================== 收藏（分表 user_id % 10） ====================

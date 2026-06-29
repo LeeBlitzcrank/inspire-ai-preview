@@ -4,13 +4,11 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 10
+inspire:
+  search:
+    mode: auto
+  es:
+    hosts: localhost:9200
 logging:
   level:
     com.inspire: debug
-
-# ES 同步配置（留空则不启用，不影响核心功能）
-inspire:
-  es:
-    hosts: localhost:9200
