@@ -1,0 +1,25 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: inspire-core
+  profiles:
+    active: dev
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: true
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: none
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+logging:
+  level:
+    com.inspire: debug

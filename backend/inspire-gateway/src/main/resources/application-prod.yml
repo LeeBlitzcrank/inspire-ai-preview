@@ -25,11 +25,11 @@ spring:
   # 生产数据库（MyBatis-Plus 多数据源：主库写入 + 从库查询）
   datasource:
     master:
-      url: jdbc:mysql://192.168.1.10:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://192.168.1.10:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
       password: Inspire@2026
     slave1:
-      url: jdbc:mysql://192.168.1.11:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://192.168.1.11:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
       password: Inspire@2026
 

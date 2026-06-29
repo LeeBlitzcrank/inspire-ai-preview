@@ -5,7 +5,7 @@
 - Master（写入）：192.168.1.10:3306
 - Slave1（读业务查询）：192.168.1.11:3306
 - Slave2（Canal数据源+离线统计）：192.168.1.12:3306
-  库名：`inspire_platform`
+  库名：`inspire_ai_preview`
   账号：
 - 业务读写账号：`inspire_rw` / 密码 Inspire@2026
 - Canal同步专用账号：`canal_sync` / 密码 Canal@Sync2026
@@ -15,16 +15,16 @@
 spring:
   datasource:
     master:
-      url: jdbc:mysql://192.168.1.10:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://192.168.1.10:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
       password: Inspire@2026
     slave1:
-      url: jdbc:mysql://192.168.1.11:3306/inspire_platform?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://192.168.1.11:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
       password: Inspire@2026
 ```
 #### 部署要点
-1. Master开启binlog，格式 `ROW`，binlog-do-db=inspire_platform
+1. Master开启binlog，格式 `ROW`，binlog-do-db=inspire_ai_preview
 2. 从库开启只读，分担分页、详情查询压力
 3. 每日凌晨2点全量备份 + binlog增量7天留存
 
@@ -140,9 +140,9 @@ canal.instance.connectionCharset = UTF-8
 canal.instance.enableDruid = false
 
 # 过滤库表：只同步灵感主表
-canal.instance.filter.regex = inspire_platform\\.inspire_main
+canal.instance.filter.regex = inspire_ai_preview\\.inspire_main
 # 忽略删除同步（下架通过deleted字段逻辑删除，不物理删）
-canal.instance.filter.black.regex = inspire_platform\\.inspire_main:DELETE
+canal.instance.filter.black.regex = inspire_ai_preview\\.inspire_main:DELETE
 
 # 目标es配置
 canal.instance.es.addressList=http://192.168.1.40:9200,http://192.168.1.41:9200

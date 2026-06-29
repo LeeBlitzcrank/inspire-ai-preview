@@ -1,6 +1,6 @@
 -- =============================================
 -- 自动建表脚本（safe: IF NOT EXISTS + continue-on-error）
--- 数据源使用 inspire_platform（与 application-dev.yml 一致）
+-- 数据源使用 inspire_ai_preview（与 application-dev.yml 一致）
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS `user` (
