@@ -55,6 +55,14 @@
         </el-select>
       </div>
       <div class="row"><label>灵感详情</label><el-input v-model="form.content" type="textarea" :rows="5" placeholder="详细描述你的创意"></el-input></div>
+      <div class="row voice-row">
+        <label>语音输入</label>
+        <div class="voice-bar">
+          <el-button :type="voiceActive ? 'danger' : 'default'" circle @click="toggleVoice">{{ voiceActive ? '🔴' : '🎤' }}</el-button>
+          <span class="voice-hint">{{ voiceActive ? '正在聆听...点击停止' : '点击开始语音输入' }}</span>
+          <span v-if="voiceError" class="voice-error">{{ voiceError }}</span>
+        </div>
+      </div>
       <div class="row"><label>封面图</label>
         <div class="upload-box" @click="triggerUpload">
           <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />
@@ -68,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createInspire, exploreInspiration, uploadFile } from '@/api/inspire'
@@ -152,6 +160,60 @@ const resetExplore = () => {
   handleExplore()
 }
 
+// 语音识别
+const voiceActive = ref(false)
+const voiceError = ref('')
+let recognition = null
+
+const initRecognition = () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) { voiceError.value = '当前浏览器不支持语音识别（推荐使用 Chrome/Safari）'; return null }
+  const r = new SR()
+  r.lang = 'zh-CN'
+  r.interimResults = true
+  r.continuous = true
+  r.maxAlternatives = 1
+  r.onresult = (e) => {
+    let transcript = ''
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript
+    }
+    form.value.content += transcript
+  }
+  r.onerror = (e) => {
+    voiceError.value = '语音识别错误: ' + e.error
+    voiceActive.value = false
+  }
+  r.onend = () => {
+    if (voiceActive.value) {
+      try { r.start() } catch(e) {}
+    }
+  }
+  return r
+}
+
+const toggleVoice = () => {
+  voiceError.value = ''
+  if (voiceActive.value) {
+    if (recognition) { recognition.stop(); recognition = null }
+    voiceActive.value = false
+    return
+  }
+  const r = initRecognition()
+  if (!r) return
+  recognition = r
+  try {
+    r.start()
+    voiceActive.value = true
+  } catch (e) {
+    voiceError.value = '启动失败，请检查麦克风权限'
+  }
+}
+
+onUnmounted(() => {
+  if (recognition) { recognition.abort(); recognition = null }
+})
+
 // 文件上传
 const fileInput = ref(null)
 const triggerUpload = () => { fileInput.value?.click() }
@@ -200,6 +262,10 @@ const submit = async () => {
 .option-shuffle { color:#e6a23c; border-color:#faecd8; }
 .option-shuffle:hover { border-color:#e6a23c; color:#e6a23c; background:#fdf6ec; }
 .leaf-notice { padding:10px; background:#f0f9eb; border-radius:10px; font-size:13px; color:#67c23a; text-align:center; }
+.voice-row { margin-bottom:18px; }
+.voice-bar { display:flex; align-items:center; gap:12px; background:#f8f9fc; border-radius:12px; padding:10px 16px; }
+.voice-hint { font-size:13px; color:#909399; }
+.voice-error { font-size:12px; color:#f56c6c; margin-left:8px; }
 .row { margin-bottom:18px; }
 .row label { display:block; font-size:14px; color:#1d1d1f; margin-bottom:8px; }
 .submit-btn { width:100%; height:46px; border-radius:14px; font-size:16px; background:#409eff; border:none; margin-top:10px; }
