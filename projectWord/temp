@@ -28,3 +28,45 @@ docker run -d --name rmq-broker \
 # 重启 auth 和 core 测试 MQ 发送
 
 
+——————————————————————————————————————————————————————————————————————————————————————————————————
+
+
+
+编译通过。现在 Flink 可以直接从 RocketMQ 消费了。测试方式：
+
+**前提条件：** RocketMQ + 后端服务都在跑
+
+```bash
+cd /Users/lee/Desktop/Project/Study\ Project/Codex/inspire-ai-preview/backend/flink-jobs
+
+MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
+  /usr/local/bin/mvn exec:java \
+  -Dexec.mainClass="com.inspire.platform.flink.InspireFlinkApp" \
+  -Dexec.args="--source rocketmq --host localhost --port 9876"
+```
+
+Flink 启动后会连上 RocketMQ NameServer，自动消费 `topic_user_behavior` 的行为消息。
+
+然后你在浏览器里随便点赞/收藏一个灵感，后端会发 `topic_user_behavior` 消息到 RocketMQ，Flink 实时消费并写入 Redis。
+
+```bash
+# 验证 Redis
+docker exec my-redis redis-cli -a 123456 HGETALL "profile:1"
+docker exec my-redis redis-cli HGETALL "profile:userId"
+docker exec my-redis redis-cli GET "hot:长沙:美食"
+```
+
+现在整个数据流全是真实的了：
+
+```
+用户操作 → 后端 → RocketMQ → Flink → Redis
+```
+
+——————————————————————————————————————————————————————————————————————————————————————————————————
+
+# 确认 topic 存在
+docker exec rmq-broker sh mqadmin topicList -n host.docker.internal:9876 | grep behavior
+
+# 看消费者状态
+docker exec rmq-broker sh mqadmin consumerProgress \
+  -n host.docker.internal:9876 -g flink_behavior_consumer

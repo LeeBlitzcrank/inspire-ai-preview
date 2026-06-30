@@ -120,9 +120,13 @@ public class InspireServiceImpl implements InspireService {
             CollectAction a = new CollectAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
             collectMapper.insert(a);
         } finally { ShardContext.clear(); }
+        InspireMain inspireForMsg = mainMapper.selectById(inspireId);
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("collect_count = collect_count + 1").eq(InspireMain::getId, inspireId));
-        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of("userId", userId, "inspireId", inspireId, "type", "collect"));
+        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of(
+                "userId", userId, "inspireId", inspireId, "type", "collect",
+                "tag", inspireForMsg != null ? inspireForMsg.getTag() : "",
+                "city", inspireForMsg != null ? inspireForMsg.getPublishCity() : ""));
     }
 
     @Override @Transactional
@@ -145,9 +149,13 @@ public class InspireServiceImpl implements InspireService {
             LikeAction a = new LikeAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
             likeMapper.insert(a);
         } finally { ShardContext.clear(); }
+        InspireMain inspireForMsg = mainMapper.selectById(inspireId);
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("like_count = like_count + 1").eq(InspireMain::getId, inspireId));
-        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of("userId", userId, "inspireId", inspireId, "type", "like"));
+        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of(
+                "userId", userId, "inspireId", inspireId, "type", "like",
+                "tag", inspireForMsg != null ? inspireForMsg.getTag() : "",
+                "city", inspireForMsg != null ? inspireForMsg.getPublishCity() : ""));
     }
 
     @Override @Transactional
