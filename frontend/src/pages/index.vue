@@ -36,18 +36,26 @@
     <transition name="slide-fade">
       <div id="detail-inspire-wrap" v-if="activeSubItem" class="detail-wrap">
         <div id="back-to-subtag" class="back-btn" @click="resetSubItem">← 返回{{ activeCategory }}</div>
-        <div v-if="loading" class="empty-sub">加载中...</div>
+        <div v-if="loading" class="list-wrap">
+          <div v-for="n in 3" :key="n" class="inspire-card skeleton-card">
+            <div class="s-line s-title"></div>
+            <div class="s-line s-desc"></div>
+            <div class="s-line s-footer"></div>
+          </div>
+        </div>
         <div id="inspire-card-list" class="list-wrap" v-else>
           <InspireCard v-for="item in inspireList" :key="item.id" :item="item"
             :style="{'--idx': item.id}" @collect="handleCollect" @click-card="goDetail" />
         </div>
-        <div v-if="!loading && inspireList.length === 0" class="empty-sub">暂无该分类灵感</div>
+        <div v-if="!loading && inspireList.length === 0" class="empty-sub">📭 还没有灵感，去其他分类看看吧</div>
+    <div v-if="loading && inspireList.length > 0" class="empty-sub" style="color:#409eff">加载更多...</div>
+    <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
       </div>
     </transition>
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -83,24 +91,50 @@ const handleClickCategory = (item) => {
   activeCategory.value = item.name; activeSubItem.value = ''; inspireList.value = []
   currentSubList.value = subData[item.name] ?? []
 }
+const currentPage = ref(1)
+const hasMore = ref(true)
+
 const selectSubItem = async (item) => {
-  activeSubItem.value = item.name
+  activeSubItem.value = item.name; currentPage.value = 1; hasMore.value = true
   loading.value = true
   try {
     const res = await getInspireList({ tag: activeCategory.value, page: 1, size: 20 })
     inspireList.value = res.data || []
+    if (res.data && res.data.length < 20) hasMore.value = false
   } catch (e) { inspireList.value = []
   } finally { loading.value = false }
 }
+
+const loadMore = async () => {
+  if (loading.value || !hasMore.value) return
+  currentPage.value++
+  loading.value = true
+  try {
+    const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
+    if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
+    if (!res.data || res.data.length < 10) hasMore.value = false
+  } catch (e) {}
+  finally { loading.value = false }
+}
+
+const onScroll = () => {
+  if (loading.value || !hasMore.value) return
+  const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
+  if (nearBottom) loadMore()
+}
+onMounted(() => window.addEventListener("scroll", onScroll))
+onBeforeUnmount(() => window.removeEventListener("scroll", onScroll))
+
 const resetCategory = () => { activeCategory.value = ''; currentSubList.value = []; activeSubItem.value = ''; inspireList.value = [] }
 const resetSubItem = () => { activeSubItem.value = ''; inspireList.value = [] }
 
 const handleCollect = async (targetId) => {
-  if (!localStorage.getItem('isLogin')) return ElMessage.warning('请先登录')
+  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
   try {
     const res = await collectInspire(targetId)
-    ElMessage.success(res.msg || '收藏成功')
-  } catch (e) {}
+    if (res.code === 200) ElMessage.success('收藏成功')
+    else ElMessage.warning(res.msg || '操作失败')
+  } catch (e) { ElMessage.error('网络异常请重试') }
 }
 </script>
 <style scoped>
@@ -126,4 +160,10 @@ const handleCollect = async (targetId) => {
 .list-wrap { display:flex; flex-direction:column; gap:16px; }
 .detail-wrap { margin-top:8px; }
 .empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
+.skeleton-card { padding:20px; }
+.s-line { height:14px; border-radius:8px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; margin-bottom:12px; }
+.s-title { width:60%; height:18px; }
+.s-desc { width:90%; }
+.s-footer { width:40%; }
+@keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 </style>

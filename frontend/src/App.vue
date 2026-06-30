@@ -1,26 +1,35 @@
 <template>
   <router-view v-slot="{ Component, route }">
-    <!-- transition name 改为 slide-top，自定义上下动画 -->
-    <transition name="slide-top" mode="out-in">
+    <transition name="fade" mode="out-in">
       <component :is="Component" :key="route.fullPath" />
     </transition>
   </router-view>
+  <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
+  <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
 </template>
 
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+const showTop = ref(false)
+const isOnline = ref(navigator.onLine)
+const onScroll = () => { showTop.value = window.scrollY > 400 }
+const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }) }
+onMounted(() => {
+  window.addEventListener('scroll', onScroll)
+  window.addEventListener('online', () => isOnline.value = true)
+  window.addEventListener('offline', () => isOnline.value = false)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+})
+</script>
+
 <style scoped>
-/* 全局路由动画：新页面从上滑入，旧页面向下滑出 */
-:deep(.slide-top-enter-from) {
-  transform: translateY(-100%);
-  opacity: 0;
-}
-:deep(.slide-top-enter-active) {
-  transition: all 0.3s ease;
-}
-:deep(.slide-top-leave-to) {
-  transform: translateY(100%);
-  opacity: 0;
-}
-:deep(.slide-top-leave-active) {
-  transition: all 0.3s ease;
-}
+:deep(.fade-enter-from) { opacity:0; transform:translateY(10px); }
+:deep(.fade-enter-active) { transition:all 0.35s ease-out; }
+:deep(.fade-leave-to) { opacity:0; transform:translateY(-10px); }
+:deep(.fade-leave-active) { transition:all 0.2s ease-in; }
+.offline-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#f56c6c; color:#fff; text-align:center; padding:6px; font-size:13px; }
+.back-top { position:fixed; right:16px; bottom:80px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.9); color:#909399; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; z-index:999; transition:all 0.25s; backdrop-filter:blur(4px); box-shadow:0 1px 6px rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.05); }
+.back-top:hover { color:#606266; border-color:#c0c4cc; box-shadow:0 2px 10px rgba(0,0,0,.12); }
 </style>

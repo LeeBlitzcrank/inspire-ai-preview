@@ -18,6 +18,7 @@ service.interceptors.response.use(
       ElMessage.error(err.response?.data?.msg || '服务异常')
       if (err.response?.status === 401) {
         localStorage.removeItem('token')
+        localStorage.removeItem('adminToken')
         localStorage.removeItem('isLogin')
         localStorage.removeItem('userAccount')
         localStorage.removeItem('userId')
@@ -27,6 +28,10 @@ service.interceptors.response.use(
           window.location.href = '/admin/login'
         } else {
           window.location.href = '/login'
+        }
+      } else if (err.response?.status >= 500 && err.response?.status < 600) {
+        if (!err.config.url.includes('/admin/')) {
+          window.location.href = '/500'
         }
       }
       return Promise.reject(err)

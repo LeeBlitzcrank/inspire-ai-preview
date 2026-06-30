@@ -28,14 +28,14 @@
       <div class="tab-item" :class="{active: activeTab==='collects'}" @click="switchToCollects">我的收藏</div>
     </div>
 
-    <div v-if="loading" class="empty-sub">加载中...</div>
+    <div v-if="loading" class="empty-sub"><div v-for="n in 3" :key="n" class="inspire-card skeleton-card" style="padding:20px"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div><div class="s-line s-w-40"></div></div></div>
     <div class="list-wrap" v-else-if="activeTab==='published'">
       <InspireCard v-for="item in publishedList" :key="item.id" :item="item" />
-      <div v-if="publishedList.length === 0" class="empty-sub">暂无发布</div>
+      <div v-if="publishedList.length === 0" class="empty-sub">✍️ 还没有发布过灵感</div>
     </div>
     <div class="list-wrap" v-else>
       <InspireCard v-for="item in collectList" :key="item.id" :item="item" @collect="handleUncollect" />
-      <div v-if="collectList.length === 0" class="empty-sub">暂无收藏</div>
+      <div v-if="collectList.length === 0" class="empty-sub">⭐ 还没有收藏过灵感</div>
     </div>
 
     <div class="logout-wrap">
@@ -117,4 +117,8 @@ const handleLogout = () => {
 .logout-wrap { margin-top:40px; text-align:center; }
 .logout-btn { color:#f56c6c; font-size:14px; }
 .empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
+.skeleton-card { border-radius:16px; border:1px solid #f0f3f9; background:#fff; }
+.s-line { height:14px; border-radius:8px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; margin-bottom:12px; }
+.s-w-40 { width:40%; } .s-w-60 { width:60%; } .s-w-90 { width:90%; }
+@keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 </style>

@@ -14,6 +14,9 @@ const AdminDashboard = () => import('@/pages/admin/AdminDashboard.vue')
 const AdminInspire = () => import('@/pages/admin/AdminInspire.vue')
 const AdminUser = () => import('@/pages/admin/AdminUser.vue')
 const AdminConfig = () => import('@/pages/admin/AdminConfig.vue')
+const NotFound = () => import('@/pages/NotFound.vue')
+const Forbidden = () => import('@/pages/Forbidden.vue')
+const ServerError = () => import('@/pages/ServerError.vue')
 
 const routes = [
   { path: '/', name: 'Index', component: Index },
@@ -37,9 +40,16 @@ const routes = [
       { path: 'user', component: AdminUser },
       { path: 'config', component: AdminConfig },
     ]
-  }
+  },
+  { path: "/403", name: "Forbidden", component: Forbidden },
+  { path: "/500", name: "ServerError", component: ServerError },
+  { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound }
 ]
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior() { return { top: 0 } }
+})
 router.beforeEach((to, from, next) => {
   const login = localStorage.getItem('isLogin')
   const adminToken = localStorage.getItem('adminToken')

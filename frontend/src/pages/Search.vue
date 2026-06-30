@@ -18,14 +18,14 @@
     </div>
     <div id="search-result-block" class="result-block" v-if="searched">
       <p class="result-tip" v-if="searchResult.length > 0">共找到 {{ searchResult.length }} 条匹配灵感</p>
-      <p class="result-tip" v-else>暂无匹配内容，请更换关键词</p>
+      <p class="result-tip" v-else>🔍 换个关键词试试</p>
       <div id="inspire-card-list" class="result-list" v-if="searchResult.length > 0">
         <InspireCard v-for="item in searchResult" :key="item.id" :item="item" @click-card="goDetail" @collect="handleCollect" />
       </div>
     </div>
     <div v-else class="hot-section">
       <p class="sub-title">🔥 热门灵感</p>
-      <div v-if="loadingHot" class="empty-sub">加载中...</div>
+      <div v-if="loadingHot" class="hot-card-list"><div v-for="n in 3" :key="n" class="hot-card"><div class="card-img skeleton-img"></div><div class="card-content"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div></div></div></div>
       <div v-else class="hot-card-list">
         <div class="hot-card" v-for="item in hotList" :key="item.id" @click="goDetail(item.id)">
           <div class="card-img"><img :src="item.img || 'https://picsum.photos/id/102/300/160'" /></div>
@@ -62,8 +62,11 @@ const doSearch = async () => {
   } catch (e) {}
 }
 const handleCollect = async (id) => {
-  if (!localStorage.getItem('isLogin')) return ElMessage.warning('请先登录')
-  try { const res = await collectInspire(id); ElMessage.success(res.msg || '收藏成功') } catch (e) {}
+  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
+  try { const res = await collectInspire(id)
+    if (res.code === 200) ElMessage.success('收藏成功')
+    else ElMessage.warning(res.msg || '操作失败')
+  } catch (e) { ElMessage.error('网络异常请重试') }
 }
 onMounted(async () => {
   loadingHot.value = true
@@ -95,5 +98,9 @@ onMounted(async () => {
 .result-block { background:#fff; border-radius:20px; padding:20px 16px; }
 .result-tip { font-size:15px; color:#409eff; margin:0 0 18px; }
 .result-list { display:flex; flex-direction:column; gap:16px; }
+.skeleton-img { width:130px; height:86px; border-radius:14px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; }
+.s-line { height:14px; border-radius:8px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; margin-bottom:10px; }
+.s-w-60 { width:60%; } .s-w-90 { width:90%; }
+@keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 .empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
 </style>
