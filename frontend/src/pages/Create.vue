@@ -11,21 +11,39 @@
       <h2 class="page-title">录入新灵感</h2>
       <p class="page-desc">填写创意内容，保存到灵感库</p>
 
-      <!-- AI 生成区域 -->
+      <!-- AI 探索区 -->
       <div class="ai-section">
         <div class="ai-row">
-          <el-input v-model="aiKeyword" placeholder="输入关键词，AI帮你生成灵感" size="large" @keyup.enter="handleAiGenerate">
-            <template #append><el-button type="warning" :loading="aiLoading" @click="handleAiGenerate">AI生成</el-button></template>
+          <el-input v-model="aiKeyword" placeholder="输入关键词，AI探索灵感" size="large" @keyup.enter="handleExplore">
+            <template #append><el-button type="warning" :loading="exploring" @click="handleExplore">✨ 探索</el-button></template>
           </el-input>
         </div>
-        <!-- AI 候选卡片 -->
-        <div v-if="candidates.length > 0" class="candidate-wrap">
-          <div class="candidate-card" v-for="c in candidates" :key="c.id" :class="{selected: selectedId === c.id}"
-            @click="selectCandidate(c)">
-            <div class="candidate-title">{{ c.title }}</div>
-            <div class="candidate-summary">{{ c.summary }}</div>
-            <div class="candidate-tag">#{{ c.tag }}</div>
+
+        <!-- 面包屑 -->
+        <div v-if="pathLabels.length > 0" class="breadcrumb">
+          <span class="crumb-item" @click="resetExplore">{{ aiKeyword }}</span>
+          <span v-for="(label, idx) in pathLabels" :key="idx" class="crumb-item">
+            <span class="crumb-sep">›</span>
+            <span @click="goToLevel(idx)">{{ label }}</span>
+          </span>
+        </div>
+
+        <!-- 摘要 -->
+        <div v-if="summary" class="summary">{{ summary }}</div>
+
+        <!-- 选项卡片 -->
+        <div v-if="options.length > 0" class="option-grid">
+          <div v-for="opt in options" :key="opt.id" class="option-card" @click="selectOption(opt)">
+            {{ opt.label }}
           </div>
+          <div class="option-card option-shuffle" @click="reshuffle">
+            🔄 换一批
+          </div>
+        </div>
+
+        <!-- 内容到达 -->
+        <div v-if="leafContent" class="leaf-notice">
+          ✅ 灵感已生成，在下方编辑后发布
         </div>
       </div>
 
@@ -37,32 +55,118 @@
         </el-select>
       </div>
       <div class="row"><label>灵感详情</label><el-input v-model="form.content" type="textarea" :rows="5" placeholder="详细描述你的创意"></el-input></div>
+      <div class="row"><label>封面图</label>
+        <div class="upload-box" @click="triggerUpload">
+          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />
+          <div v-if="form.img" class="preview-wrap"><img :src="form.img" class="preview-img" /><span class="preview-del" @click.stop="form.img=''">✕</span></div>
+          <div v-else class="upload-placeholder"><div class="upload-icon">+</div><div class="upload-text">点击上传封面图</div></div>
+        </div>
+      </div>
       <el-button class="submit-btn" type="primary" :loading="loading" @click="submit">保存灵感</el-button>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { aiGenerate, createInspire } from '@/api/inspire'
+import { createInspire, exploreInspiration, uploadFile } from '@/api/inspire'
 const router = useRouter()
-const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
-const loading = ref(false); const aiLoading = ref(false)
-const aiKeyword = ref(''); const candidates = ref([]); const selectedId = ref(null)
-const form = ref({ title: '', tag: '', content: '' })
 
-const handleAiGenerate = async () => {
+const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
+const loading = ref(false)
+const form = ref({ title: '', tag: '', content: '', img: '' })
+
+// AI 探索状态
+const aiKeyword = ref('')
+const exploring = ref(false)
+const options = ref([])
+const summary = ref('')
+const path = ref([])
+const pathLabels = ref([])
+const leafContent = ref(null)
+
+const handleExplore = async () => {
   if (!aiKeyword.value.trim()) return ElMessage.warning('请输入关键词')
-  aiLoading.value = true; candidates.value = []; selectedId.value = null
+  exploring.value = true; options.value = []; summary.value = ''; leafContent.value = null
+  path.value = []; pathLabels.value = []
   try {
-    const res = await aiGenerate({ keyword: aiKeyword.value })
-    candidates.value = res.data?.candidates || []
-  } catch (e) {} finally { aiLoading.value = false }
+    const res = await exploreInspiration({ keyword: aiKeyword.value, path: '' })
+    if (res.code === 200) {
+      options.value = res.data?.options || []
+      summary.value = res.data?.summary || ''
+      if (res.data?.content) applyContent(res.data.content)
+    }
+  } catch (e) { ElMessage.warning('探索失败请重试') }
+  finally { exploring.value = false }
 }
-const selectCandidate = (c) => {
-  selectedId.value = c.id; form.value.title = c.title; form.value.tag = c.tag
+
+const selectOption = async (opt) => {
+  path.value.push(opt.id)
+  pathLabels.value.push(opt.label)
+  exploring.value = true; options.value = []; summary.value = ''
+  try {
+    const res = await exploreInspiration({ keyword: aiKeyword.value, path: path.value.join(',') })
+    if (res.code === 200) {
+      options.value = res.data?.options || []
+      summary.value = res.data?.summary || ''
+      if (res.data?.content) applyContent(res.data.content)
+    }
+  } catch (e) {}
+  finally { exploring.value = false }
 }
+
+const applyContent = (c) => {
+  leafContent.value = c
+  options.value = []
+  form.value.title = c.title || form.value.title
+  form.value.tag = c.tag || form.value.tag
+  form.value.content = (form.value.content ? form.value.content + '\n' : '') + (c.text || '')
+}
+
+const reshuffle = async () => {
+  exploring.value = true
+  try {
+    const p = path.value.join(',')
+    const res = await exploreInspiration({ keyword: aiKeyword.value, path: p, refresh: true })
+    if (res.code === 200) { options.value = res.data?.options || []; summary.value = res.data?.summary || '' }
+  } catch (e) {}
+  finally { exploring.value = false }
+}
+
+const goToLevel = (idx) => {
+  path.value = path.value.slice(0, idx + 1)
+  pathLabels.value = pathLabels.value.slice(0, idx + 1)
+  leafContent.value = null
+  // 重载该层
+  const last = path.value.join(',')
+  exploring.value = true; options.value = []; summary.value = ''
+  exploreInspiration({ keyword: aiKeyword.value, path: last || '' }).then(res => {
+    if (res.code === 200) { options.value = res.data?.options || []; summary.value = res.data?.summary || '' }
+  }).finally(() => exploring.value = false)
+}
+
+const resetExplore = () => {
+  path.value = []; pathLabels.value = []; options.value = []; summary.value = ''; leafContent.value = null
+  handleExplore()
+}
+
+// 文件上传
+const fileInput = ref(null)
+const triggerUpload = () => { fileInput.value?.click() }
+const handleFile = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const fd = new FormData(); fd.append('file', file)
+  try {
+    const res = await uploadFile(fd)
+    if (res.code === 200 && res.data?.url) form.value.img = 'http://localhost:8083' + res.data.url
+    else ElMessage.error('上传失败')
+  } catch (e) { ElMessage.error('上传失败') }
+  e.target.value = ''
+}
+
 const submit = async () => {
   if (!form.value.title) return ElMessage.warning('请填写标题')
   if (!form.value.tag) return ElMessage.warning('请选择分类')
@@ -77,7 +181,7 @@ const submit = async () => {
 </script>
 <style scoped>
 .create-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 0 16px; }
+.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 16px 16px; }
 .left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
 .right-icons { display:flex; gap:20px; }
 .icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
@@ -85,15 +189,26 @@ const submit = async () => {
 .page-title { font-size:24px; font-weight:500; text-align:center; margin:0 0 6px; color:#1d1d1f; }
 .page-desc { text-align:center; font-size:14px; color:#86868b; margin-bottom:28px; }
 .ai-section { margin-bottom:24px; background:#fef9ef; border-radius:16px; padding:16px; }
-.ai-row { margin-bottom:12px; }
-.candidate-wrap { display:flex; gap:12px; }
-.candidate-card { flex:1; background:#fff; border:2px solid #eee; border-radius:14px; padding:16px; cursor:pointer; transition:0.25s; }
-.candidate-card:hover { border-color:#409eff; }
-.candidate-card.selected { border-color:#409eff; background:#f0f7ff; }
-.candidate-title { font-size:15px; font-weight:500; color:#1d1d1f; margin-bottom:6px; }
-.candidate-summary { font-size:13px; color:#6e6e73; margin-bottom:8px; line-height:1.4; }
-.candidate-tag { font-size:12px; color:#409eff; }
+.breadcrumb { font-size:13px; margin-bottom:12px; color:#909399; }
+.crumb-item { cursor:pointer; }
+.crumb-item:hover { color:#409eff; }
+.crumb-sep { margin:0 6px; }
+.summary { font-size:14px; color:#606266; margin-bottom:14px; line-height:1.5; }
+.option-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.option-card { padding:14px; background:#fff; border:1px solid #eee; border-radius:12px; text-align:center; cursor:pointer; font-size:14px; color:#333; transition:0.2s; }
+.option-card:hover { border-color:#409eff; color:#409eff; }
+.option-shuffle { color:#e6a23c; border-color:#faecd8; }
+.option-shuffle:hover { border-color:#e6a23c; color:#e6a23c; background:#fdf6ec; }
+.leaf-notice { padding:10px; background:#f0f9eb; border-radius:10px; font-size:13px; color:#67c23a; text-align:center; }
 .row { margin-bottom:18px; }
 .row label { display:block; font-size:14px; color:#1d1d1f; margin-bottom:8px; }
 .submit-btn { width:100%; height:46px; border-radius:14px; font-size:16px; background:#409eff; border:none; margin-top:10px; }
+.upload-box { border:2px dashed #dcdfe6; border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:0.25s; }
+.upload-box:hover { border-color:#409eff; }
+.upload-placeholder { padding:10px 0; }
+.upload-icon { font-size:32px; color:#c0c4cc; }
+.upload-text { font-size:13px; color:#909399; margin-top:6px; }
+.preview-wrap { position:relative; display:inline-block; }
+.preview-img { max-height:160px; border-radius:8px; }
+.preview-del { position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:50%; background:#f56c6c; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
 </style>

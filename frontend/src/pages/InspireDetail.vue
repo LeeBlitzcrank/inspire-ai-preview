@@ -92,19 +92,19 @@ const imgFallback = (e) => { e.target.src = 'https://picsum.photos/id/102/300/16
 </script>
 <style scoped>
 .detail-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-.top-nav { display:flex; align-items:center; justify-content:space-between; padding:8px 0 24px; }
+.top-nav { display:flex; align-items:center; justify-content:space-between; padding:8px 16px 24px; }
 .left-logo { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); cursor:pointer; font-size:20px; }
 #detail-title { font-size:18px; font-weight:600; }
 .placeholder { width:40px; }
 .main-card { background:#fff; border-radius:20px; padding:20px; margin-bottom:30px; }
-.img-box { width:100%; height:200px; border-radius:16px; overflow:hidden; margin-bottom:16px; }
-.img-box img { width:100%; height:100%; object-fit:cover; }
+.img-box { width:100%; aspect-ratio:16/10; border-radius:16px; overflow:hidden; margin-bottom:16px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
+.img-box img { max-width:100%; max-height:100%; object-fit:contain; }
 .title { font-size:20px; margin:0 0 12px; color:#1d1d1f; }
 .desc { font-size:15px; color:#666; line-height:1.6; margin-bottom:16px; }
 .stat-row { display:flex; gap:20px; font-size:14px; color:#888; margin-bottom:20px; flex-wrap:wrap; }
 .action-row { display:flex; gap:16px; }
 .loading-tip { text-align:center; padding:60px 0; color:#999; font-size:15px; }
-.skeleton-img { width:100%; height:200px; border-radius:16px; margin-bottom:16px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; }
+.skeleton-img { width:100%; aspect-ratio:16/10; border-radius:16px; margin-bottom:16px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; }
 .s-w-60 { width:60%; } .s-w-70 { width:70%; } .s-w-80 { width:80%; } .s-w-90 { width:90%; }
 @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 </style>

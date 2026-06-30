@@ -84,6 +84,11 @@
             <artifactId>inspire-mq</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
+        </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

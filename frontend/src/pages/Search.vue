@@ -3,6 +3,7 @@
     <div id="search-top-nav" class="top-nav">
       <div id="search-nav-logo" class="left-logo" @click="$router.push('/')">🍎</div>
       <div id="search-nav-icon-group" class="right-icons">
+        <div id="search-icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="search-icon-search" class="icon-item active" @click="$router.push('/search')">🔍</div>
         <div id="search-icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
@@ -46,6 +47,10 @@ import { ElMessage } from 'element-plus'
 import { searchInspires, getInspireList, collectInspire } from '@/api/inspire'
 const router = useRouter()
 const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
+const goCreate = () => {
+  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
+  router.push('/create')
+}
 const goPersonal = () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/personal')
@@ -76,7 +81,7 @@ onMounted(async () => {
 </script>
 <style scoped>
 .search-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 0 28px; }
+.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 16px 28px; }
 .left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
 .right-icons { display:flex; gap:20px; }
 .icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
@@ -88,8 +93,8 @@ onMounted(async () => {
 .hot-section { margin-top:20px; }
 .sub-title { font-size:18px; font-weight:600; color:#1d1d1f; margin-bottom:16px; }
 .hot-card { display:flex; gap:16px; padding:16px; background:#fff; border-radius:16px; margin-bottom:12px; cursor:pointer; border:1px solid #f0f3f9; }
-.card-img { width:130px; height:86px; flex-shrink:0; border-radius:14px; overflow:hidden; }
-.card-img img { width:100%; height:100%; object-fit:cover; }
+.card-img { width:130px; height:86px; flex-shrink:0; border-radius:14px; overflow:hidden; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
+.card-img img { max-width:100%; max-height:100%; object-fit:contain; }
 .card-content { flex:1; }
 .card-top { display:flex; justify-content:space-between; margin-bottom:6px; }
 .card-title { font-size:16px; font-weight:500; margin:0; }

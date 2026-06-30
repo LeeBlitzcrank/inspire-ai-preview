@@ -52,7 +52,7 @@ const handleRegister = async () => {
 </script>
 <style scoped>
 .register-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 0 16px; }
+.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 16px 16px; }
 .left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
 .right-icons { display:flex; gap:20px; }
 .icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }

@@ -1,16 +1,21 @@
 server:
   port: 8082
-
 spring:
   application:
     name: inspire-ai
   profiles:
     active: dev
-
 inspire:
   ai:
-    mock-enabled: true
-
+    deepseek:
+      api-key: sk-d071a15950b948ca897fe2026db35fb8
+      api-url: https://api.deepseek.com/v1/chat/completions
+      model: deepseek-chat
 logging:
   level:
     com.inspire: debug
+
+redis:
+  host: localhost
+  port: 6379
+  password: 123456
