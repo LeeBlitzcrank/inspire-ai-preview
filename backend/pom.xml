@@ -20,6 +20,7 @@
         <module>inspire-mq</module>
         <module>inspire-core</module>
         <module>inspire-search</module>
+        <module>inspire-admin</module>
     </modules>
 
     <parent>

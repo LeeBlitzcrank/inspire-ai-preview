@@ -7,7 +7,7 @@ const service = axios.create({
 })
 
 service.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -21,7 +21,13 @@ service.interceptors.response.use(
         localStorage.removeItem('isLogin')
         localStorage.removeItem('userAccount')
         localStorage.removeItem('userId')
-        window.location.href = '/login'
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminUser')
+        if (err.config && err.config.url && err.config.url.includes('/admin/')) {
+          window.location.href = '/admin/login'
+        } else {
+          window.location.href = '/login'
+        }
       }
       return Promise.reject(err)
     }

@@ -33,3 +33,15 @@ export const searchInspires = (params) => request.get('/search/public', { params
 // ===== 忘记密码 =====
 export const forgotPassword = (data) => request.post('/auth/forgot-password', data)
 export const resetPassword = (data) => request.post('/auth/reset-password', data)
+
+// ===== 管理员 =====
+export const adminLogin = (data) => request.post('/admin/login', data)
+export const getAdminDashboard = () => request.get('/admin/dashboard')
+export const adminInspireList = (params) => request.get('/admin/inspire/list', { params })
+export const adminBlockInspire = (id) => request.put(`/admin/inspire/${id}/block`)
+export const adminUnblockInspire = (id) => request.put(`/admin/inspire/${id}/unblock`)
+export const adminSearchUser = (params) => request.get('/admin/user/search', { params })
+export const adminUserDetail = (id) => request.get(`/admin/user/${id}`)
+export const adminConfigList = () => request.get('/admin/config/list')
+export const adminUpdateConfig = (data) => request.put('/admin/config', data)
+export const adminManualPush = (data) => request.post('/admin/config/push', data)

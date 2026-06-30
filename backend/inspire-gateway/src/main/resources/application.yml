@@ -71,7 +71,7 @@ inspire:
   jwt:
     secret: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
     expiration: 604800000
-    white-list: /api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/api/search/public/**,/swagger-ui/**,/v3/api-docs/**
+    white-list: /api/admin/login,/api/admin/public/**,/api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/api/search/public/**,/swagger-ui/**,/v3/api-docs/**
 
 logging:
   level:
