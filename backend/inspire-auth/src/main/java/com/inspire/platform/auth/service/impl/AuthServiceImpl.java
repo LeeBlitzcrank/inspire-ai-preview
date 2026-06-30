@@ -10,6 +10,8 @@ import com.inspire.platform.auth.mapper.UserMapper;
 import com.inspire.platform.auth.service.AuthService;
 import com.inspire.platform.auth.service.email.EmailService;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.mq.constant.MqTopicConstants;
+import com.inspire.platform.mq.producer.MqProducer;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -31,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final PasswordResetMapper passwordResetMapper;
     private final EmailService emailService;
+    private final MqProducer mqProducer;
     private final SecretKey secretKey;
     private final long expirationMs;
     private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
@@ -38,11 +41,13 @@ public class AuthServiceImpl implements AuthService {
     public AuthServiceImpl(UserMapper userMapper,
                            PasswordResetMapper passwordResetMapper,
                            EmailService emailService,
+                           MqProducer mqProducer,
                            @Value("${inspire.jwt.secret}") String secret,
                            @Value("${inspire.jwt.expiration:604800000}") long expiration) {
         this.userMapper = userMapper;
         this.passwordResetMapper = passwordResetMapper;
         this.emailService = emailService;
+        this.mqProducer = mqProducer;
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expiration;
@@ -73,6 +78,7 @@ public class AuthServiceImpl implements AuthService {
         user.setDeleted(0);
 
         userMapper.insert(user);
+        mqProducer.send(MqTopicConstants.TOPIC_USER_REGISTER, java.util.Map.of("userId", user.getId(), "username", user.getUsername(), "email", user.getEmail()));
         log.info("用户注册成功: userId={}, username={}, email={}", user.getId(), user.getUsername(), user.getEmail());
         return buildTokenResponse(user);
     }
@@ -88,6 +94,7 @@ public class AuthServiceImpl implements AuthService {
         if (!PASSWORD_ENCODER.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException("账号或密码错误");
         }
+        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of("userId", user.getId(), "username", user.getUsername(), "type", "login"));
         log.info("用户登录成功: userId={}, username={}", user.getId(), user.getUsername());
         return buildTokenResponse(user);
     }

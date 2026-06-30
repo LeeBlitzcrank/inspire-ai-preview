@@ -1,0 +1,30 @@
+cat > ~/docker/rocketmq/conf/broker.conf << 'EOF'
+namesrvAddr=host.docker.internal:9876
+brokerIP1=localhost
+brokerId=0
+autoCreateTopicEnable=true
+EOF
+
+docker rm -f rmq-broker
+docker run -d --name rmq-broker \
+  -p 10911:10911 -p 10909:10909 \
+  -v ~/docker/rocketmq/conf/broker.conf:/home/rocketmq/rocketmq-5.2.0/conf/broker.conf \
+  -e "NAMESRV_ADDR=host.docker.internal:9876" \
+  apache/rocketmq:5.2.0 \
+  sh mqbroker -c /home/rocketmq/rocketmq-5.2.0/conf/broker.conf
+
+  docker run -d --name rmq-namesrv -p 9876:9876 apache/rocketmq:5.2.0 sh mqnamesrv
+
+
+  docker exec rmq-broker sh mqadmin updateTopic \
+    -n host.docker.internal:9876 -b localhost:10911 -t topic_user_register
+
+  docker exec rmq-broker sh mqadmin updateTopic \
+    -n host.docker.internal:9876 -b localhost:10911 -t topic_user_behavior
+
+  docker exec rmq-broker sh mqadmin updateTopic \
+    -n host.docker.internal:9876 -b localhost:10911 -t topic_inspire_publish
+
+# 重启 auth 和 core 测试 MQ 发送
+
+

@@ -8,6 +8,8 @@ import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.mq.constant.MqTopicConstants;
+import com.inspire.platform.mq.producer.MqProducer;
 import com.inspire.platform.core.service.es.EsSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ public class InspireServiceImpl implements InspireService {
     private final CollectMapper collectMapper;
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
+    private final MqProducer mqProducer;
 
     @Override
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
@@ -72,6 +75,7 @@ public class InspireServiceImpl implements InspireService {
         mainMapper.insert(m);
         InspireContent c = new InspireContent(); c.setInspireId(m.getId()); c.setContent(req.getContent());
         contentMapper.insert(c);
+        mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_PUBLISH, java.util.Map.of("inspireId", m.getId(), "userId", userId, "title", m.getTitle(), "tag", m.getTag()));
         esSyncService.sync(m);
         log.info("创建灵感: id={}, userId={}, status={}", m.getId(), userId, m.getStatus());
         return m;
@@ -118,6 +122,7 @@ public class InspireServiceImpl implements InspireService {
         } finally { ShardContext.clear(); }
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("collect_count = collect_count + 1").eq(InspireMain::getId, inspireId));
+        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of("userId", userId, "inspireId", inspireId, "type", "collect"));
     }
 
     @Override @Transactional
@@ -142,6 +147,7 @@ public class InspireServiceImpl implements InspireService {
         } finally { ShardContext.clear(); }
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("like_count = like_count + 1").eq(InspireMain::getId, inspireId));
+        mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of("userId", userId, "inspireId", inspireId, "type", "like"));
     }
 
     @Override @Transactional

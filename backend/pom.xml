@@ -17,6 +17,7 @@
         <module>inspire-gateway</module>
         <module>inspire-auth</module>
         <module>inspire-ai</module>
+        <module>inspire-mq</module>
         <module>inspire-core</module>
         <module>inspire-search</module>
     </modules>
@@ -72,6 +73,16 @@
                 <version>${jjwt.version}</version>
                 <scope>runtime</scope>
             </dependency>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-client</artifactId>
+            <version>5.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.inspire.platform</groupId>
+            <artifactId>inspire-mq</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

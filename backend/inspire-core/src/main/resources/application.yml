@@ -23,3 +23,7 @@ mybatis-plus:
 logging:
   level:
     com.inspire: debug
+
+# RocketMQ 配置
+rocketmq:
+  name-server: localhost:9876

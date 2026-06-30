@@ -46,3 +46,7 @@ logging:
   level:
     com.inspire: debug
     com.baomidou.mybatisplus: info
+
+# RocketMQ 配置
+rocketmq:
+  name-server: localhost:9876
