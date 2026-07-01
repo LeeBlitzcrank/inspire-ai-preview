@@ -38,9 +38,13 @@ const handleRegister = async () => {
   try {
     const res = await register({ username: account, password: pwd, confirmPassword: rePwd, email })
     if (res.code === 200) {
+      // 清除可能残留的管理员 token
+      localStorage.removeItem('adminToken')
+      localStorage.removeItem('adminUser')
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
+      if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
       localStorage.setItem('userId', res.data.userId)
       ElMessage.success('注册成功，自动登录')
       router.push('/')

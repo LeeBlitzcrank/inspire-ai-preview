@@ -1,6 +1,10 @@
 package com.inspire.platform.auth.controller;
 
 import com.inspire.platform.auth.dto.*;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.client.RestTemplate;
+import java.util.HashMap;
+import java.util.Map;
 import com.inspire.platform.auth.entity.User;
 import com.inspire.platform.auth.service.AuthService;
 import com.inspire.platform.common.result.Result;
@@ -76,6 +80,42 @@ public class AuthController {
     public Result<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.getEmail());
         return Result.success("重置链接已发送至您的邮箱，请查收", null);
+    }
+
+    @Operation(summary = "IP定位", description = "获取客户端IP所在城市。支持 X-Forwarded-For 和 ip 查询参数")
+    @GetMapping("/ip-location")
+    public Result<Map<String, String>> ipLocation(
+            HttpServletRequest request,
+            @RequestParam(required = false) String ip) {
+        // 优先级: ip查询参数 > X-Forwarded-For > RemoteAddr
+        if (ip == null || ip.isEmpty()) ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
+        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
+
+        Map<String, String> data = new HashMap<>();
+        data.put("query_ip", ip != null ? ip : "");
+        System.out.println("[IP定位] 获取到IP: " + ip);
+
+        try {
+            RestTemplate rt = new RestTemplate();
+            String queryIp = ip;
+            Map result = rt.getForObject(
+                "http://ip-api.com/json/" + queryIp + "?fields=status,regionName,city", Map.class);
+            System.out.println("[IP定位] ip-api返回: " + result);
+            if (result != null && "success".equals(result.get("status"))) {
+                data.put("region", result.getOrDefault("regionName", "").toString());
+                data.put("city", result.getOrDefault("city", "").toString());
+            }
+        } catch (Exception e) {
+            System.out.println("[IP定位] 调用失败: " + e.getMessage());
+        }
+        // 仍然没有数据时默认北京
+        if (!data.containsKey("city") || data.get("city") == null || data.get("city").isEmpty()) {
+            data.put("region", "北京");
+            data.put("city", "北京");
+            data.put("note", "自动定位失败，默认北京");
+        }
+        return Result.success(data);
     }
 
     @Operation(summary = "重置密码", description = "使用忘记密码接口获取的令牌设置新密码，令牌过期或使用后失效")

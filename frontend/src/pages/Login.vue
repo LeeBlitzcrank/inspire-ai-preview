@@ -38,9 +38,13 @@ const handleLogin = async () => {
   try {
     const res = await login({ username: form.value.account, password: form.value.password })
     if (res.code === 200) {
+      // 清除可能残留的管理员 token，避免 adminToken 影响普通用户请求
+      localStorage.removeItem('adminToken')
+      localStorage.removeItem('adminUser')
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
+      if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
       localStorage.setItem('userId', res.data.userId)
       ElMessage.success('登录成功')
       router.push('/')

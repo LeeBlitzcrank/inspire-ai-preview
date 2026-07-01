@@ -50,3 +50,9 @@ export const adminManualPush = (data) => request.post('/admin/config/push', data
 export const uploadFile = (formData) => request.post('/file/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 
 export const exploreInspiration = (data) => request.post('/ai/explore', data)
+
+
+// ===== 评论 =====
+export const getComments = (id, params) => request.get(`/inspire/${id}/comments`, { params })
+export const createComment = (id, data) => request.post(`/inspire/${id}/comment`, data)
+export const deleteComment = (id, commentId) => request.delete(`/inspire/${id}/comment/${commentId}`)

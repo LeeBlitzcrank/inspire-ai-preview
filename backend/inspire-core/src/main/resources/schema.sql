@@ -59,3 +59,24 @@ CREATE TABLE IF NOT EXISTS `inspire_like_6`  LIKE `inspire_like_0`;
 CREATE TABLE IF NOT EXISTS `inspire_like_7`  LIKE `inspire_like_0`;
 CREATE TABLE IF NOT EXISTS `inspire_like_8`  LIKE `inspire_like_0`;
 CREATE TABLE IF NOT EXISTS `inspire_like_9`  LIKE `inspire_like_0`;
+
+-- ========== 评论表 ==========
+CREATE TABLE IF NOT EXISTS `inspire_comment` (
+  `id` BIGINT NOT NULL,
+  `inspire_id` BIGINT NOT NULL COMMENT '灵感ID',
+  `user_id` BIGINT NOT NULL COMMENT '评论人ID',
+  `username` VARCHAR(60) NOT NULL COMMENT '评论人昵称',
+  `content` VARCHAR(500) NOT NULL COMMENT '评论内容',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_inspire_id` (`inspire_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感评论表';
+
+-- 兼容：添加 parent_id 和 reply_user_id（已有表忽略重复）
+ALTER TABLE `inspire_comment` ADD COLUMN `parent_id` BIGINT DEFAULT 0 COMMENT '回复目标评论ID，0为顶级评论' AFTER `username`;
+ALTER TABLE `inspire_comment` ADD COLUMN `reply_user_id` BIGINT DEFAULT 0 COMMENT '被回复的用户ID' AFTER `parent_id`;
+ALTER TABLE `inspire_comment` ADD COLUMN `reply_username` VARCHAR(60) DEFAULT '' COMMENT '被回复的用户名' AFTER `reply_user_id`;
+ALTER TABLE `inspire_comment` ADD COLUMN `avatar` VARCHAR(255) DEFAULT '' COMMENT '评论人头像' AFTER `username`;
