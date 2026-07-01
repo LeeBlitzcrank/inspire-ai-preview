@@ -34,4 +34,26 @@ public class InspireAdminController {
         adminInspireService.unblock(id);
         return Result.success("已上架", null);
     }
+
+    @Operation(summary = "待审核列表", description = "内容审核队列")
+    @GetMapping("/pending")
+    public Result<Map<String, Object>> pending(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.success(adminInspireService.listPending(page, size));
+    }
+
+    @Operation(summary = "审核通过", description = "状态从待审核→已发布")
+    @PutMapping("/{id}/approve")
+    public Result<Void> approve(@PathVariable Long id) {
+        adminInspireService.approve(id);
+        return Result.success("审核通过", null);
+    }
+
+    @Operation(summary = "审核拒绝", description = "状态从待审核→已拒绝")
+    @PutMapping("/{id}/reject")
+    public Result<Void> reject(@PathVariable Long id) {
+        adminInspireService.reject(id);
+        return Result.success("已拒绝", null);
+    }
 }

@@ -160,6 +160,17 @@ public class AiServiceImpl implements AiService {
                 jedis.setex(redisKey, CACHE_TTL, msg);
                 log.info("Redis缓存已写入: {}, TTL={}s", cacheKey, CACHE_TTL);
             }
+            // 异步记录 AI 调用
+            try {
+                java.util.Map<String, Object> callBody = new java.util.HashMap<>();
+                callBody.put("keyword", keyword);
+                callBody.put("userId", 0);
+                new Thread(() -> {
+                    try {
+                        restTemplate.postForEntity("http://localhost:8083/internal/ai/call", callBody, String.class);
+                    } catch (Exception ex) { /* 记录失败不影响主流程 */ }
+                }).start();
+            } catch (Exception ex) { /* 忽略 */ }
             return msg;
         } catch (Exception e) {
             log.warn("DeepSeek调用失败: {}", e.getMessage());

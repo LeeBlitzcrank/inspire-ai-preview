@@ -56,12 +56,14 @@ public class InspireController {
         return Result.success(inspireService.listMyCollects(userId));
     }
 
-    @Operation(summary = "创建灵感", description = "status=0保存草稿，status=1直接发布")
+    @Operation(summary = "创建灵感", description = "status=0保存草稿，status=1直接发布，命中敏感词自动设为待审核")
     @PostMapping
     public Result<InspireMain> create(
             @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId,
             @Valid @RequestBody InspireCreateRequest req) {
-        return Result.success("创建成功", inspireService.create(req, userId));
+        InspireMain result = inspireService.create(req, userId);
+        String msg = result.getStatus() == 2 ? "内容已提交审核，请等待管理员审核通过后发布" : "创建成功";
+        return Result.success(msg, result);
     }
 
     @Operation(summary = "修改灵感", description = "只传需要修改的字段即可")

@@ -56,3 +56,9 @@ export const exploreInspiration = (data) => request.post('/ai/explore', data)
 export const getComments = (id, params) => request.get(`/inspire/${id}/comments`, { params })
 export const createComment = (id, data) => request.post(`/inspire/${id}/comment`, data)
 export const deleteComment = (id, commentId) => request.delete(`/inspire/${id}/comment/${commentId}`)
+
+
+// ===== 内容审核 =====
+export const adminPendingList = (params) => request.get('/admin/inspire/pending', { params })
+export const adminApproveInspire = (id) => request.put(`/admin/inspire/${id}/approve`)
+export const adminRejectInspire = (id) => request.put(`/admin/inspire/${id}/reject`)

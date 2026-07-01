@@ -8,6 +8,7 @@ import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.common.util.TextFilter;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import com.inspire.platform.core.service.es.EsSyncService;
@@ -69,7 +70,15 @@ public class InspireServiceImpl implements InspireService {
         InspireMain m = new InspireMain();
         m.setId(nextId()); m.setTitle(req.getTitle());
         m.setImg(req.getImg() != null ? req.getImg() : ""); m.setTag(req.getTag()); m.setUserId(userId);
-        m.setStatus(req.getStatus() != null ? req.getStatus() : 0);
+        // 内容审核：命中敏感词设为待审核（2），否则用请求的status
+        String reason = TextFilter.check(req.getTitle());
+        if (reason == null) reason = TextFilter.check(req.getContent());
+        if (reason != null) {
+            log.warn("内容触发审核: title={}, userId={}, reason={}", req.getTitle(), userId, reason);
+            m.setStatus(2);
+        } else {
+            m.setStatus(req.getStatus() != null ? req.getStatus() : 0);
+        }
         m.setPublishCity(req.getPublishCity() != null ? req.getPublishCity() : "");
         m.setViewCount(0L); m.setLikeCount(0); m.setCollectCount(0); m.setHeat(0);
         mainMapper.insert(m);
@@ -204,7 +213,8 @@ public class InspireServiceImpl implements InspireService {
     }
 
     private static long seq = 0L, lastTs = -1L;
-    private static synchronized long nextId() {
+    /** 公开的静态ID生成器 */
+    public static synchronized long nextId() {
         long ts = System.currentTimeMillis();
         if (ts < lastTs) ts = lastTs;
         if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) ts++; }

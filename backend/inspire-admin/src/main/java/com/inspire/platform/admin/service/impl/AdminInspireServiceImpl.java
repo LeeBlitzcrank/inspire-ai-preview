@@ -8,6 +8,7 @@ import com.inspire.platform.admin.service.AdminInspireService;
 import com.inspire.platform.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,5 +56,47 @@ public class AdminInspireServiceImpl implements AdminInspireService {
         if (row == null) throw new BusinessException("灵感不存在，ID=" + id);
         inspireMainMapper.update(null, Wrappers.lambdaUpdate(InspireMainRow.class)
                 .set(InspireMainRow::getDeleted, 0).eq(InspireMainRow::getId, id));
+    }
+    
+    @Override @Transactional
+    public void approve(Long id) {
+        InspireMainRow m = inspireMainMapper.selectById(id);
+        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
+        m.setStatus(1);
+        inspireMainMapper.updateById(m);
+        System.out.println("[审核] 通过: id=" + id);
+    }
+
+    @Override @Transactional
+    public void reject(Long id) {
+        InspireMainRow m = inspireMainMapper.selectById(id);
+        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
+        m.setStatus(3);
+        inspireMainMapper.updateById(m);
+        System.out.println("[审核] 拒绝: id=" + id);
+    }
+
+    @Override
+    public Map<String, Object> listPending(int page, int size) {
+        LambdaQueryWrapper<InspireMainRow> w = Wrappers.lambdaQuery();
+        w.eq(InspireMainRow::getStatus, 2).eq(InspireMainRow::getDeleted, 0);
+        w.orderByDesc(InspireMainRow::getCreateTime);
+        w.last("LIMIT " + size + " OFFSET " + (page - 1) * size);
+        List<InspireMainRow> rows = inspireMainMapper.selectList(w);
+        List<InspireAdminListVO> voList = rows.stream().map(m -> {
+            InspireAdminListVO vo = new InspireAdminListVO();
+            vo.setId(m.getId()); vo.setTitle(m.getTitle()); vo.setTag(m.getTag());
+            vo.setStatus(m.getStatus()); vo.setViewCount(m.getViewCount());
+            vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
+            vo.setHeat(m.getHeat()); vo.setPublishCity(m.getPublishCity());
+            vo.setDeleted(m.getDeleted()); vo.setCreateTime(m.getCreateTime());
+            return vo;
+        }).collect(Collectors.toList());
+        long total = inspireMainMapper.selectCount(
+            Wrappers.<InspireMainRow>lambdaQuery()
+                .eq(InspireMainRow::getStatus, 2).eq(InspireMainRow::getDeleted, 0));
+        Map<String, Object> r = new HashMap<>();
+        r.put("list", voList); r.put("total", total);
+        return r;
     }
 }

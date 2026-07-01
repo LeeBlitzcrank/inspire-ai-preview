@@ -236,7 +236,7 @@ const submit = async () => {
   loading.value = true
   try {
     const res = await createInspire({ ...form.value, status: 1 })
-    ElMessage.success('灵感发布成功')
+    ElMessage.success(res.msg || '灵感发布成功')
     router.push('/')
   } catch (e) {} finally { loading.value = false }
 }
