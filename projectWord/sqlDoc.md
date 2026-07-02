@@ -309,3 +309,6 @@ CREATE TABLE `user_notification` (
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`,`is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表-消息系统';
+
+-- 14. 灵感表新增分享计数字段
+ALTER TABLE `inspire_main` ADD COLUMN `share_count` INT DEFAULT 0 COMMENT '分享次数' AFTER `collect_count`;

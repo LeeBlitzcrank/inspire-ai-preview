@@ -26,7 +26,7 @@
       <div class="action-row">
         <div class="action-btn" :class="{ active: liked }" @click="handleLike">⭐ {{ detail.likeCount || 0 }}</div>
         <div class="action-btn" :class="{ active: collected }" @click="handleCollect">🔖 {{ detail.collectCount || 0 }}</div>
-        <div class="action-btn" @click="handleShare">🔗 分享</div>
+        <div class="action-btn" @click="handleShare">🔗 {{ detail.shareCount || 0 }}</div>
       </div>
     </div>
     <div v-else-if="loadErr" class="loading-tip">{{ loadErr }}</div>
@@ -38,6 +38,24 @@
     <div class="s-line s-w-70" style="margin-bottom:24px"></div>
     <div class="s-line s-w-40"></div>
   </div>
+  </div>
+
+  <!-- 分享弹窗 -->
+  <div v-if="showSharePanel" class="overlay" @click.self="showSharePanel = false">
+    <div class="share-panel">
+      <div class="share-header">分享灵感</div>
+      <div class="share-count">已分享 {{ detail.shareCount || 0 }} 次</div>
+      <div class="share-divider"></div>
+      <div class="share-option" @click="nativeShare">
+        <span class="share-icon">📱</span>
+        <span class="share-label">分享到其他应用</span>
+      </div>
+      <div class="share-option" @click="copyShareLink">
+        <span class="share-icon">🔗</span>
+        <span class="share-label">复制链接</span>
+      </div>
+      <div class="share-cancel" @click="showSharePanel = false">取消</div>
+    </div>
   </div>
 
   <!-- 评论区 -->
@@ -108,7 +126,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireDetail, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing } from '@/api/inspire'
+import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing } from '@/api/inspire'
 const route = useRoute(); const router = useRouter()
 const detail = ref({}); const liked = ref(false); const collected = ref(false); const loadErr = ref('')
 
@@ -150,14 +168,39 @@ const handleCollect = async () => {
 }
 watch(() => route.params.id, (id) => { if (id) loadData(id) }, { immediate: true })
 
-const handleShare = () => {
+const showSharePanel = ref(false)
+const handleShare = async () => {
+  showSharePanel.value = true
+  // 记录分享行为
+  if (detail.value.id) {
+    try {
+      await shareInspire(detail.value.id)
+      detail.value.shareCount = (detail.value.shareCount || 0) + 1
+    } catch (e) {}
+  }
+}
+const copyShareLink = () => {
   const url = window.location.href
-  const ta = document.createElement('textarea')
-  ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0'
-  document.body.appendChild(ta); ta.select()
-  try { document.execCommand('copy'); ElMessage.success('链接已复制') }
-  catch (e) { ElMessage.warning('复制失败') }
-  document.body.removeChild(ta)
+  navigator.clipboard.writeText(url).then(() => {
+    ElMessage.success('链接已复制到剪贴板')
+  }).catch(() => {
+    const ta = document.createElement('textarea')
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta); ta.select()
+    try { document.execCommand('copy'); ElMessage.success('链接已复制') }
+    catch (e) { ElMessage.warning('复制失败') }
+    document.body.removeChild(ta)
+  })
+  showSharePanel.value = false
+}
+const nativeShare = () => {
+  const url = window.location.href
+  if (navigator.share) {
+    navigator.share({ title: document.title, url: url }).catch(() => {})
+  } else {
+    copyShareLink()
+  }
+  showSharePanel.value = false
 }
 const imgFallback = (e) => { e.target.src = 'https://picsum.photos/id/102/300/160' }
 
@@ -340,8 +383,8 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 #detail-title { font-size:18px; font-weight:600; }
 .placeholder { width:40px; }
 .main-card { background:#fff; border-radius:20px; padding:20px; margin-bottom:0px; box-shadow:0 1px 8px rgba(0,0,0,0.04); }
-.img-box { width:100%; aspect-ratio:16/10; border-radius:14px; overflow:hidden; margin-bottom:16px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
-.img-box img { width:100%; height:100%; object-fit:cover; }
+.img-box { width:100%; border-radius:14px; overflow:hidden; margin-bottom:16px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; }
+.img-box img { max-width:100%; max-height:70vh; height:auto; display:block; border-radius:14px; }
 .meta-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 .meta-tag { font-size:12px; color:#fff; background:#409eff; border-radius:4px; padding:2px 8px; font-weight:400; }
 .meta-user { font-size:13px; color:#909399; }
@@ -355,6 +398,16 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 .action-btn { flex:1; text-align:center; font-size:14px; color:#666; cursor:pointer; padding:6px; border-radius:8px; transition:all 0.2s; user-select:none; }
 .action-btn:hover { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
 .action-btn.active { color:#409eff; font-weight:500; }
+.overlay { position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000; background:rgba(0,0,0,.4); display:flex; align-items:flex-end; justify-content:center; }
+.share-panel { width:94%; max-width:400px; background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 32px; }
+.share-header { font-size:17px; font-weight:600; color:#1d1d1f; text-align:center; margin-bottom:8px; }
+.share-count { font-size:13px; color:#909399; text-align:center; margin-bottom:16px; }
+.share-divider { height:1px; background:#f0f3f9; margin:0 0 16px; }
+.share-option { display:flex; align-items:center; gap:12px; padding:14px 12px; border-radius:12px; cursor:pointer; transition:0.2s; }
+.share-option:hover { background:#f5f8ff; }
+.share-icon { font-size:22px; }
+.share-label { font-size:15px; color:#1d1d1f; }
+.share-cancel { margin-top:16px; text-align:center; padding:14px; border-radius:12px; background:#f5f5f7; font-size:15px; color:#1d1d1f; cursor:pointer; }
 .loading-tip { text-align:center; padding:60px 0; color:#999; font-size:15px; }
 .skeleton-img { width:100%; aspect-ratio:16/10; border-radius:16px; margin-bottom:16px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; }
 .s-w-60 { width:60%; } .s-w-70 { width:70%; } .s-w-80 { width:80%; } .s-w-90 { width:90%; }

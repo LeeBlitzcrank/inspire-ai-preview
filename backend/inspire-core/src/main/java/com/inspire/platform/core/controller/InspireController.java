@@ -122,4 +122,12 @@ public class InspireController {
         inspireService.unlike(userId, inspireId);
         return Result.success("取消点赞", null);
     }
+
+    @Operation(summary = "分享灵感", description = "记录分享行为，分享数+1")
+    @PostMapping("/{id}/share")
+    public Result<Void> share(@PathVariable("id") Long inspireId,
+            @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId) {
+        inspireService.share(userId, inspireId);
+        return Result.success("分享成功", null);
+    }
 }

@@ -36,5 +36,7 @@ public interface InspireService {
     /** 点赞 */
     void like(Long userId, Long inspireId);
     void unlike(Long userId, Long inspireId);
-    List<InspireVO> listMyCollects(Long userId);
+
+    /** 分享 */
+    void share(Long userId, Long inspireId);    List<InspireVO> listMyCollects(Long userId);
 }

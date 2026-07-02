@@ -20,7 +20,7 @@ public class InspireVO {
     @Schema(description = "点赞数") private Integer likeCount;
     @Schema(description = "收藏数") private Integer collectCount;
     @Schema(description = "热度") private Integer heat;
-    @Schema(description = "发布城市") private String publishCity;
+    @Schema(description = "分享数") private Integer shareCount;    @Schema(description = "发布城市") private String publishCity;
     @Schema(description = "发布时间") private LocalDateTime createTime;
     @Schema(description = "灵感正文（仅在详情接口返回）") private String content;
     @Schema(description = "当前用户是否已收藏") private Boolean collected = false;

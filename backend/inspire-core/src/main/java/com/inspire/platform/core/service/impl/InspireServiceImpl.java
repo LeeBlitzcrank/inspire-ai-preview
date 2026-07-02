@@ -196,7 +196,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void unlike(Long userId, Long inspireId) {
-        ShardContext.setByInspireId(inspireId);
+
         try { likeMapper.delete(Wrappers.lambdaQuery(LikeAction.class)
                 .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId));
         } finally { ShardContext.clear(); }
@@ -204,6 +204,16 @@ public class InspireServiceImpl implements InspireService {
                 .setSql("like_count = GREATEST(like_count - 1, 0)").eq(InspireMain::getId, inspireId));
     }
 
+
+    @Override
+    @Transactional
+    public void share(Long userId, Long inspireId) {
+        mainMapper.update(null, com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaUpdate(InspireMain.class)
+            .setSql("share_count = COALESCE(share_count, 0) + 1").eq(InspireMain::getId, inspireId));
+        mqProducer.send(com.inspire.platform.mq.constant.MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of(
+            "userId", userId, "inspireId", inspireId, "type", "share"));
+        log.info("分享: userId={}, inspireId={}", userId, inspireId);
+    }
     @Override
     public List<InspireVO> listMyCollects(Long userId) {
         List<Long> ids;
@@ -225,6 +235,7 @@ public class InspireServiceImpl implements InspireService {
         try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId())); } catch(Exception e) { vo.setNickname(""); }
         vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
         vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
+        vo.setShareCount(m.getShareCount());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
         vo.setPublishCity(m.getPublishCity()); vo.setCreateTime(m.getCreateTime());
         vo.setContent(content);

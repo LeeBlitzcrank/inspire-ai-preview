@@ -18,7 +18,7 @@ public class InspireMain {
     @Schema(description = "点赞数") private Integer likeCount;
     @Schema(description = "收藏数") private Integer collectCount;
     @Schema(description = "综合热度") private Integer heat;
-    @Schema(description = "发布城市") private String publishCity;
+    @Schema(description = "分享数") private Integer shareCount;    @Schema(description = "发布城市") private String publishCity;
     @Schema(description = "发布时间") @TableField(fill = FieldFill.INSERT) private LocalDateTime createTime;
     @Schema(description = "更新时间") @TableField(fill = FieldFill.INSERT_UPDATE) private LocalDateTime updateTime;
     @Schema(hidden = true) private Integer deleted;

@@ -76,3 +76,6 @@ export const getNotifications = (params) => request.get('/notification/list', { 
 export const getUnreadCount = () => request.get('/notification/unread')
 export const markNotificationRead = (notificationId) => request.put('/notification/read', null, { params: { notificationId } })
 export const markAllRead = () => request.put('/notification/read')
+
+// ===== 分享裂变 =====
+export const shareInspire = (id) => request.post(`/inspire/${id}/share`)
