@@ -29,10 +29,10 @@
     <!-- 分类 & 城市 -->
     <div class="row">
       <div class="panel"><h3>📍 分类热度</h3><div v-if="d.tagHeat && Object.keys(d.tagHeat).length">
-        <div v-for="(v,k) in d.tagHeat" :key="k" class="tag-row"><span>{{ k }}</span><span class="tag-val">{{ v }}条</span></div>
+        <div v-for="(v,k) in d.tagHeat" :key="k" class="tag-row"><span>{{ k }}</span><span class="tag-val">{{ v }}人</span></div>
       </div><div v-else class="empty-panel">暂无数据</div></div>
       <div class="panel"><h3>🏠 城市分布</h3><div v-if="d.cityStats && Object.keys(d.cityStats).length">
-        <div v-for="(v,k) in d.cityStats" :key="k" class="tag-row"><span>{{ k }}</span><span class="tag-val">{{ v }}条</span></div>
+        <div v-for="(v,k) in d.cityStats" :key="k" class="tag-row"><span>{{ k }}</span><span class="tag-val">{{ v }}人</span></div>
       </div><div v-else class="empty-panel">暂无数据</div></div>
     </div>
   </div>

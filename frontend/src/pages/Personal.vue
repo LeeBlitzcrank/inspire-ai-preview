@@ -345,7 +345,7 @@ const handleLogout = () => {
 .right-icons { display:flex; gap:20px; }
 .icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
 .user-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; cursor:pointer; position:relative; }
-.avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:500; }
+.avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#d4c5a9,#b8a88c); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:500; }
 .user-info h2 { margin:0; font-size:20px; color:#1d1d1f; }
 .user-info p { margin:4px 0 0; font-size:14px; color:#86868b; }
 .city-tag { display:inline-block; background:#f0f9eb; color:#67c23a; font-size:12px; padding:2px 8px; border-radius:10px; margin-top:4px; }

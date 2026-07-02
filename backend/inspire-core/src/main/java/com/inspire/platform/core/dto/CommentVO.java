@@ -15,6 +15,7 @@ public class CommentVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
     private String username;
+    private String nickname;
     private String avatar;
     private String content;
     @JsonSerialize(using = ToStringSerializer.class)

@@ -293,3 +293,19 @@ CREATE TABLE `inspire_like_9` LIKE inspire_like_0;
 5. **ext_json扩展设计**：产品迭代新增字段无需执行ALTER TABLE，线上无锁表风险，适配快速迭代
 6. **行为日志永久存储**：不做分表，全量行为数据用于Flink实时画像、离线数据分析、用户行为溯源
 7. **计数异步落库**：浏览、点赞、收藏计数优先Redis缓存，定时任务批量更新MySQL，规避热点行频繁UPDATE锁表
+-- 13. 用户通知表 user_notification
+CREATE TABLE `user_notification` (
+  `id` BIGINT NOT NULL COMMENT '雪花通知ID',
+  `user_id` BIGINT NOT NULL COMMENT '通知接收者用户ID',
+  `type` VARCHAR(16) NOT NULL COMMENT '通知类型: like/collect/comment/reply/follow',
+  `actor_id` BIGINT NOT NULL COMMENT '触发者用户ID',
+  `actor_name` VARCHAR(50) DEFAULT '' COMMENT '触发者昵称',
+  `content` VARCHAR(255) DEFAULT '' COMMENT '通知摘要文本',
+  `target_id` BIGINT DEFAULT NULL COMMENT '关联灵感/评论ID',
+  `target_title` VARCHAR(120) DEFAULT '' COMMENT '关联灵感标题',
+  `is_read` TINYINT DEFAULT 0 COMMENT '0未读 1已读',
+  `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '通知时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`,`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表-消息系统';

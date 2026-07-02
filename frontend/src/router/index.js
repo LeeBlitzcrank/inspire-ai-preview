@@ -15,6 +15,7 @@ const AdminInspire = () => import('@/pages/admin/AdminInspire.vue')
 const AdminUser = () => import('@/pages/admin/AdminUser.vue')
 const AdminConfig = () => import('@/pages/admin/AdminConfig.vue')
 const NotFound = () => import('@/pages/NotFound.vue')
+const Notifications = () => import("@/pages/Notifications.vue")
 const Forbidden = () => import('@/pages/Forbidden.vue')
 const ServerError = () => import('@/pages/ServerError.vue')
 
@@ -23,6 +24,7 @@ const routes = [
   { path: '/search', name: 'Search', component: Search },
   { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail },
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
+  { path: '/notifications', name: 'Notifications', component: Notifications, meta: { needLogin: true } },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/create', name: 'Create', component: Create, meta: { needLogin: true } },

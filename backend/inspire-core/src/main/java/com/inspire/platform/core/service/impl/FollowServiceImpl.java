@@ -4,7 +4,7 @@ import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.core.dto.InspireVO;
 
 import com.inspire.platform.core.service.FollowService;
-import lombok.RequiredArgsConstructor;
+import com.inspire.platform.core.service.NotificationService;import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 public class FollowServiceImpl implements FollowService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final NotificationService notificationService;
 
     // 获取下一个ID
     private long nextId() {
@@ -37,7 +38,11 @@ public class FollowServiceImpl implements FollowService {
         jdbcTemplate.update("INSERT INTO user_follow(id, follower_id, followee_id) VALUES(?, ?, ?)",
             nextId(), myId, userId);
         log.info("关注: follower={}, followee={}", myId, userId);
-    }
+        try {
+            String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, myId);
+            notificationService.notify(userId, "follow", myId,
+                myName != null ? myName : String.valueOf(myId), "关注了你", null, null);
+        } catch (Exception e) { log.warn("关注通知发送失败", e); }    }
 
     @Override
     @Transactional

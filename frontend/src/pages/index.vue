@@ -5,7 +5,7 @@
       <div id="nav-icon-group" class="right-icons">
         <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
-        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
+        <div id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
     <!-- 选项卡 -->
@@ -98,8 +98,9 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing } from '@/api/inspire'
+import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount } from '@/api/inspire'
 const router = useRouter()
+const unreadCount = ref(0)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
 const activeTab = ref('category')
 
@@ -137,7 +138,18 @@ const goPersonal = () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/personal')
 }
+const goNotifications = () => {
+  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
+  router.push('/notifications')
+}
 const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
+
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadCount()
+    unreadCount.value = res.data?.count || 0
+  } catch (e) {}
+}
 
 const categoryList = ref([
   { id:1, name:'美食', icon:'🍜', count:268 }, { id:2, name:'运动', icon:'🏃', count:135 },
@@ -222,7 +234,10 @@ const onScroll = () => {
   const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
   if (nearBottom) loadMore()
 }
-onMounted(() => window.addEventListener("scroll", onScroll))
+onMounted(() => {
+  window.addEventListener("scroll", onScroll)
+  if (isLogin.value) fetchUnreadCount()
+})
 onBeforeUnmount(() => window.removeEventListener("scroll", onScroll))
 
 const resetCategory = () => { activeCategory.value = ''; currentSubList.value = []; activeSubItem.value = ''; inspireList.value = [] }
@@ -278,4 +293,8 @@ const handleCollect = async (targetId) => {
 .s-desc { width:90%; }
 .s-footer { width:40%; }
 @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
+
+.noti-badge { position:absolute; top:-2px; right:-2px; min-width:16px; height:16px; border-radius:8px; background:#f56c6c; color:#fff; font-size:11px; line-height:16px; text-align:center; padding:0 4px; font-weight:600; pointer-events:none; }
+#icon-noti { position:relative; }
+
 </style>

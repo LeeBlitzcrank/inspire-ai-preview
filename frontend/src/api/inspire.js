@@ -71,3 +71,8 @@ export const unfollowUser = (userId) => request.delete(`/inspire/follow/${userId
 export const getFollowing = () => request.get('/inspire/follow/following')
 export const getFollowers = () => request.get('/inspire/follow/followers')
 export const getFollowingFeed = (params) => request.get('/inspire/follow/feed', { params })
+// ===== 消息通知 =====
+export const getNotifications = (params) => request.get('/notification/list', { params })
+export const getUnreadCount = () => request.get('/notification/unread')
+export const markNotificationRead = (notificationId) => request.put('/notification/read', null, { params: { notificationId } })
+export const markAllRead = () => request.put('/notification/read')

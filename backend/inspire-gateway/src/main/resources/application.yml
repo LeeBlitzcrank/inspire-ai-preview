@@ -61,7 +61,6 @@ spring:
             - Path=/api/search/**
           filters:
             - StripPrefix=1
-
         # 文件上传
         - id: inspire-file
           uri: ${routes.core-service:http://localhost:8083}
@@ -69,7 +68,13 @@ spring:
             - Path=/api/file/**
           filters:
             - StripPrefix=1
-
+        # 消息通知
+        - id: inspire-notification
+          uri: ${routes.core-service:http://localhost:8083}
+          predicates:
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=1
         # Swagger UI（透传到 auth 服务）
         - id: inspire-swagger
           uri: ${routes.auth-service:http://localhost:8081}

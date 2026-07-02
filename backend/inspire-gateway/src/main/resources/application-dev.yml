@@ -19,7 +19,7 @@ spring:
           min-idle: 0
   # 本地 MySQL（开发阶段网关不直连数据库，仅用于校验连接配置）
   datasource:
-    url: jdbc:mysql://localhost:3306/inspire_space?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/inspire_space?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&connectionTimeZone=%2B08:00&createDatabaseIfNotExist=true
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver

@@ -55,11 +55,11 @@
       <div v-for="c in comments" :key="c.id" class="comment-item" :class="{ 'is-reply': c.parentId && c.parentId !== 0 }" @click="handleCommentClick($event, c)">
         <div class="comment-header">
           <span class="comment-avatar">{{ c.avatar || (c.username ? c.username[0] : '\U0001f464') }}</span>
-          <span class="comment-username">{{ c.username }}</span>
+          <span class="comment-username">{{ c.nickname || c.username }}</span>
           <span v-if="c.replyUsername && c.parentId !== 0" class="comment-reply-target">回复 @{{ c.replyUsername }}</span>
           <span class="comment-time">{{ formatTime(c.createTime) }}</span>
           <span class="comment-reply-btn" data-reply="true" @click.stop="startReply(c)">回复</span>
-          <span class="comment-del" @click="handleDeleteComment(c.id)">删除</span>
+          <span v-if="String(c.userId) === currentUserId" class="comment-del" @click="handleDeleteComment(c.id)">删除</span>
         </div>
         <div class="comment-body">{{ c.content }}</div>
 
@@ -68,11 +68,11 @@
           <div v-for="child in c.children" :key="child.id" class="reply-item" @click="handleCommentClick($event, child)">
             <div class="comment-header">
               <span class="comment-avatar">{{ child.avatar || (child.username ? child.username[0] : '\U0001f464') }}</span>
-              <span class="comment-username">{{ child.username }}</span>
+              <span class="comment-username">{{ child.nickname || child.username }}</span>
               <span v-if="child.replyUsername" class="comment-reply-target">回复 @{{ child.replyUsername }}</span>
               <span class="comment-time">{{ formatTime(child.createTime) }}</span>
               <span class="comment-reply-btn" data-reply="true" @click.stop="startReply(child)">回复</span>
-              <span class="comment-del" @click="handleDeleteComment(child.id)">删除</span>
+              <span v-if="String(child.userId) === currentUserId" class="comment-del" @click="handleDeleteComment(child.id)">删除</span>
             </div>
             <div class="comment-body">{{ child.content }}</div>
 
@@ -258,7 +258,7 @@ const handleSubmitComment = async () => {
 const startReply = (c) => {
   console.log('[回复] 点击回复 c.id=', c.id, 'c.username=', c.username)
   replyToId.value = String(c.id)
-  replyToName.value = c.username || ''
+  replyToName.value = (c.nickname || c.username) || ''
   commentText.value = ''
   console.log('[回复] 已设置 replyToId=', replyToId.value)
 }
@@ -305,13 +305,22 @@ const loadMoreComments = () => {
 
 const formatTime = (t) => {
   if (!t) return ''
-  const d = new Date(t)
+  // 处理数组格式 [年,月,日,时,分,秒]
+  var d
+  if (Array.isArray(t)) {
+    d = new Date(t[0], t[1] - 1, t[2], t[3] || 0, t[4] || 0, t[5] || 0)
+  } else {
+    d = new Date(t)
+  }
   const now = new Date()
   const diff = now - d
-  if (diff < 60000) return '刚刚'
+  if (diff < 180000) return '刚刚'
   if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
   if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
-  return d.toLocaleDateString('zh-CN')
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return y + '-' + m + '-' + day
 }
 
 // 详情加载后自动加载评论和关注状态

@@ -17,6 +17,10 @@ spring:
   web:
     resources:
       static-locations: file:/tmp/inspire-uploads/
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Shanghai
 mybatis-plus:
   global-config:
     db-config:

@@ -75,7 +75,7 @@ const handleCollect = async (id) => {
 }
 onMounted(async () => {
   loadingHot.value = true
-  try { const res = await getInspireList({ page: 1, size: 10 }); hotList.value = res.data || [] }
+  try { const res = await getInspireList({ sort: 'heat', page: 1, size: 10 }); hotList.value = res.data || [] }
   catch (e) {} finally { loadingHot.value = false }
 })
 </script>

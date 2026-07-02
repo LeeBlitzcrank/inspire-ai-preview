@@ -12,6 +12,7 @@ import com.inspire.platform.common.util.TextFilter;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import com.inspire.platform.core.service.es.EsSyncService;
+import com.inspire.platform.core.service.NotificationService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class InspireServiceImpl implements InspireService {
     private final CollectMapper collectMapper;
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
+    private final NotificationService notificationService;
     private final MqProducer mqProducer;
     private final JdbcTemplate jdbcTemplate;
 
@@ -82,6 +84,7 @@ public class InspireServiceImpl implements InspireService {
             m.setStatus(req.getStatus() != null ? req.getStatus() : 0);
         }
         m.setPublishCity(req.getPublishCity() != null ? req.getPublishCity() : "");
+        m.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
         m.setViewCount(0L); m.setLikeCount(0); m.setCollectCount(0); m.setHeat(0);
         mainMapper.insert(m);
         InspireContent c = new InspireContent(); c.setInspireId(m.getId()); c.setContent(req.getContent());
@@ -138,6 +141,17 @@ public class InspireServiceImpl implements InspireService {
                 "userId", userId, "inspireId", inspireId, "type", "collect",
                 "tag", inspireForMsg != null ? inspireForMsg.getTag() : "",
                 "city", inspireForMsg != null ? inspireForMsg.getPublishCity() : ""));
+        // 通知灵感作者
+        try {
+            String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, userId);
+            if (myName == null) myName = String.valueOf(userId);
+            String title = inspireForMsg != null ? inspireForMsg.getTitle() : "";
+            if (title != null && title.length() > 20) title = title.substring(0, 20) + "...";
+            if (inspireForMsg != null) {
+                notificationService.notify(inspireForMsg.getUserId(), "collect", userId,
+                    myName, "收藏了你的灵感", inspireId, title);
+            }
+        } catch (Exception e) { log.warn("收藏通知发送失败", e); }
     }
 
     @Override @Transactional
@@ -167,6 +181,17 @@ public class InspireServiceImpl implements InspireService {
                 "userId", userId, "inspireId", inspireId, "type", "like",
                 "tag", inspireForMsg != null ? inspireForMsg.getTag() : "",
                 "city", inspireForMsg != null ? inspireForMsg.getPublishCity() : ""));
+        // 通知灵感作者
+        try {
+            String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, userId);
+            if (myName == null) myName = String.valueOf(userId);
+            String title = inspireForMsg != null ? inspireForMsg.getTitle() : "";
+            if (title != null && title.length() > 20) title = title.substring(0, 20) + "...";
+            if (inspireForMsg != null) {
+                notificationService.notify(inspireForMsg.getUserId(), "like", userId,
+                    myName, "点赞了你的灵感", inspireId, title);
+            }
+        } catch (Exception e) { log.warn("点赞通知发送失败", e); }
     }
 
     @Override @Transactional

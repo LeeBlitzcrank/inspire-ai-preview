@@ -70,8 +70,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
         // 城市分布
         Map<String, Integer> cityStats = new HashMap<>();
-        jdbcTemplate.query("SELECT publish_city, COUNT(*) as cnt FROM inspire_main WHERE deleted=0 AND status=1 AND publish_city != '' GROUP BY publish_city",
-                rs -> { cityStats.put(rs.getString("publish_city"), rs.getInt("cnt")); });
+        jdbcTemplate.query("SELECT city, COUNT(*) as cnt FROM user WHERE deleted=0 AND city != '' GROUP BY city",
+                rs -> { cityStats.put(rs.getString("city"), rs.getInt("cnt")); });
         vo.setCityStats(cityStats);
         return vo;
     }
