@@ -312,3 +312,19 @@ CREATE TABLE `user_notification` (
 
 -- 14. 灵感表新增分享计数字段
 ALTER TABLE `inspire_main` ADD COLUMN `share_count` INT DEFAULT 0 COMMENT '分享次数' AFTER `collect_count`;
+
+-- 15. 灵感版本历史表 inspire_version
+CREATE TABLE `inspire_version` (
+  `id` BIGINT NOT NULL COMMENT '雪花ID',
+  `inspire_id` BIGINT NOT NULL COMMENT '关联灵感ID',
+  `version_number` INT NOT NULL COMMENT '版本号',
+  `title` VARCHAR(120) NOT NULL COMMENT '历史标题',
+  `content` TEXT COMMENT '历史正文',
+  `img` VARCHAR(255) DEFAULT '' COMMENT '历史封面',
+  `images` TEXT COMMENT '历史多图',
+  `tag` VARCHAR(30) DEFAULT '' COMMENT '历史分类',
+  `change_summary` VARCHAR(200) DEFAULT '' COMMENT '变更摘要',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '存档时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_inspire_id` (`inspire_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感版本历史';

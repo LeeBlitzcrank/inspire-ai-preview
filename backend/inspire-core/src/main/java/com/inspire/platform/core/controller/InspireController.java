@@ -130,4 +130,16 @@ public class InspireController {
         inspireService.share(userId, inspireId);
         return Result.success("分享成功", null);
     }
+
+    @Operation(summary = "灵感版本列表")
+    @GetMapping("/{id}/versions")
+    public Result<java.util.List<java.util.Map<String, Object>>> listVersions(@PathVariable Long id) {
+        return Result.success(inspireService.listVersions(id));
+    }
+
+    @Operation(summary = "灵感版本详情")
+    @GetMapping("/{id}/versions/{versionId}")
+    public Result<java.util.Map<String, Object>> getVersion(@PathVariable Long id, @PathVariable Long versionId) {
+        return Result.success(inspireService.getVersion(versionId));
+    }
 }

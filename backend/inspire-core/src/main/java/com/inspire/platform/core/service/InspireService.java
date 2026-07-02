@@ -39,4 +39,10 @@ public interface InspireService {
 
     /** 分享 */
     void share(Long userId, Long inspireId);    List<InspireVO> listMyCollects(Long userId);
+
+    /** 版本历史列表 */
+    java.util.List<java.util.Map<String, Object>> listVersions(Long inspireId);
+
+    /** 版本详情 */
+    java.util.Map<String, Object> getVersion(Long versionId);
 }

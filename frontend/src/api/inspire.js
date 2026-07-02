@@ -79,3 +79,8 @@ export const markAllRead = () => request.put('/notification/read')
 
 // ===== 分享裂变 =====
 export const shareInspire = (id) => request.post(`/inspire/${id}/share`)
+
+// ===== 版本历史 =====
+export const getInspireVersions = (id) => request.get(`/inspire/${id}/versions`)
+
+export const getInspireVersionDetail = (id, versionId) => request.get('/inspire/' + id + '/versions/' + versionId)

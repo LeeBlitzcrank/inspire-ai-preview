@@ -11,6 +11,7 @@ public class InspireMain {
     @Schema(description = "灵感ID") @TableId(type = IdType.INPUT) private Long id;
     @Schema(description = "灵感标题", example = "鸡腿的五种神仙吃法") private String title;
     @Schema(description = "封面图") private String img;
+    @Schema(description = "多图JSON数组") private String images;
     @Schema(description = "分类", example = "美食") private String tag;
     @Schema(description = "发布人ID") private Long userId;
     @Schema(description = "0草稿 1已发布") private Integer status;

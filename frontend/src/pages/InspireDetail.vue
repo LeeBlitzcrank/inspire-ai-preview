@@ -6,7 +6,15 @@
       <div class="placeholder"></div>
     </div>
     <div v-if="detail.id" id="detail-main-card" class="main-card">
-      <div class="img-box"><img :src="detail.img || 'https://picsum.photos/id/102/300/160'" @error="imgFallback" /></div>
+      <div v-if="!images.length" class="img-box"><img :src="detail.img || 'https://picsum.photos/id/102/300/160'" @error="imgFallback" /></div>
+      <div v-else class="carousel-wrap">
+        <img :src="images[curImage]" class="carousel-img" @error="imgFallback" />
+        <div v-if="images.length > 1" class="carousel-nav">
+          <span class="carousel-arrow left" @click="prevImage">‹</span>
+          <div class="carousel-dots"><span v-for="(_,i) in images" :key="i" class="dot" :class="{active:i===curImage}" @click="curImage=i"></span></div>
+          <span class="carousel-arrow right" @click="nextImage">›</span>
+        </div>
+      </div>
       <div class="meta-row">
         <span class="meta-tag">{{ detail.tag }}</span>
         <span class="meta-user">👤 {{ detail.nickname || detail.username || '用户' }}</span>
@@ -26,6 +34,7 @@
       <div class="action-row">
         <div class="action-btn" :class="{ active: liked }" @click="handleLike">⭐ {{ detail.likeCount || 0 }}</div>
         <div class="action-btn" :class="{ active: collected }" @click="handleCollect">🔖 {{ detail.collectCount || 0 }}</div>
+        <div v-if="isLogin && String(detail.userId) === currentUserId" class="action-btn" @click="goEdit">✏️ 编辑</div>
         <div class="action-btn" @click="handleShare">🔗 {{ detail.shareCount || 0 }}</div>
       </div>
     </div>
@@ -55,6 +64,30 @@
         <span class="share-label">复制链接</span>
       </div>
       <div class="share-cancel" @click="showSharePanel = false">取消</div>
+    </div>
+  </div>
+
+  <!-- 版本预览弹窗 -->
+  <div v-if="versionPreview" class="overlay" @click.self="versionPreview = null">
+    <div class="version-preview">
+      <div class="vp-header">
+        <span class="vp-title">📜 v{{ versionPreview.versionNumber || '?' }} {{ versionPreview.title }}</span>
+        <span class="vp-close" @click="versionPreview = null">✕</span>
+      </div>
+      <div class="vp-time">{{ formatTime(versionPreview.createTime) }}</div>
+      <div class="vp-content">{{ versionPreview.content }}</div>
+    </div>
+  </div>
+
+  <!-- 版本历史 -->
+  <div v-if="versions.length > 0" class="version-section">
+    <div class="version-title">📜 版本历史</div>
+    <div class="version-list">
+      <div v-for="(v, i) in versions" :key="v.id" class="version-item" @click="viewVersion(v.id)">
+        <span class="ver-num">v{{ versions.length - i }}</span>
+        <span class="ver-time">{{ formatTime(v.createTime) }}</span>
+        <span class="ver-title">{{ v.title }}</span>
+      </div>
     </div>
   </div>
 
@@ -126,7 +159,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing } from '@/api/inspire'
+import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing, getInspireVersions, getInspireVersionDetail } from '@/api/inspire'
 const route = useRoute(); const router = useRouter()
 const detail = ref({}); const liked = ref(false); const collected = ref(false); const loadErr = ref('')
 
@@ -202,6 +235,15 @@ const nativeShare = () => {
   }
   showSharePanel.value = false
 }
+const images = computed(() => {
+  if (detail.value.images && detail.value.images.length > 0) return detail.value.images
+  if (detail.value.img) return [detail.value.img]
+  return []
+})
+const curImage = ref(0)
+const prevImage = () => { curImage.value = (curImage.value - 1 + images.value.length) % images.value.length }
+const nextImage = () => { curImage.value = (curImage.value + 1) % images.value.length }
+const goEdit = () => { router.push('/edit/' + detail.value.id) }
 const imgFallback = (e) => { e.target.src = 'https://picsum.photos/id/102/300/160' }
 
 const handleToggleFollow = async () => {
@@ -234,7 +276,12 @@ const commentsLoading = ref(false)
 const commentPage = ref(1)
 const hasMoreComments = ref(false)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
-const currentUserId = computed(() => localStorage.getItem('userId') || '')
+const currentUserId = computed(() => {
+  const t = localStorage.getItem('token')
+  if (!t) return ''
+  try { return JSON.parse(atob(t.split('.')[1])).sub || '' }
+  catch (e) { return '' }
+})
 const isFollowing = ref(false)
 const paragraphs = computed(() => {
   const text = detail.value.content
@@ -366,9 +413,30 @@ const formatTime = (t) => {
   return y + '-' + m + '-' + day
 }
 
-// 详情加载后自动加载评论和关注状态
+const loadVersions = async (id) => {
+  try {
+    const res = await getInspireVersions(id)
+    versions.value = res.data || []
+    console.log('[VERSIONS] 加载完成, 数量:', versions.value.length, id)
+  } catch (e) {
+    versions.value = []
+    console.warn('[VERSIONS] 加载失败:', e)
+  }
+}
+const versions = ref([])
+const versionPreview = ref(null)
+const viewVersion = async (versionId) => {
+  console.log('[VERSION] 点击版本:', versionId)
+  try {
+    const res = await getInspireVersionDetail(detail.value.id, versionId)
+    console.log('[VERSION] 详情数据:', res.data)
+    versionPreview.value = res.data
+  } catch (e) { console.warn('[VERSION] 失败:', e) }
+}
+
+// 详情加载后自动加载评论、关注状态、版本历史
 watch(() => detail.value.id, (id) => {
-  if (id) { loadComments(true); checkFollowing() }
+  if (id) { loadComments(true); checkFollowing(); loadVersions(id) }
 })
 
 // 调试：回复状态
@@ -394,6 +462,14 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 .desc-wrap { padding:16px 0 12px; border-top:1px solid #f0f0f0; margin-top:4px; }
 .desc-p { font-size:16px; color:#2c2c2e; line-height:1.75; margin:0 0 10px; text-indent:2em; letter-spacing:0.3px; }
 .stat-row { display:flex; gap:24px; font-size:13px; color:#909399; margin-bottom:20px; flex-wrap:wrap; border-top:1px solid #f0f0f0; padding-top:16px; }
+.carousel-wrap { position:relative; border-radius:14px; overflow:hidden; margin-bottom:16px; background:#f5f5f5; }
+.carousel-img { width:100%; display:block; }
+.carousel-nav { position:absolute; bottom:12px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:12px; }
+.carousel-arrow { width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,.35); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; transition:0.2s; }
+.carousel-arrow:hover { background:rgba(0,0,0,.55); }
+.carousel-dots { display:flex; gap:6px; }
+.dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.5); cursor:pointer; transition:0.2s; }
+.dot.active { width:18px; border-radius:3px; background:#fff; }
 .action-row { display:flex; gap:12px; justify-content:space-around; background:#f8f9fc; border-radius:12px; padding:10px 8px; }
 .action-btn { flex:1; text-align:center; font-size:14px; color:#666; cursor:pointer; padding:6px; border-radius:8px; transition:all 0.2s; user-select:none; }
 .action-btn:hover { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
@@ -444,4 +520,19 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 .reply-list { margin-top:8px; margin-left:12px; border-left:2px solid #ebeef5; padding-left:12px; }
 .reply-item { padding:10px 0; border-bottom:1px solid #f5f5f5; }
 .reply-item:last-child { border-bottom:none; }
+.version-preview { width:94%; max-width:500px; max-height:80vh; overflow-y:auto; background:#fff; border-radius:20px; padding:24px; margin:auto; align-self:center; position:relative; }
+.vp-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.vp-title { font-size:17px; font-weight:600; color:#1d1d1f; line-height:1.4; }
+.vp-close { font-size:18px; color:#909399; cursor:pointer; padding:4px; }
+.overlay:has(.version-preview) { align-items:center; }
+.vp-time { font-size:13px; color:#909399; margin-bottom:16px; }
+.vp-content { font-size:15px; color:#1d1d1f; line-height:1.7; white-space:pre-wrap; }
+.version-section { background:#fff; border-radius:16px; padding:20px; margin-bottom:12px; box-shadow:0 1px 8px rgba(0,0,0,0.04); }
+.version-title { font-size:15px; font-weight:600; color:#1d1d1f; margin-bottom:12px; }
+.version-list { display:flex; flex-direction:column; gap:8px; }
+.version-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:#f8f9fc; cursor:pointer; transition:0.2s; font-size:13px; }
+.version-item:hover { background:#ecf5ff; }
+.ver-num { font-weight:600; color:#409eff; min-width:28px; }
+.ver-time { color:#909399; min-width:80px; }
+.ver-title { color:#1d1d1f; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 </style>

@@ -28,6 +28,7 @@ const routes = [
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/create', name: 'Create', component: Create, meta: { needLogin: true } },
+  { path: '/edit/:id', name: 'Edit', component: Create, meta: { needLogin: true } },
   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/reset-password', name: 'ResetPassword', component: ResetPasswordPage },
   { path: '/admin/login', name: 'AdminLogin', component: AdminLogin },

@@ -11,6 +11,7 @@ public class InspireVO {
     @Schema(description = "灵感ID") private Long id;
     @Schema(description = "标题") private String title;
     @Schema(description = "封面图") private String img;
+    @Schema(description = "多图列表") private java.util.List<String> images;
     @Schema(description = "分类") private String tag;
     @JsonSerialize(using = ToStringSerializer.class)
     @Schema(description = "发布人ID") private Long userId;

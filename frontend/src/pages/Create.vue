@@ -1,18 +1,19 @@
 <template>
   <div class="create-page">
     <div class="top-nav">
-      <div class="left-logo" @click="$router.push('/')">🍎</div>
+      <div v-if="editId" class="left-logo" @click="goBack">←</div>
+      <div v-else class="left-logo" @click="$router.push('/')">🍎</div>
       <div class="right-icons">
         <div class="icon-item" @click="$router.push('/search')">🔍</div>
         <div class="icon-item" @click="$router.push('/personal')">👤</div>
       </div>
     </div>
     <div class="input-box">
-      <h2 class="page-title">录入新灵感</h2>
-      <p class="page-desc">填写创意内容，保存到灵感库</p>
+      <h2 class="page-title">{{ editId ? '编辑灵感' : '录入新灵感' }}</h2>
+      <p class="page-desc">{{ editId ? '修改内容后保存' : '填写创意内容，保存到灵感库' }}</p>
 
       <!-- AI 探索区 -->
-      <div class="ai-section">
+      <div v-if="!editId" class="ai-section">
         <div class="ai-row">
           <el-input v-model="aiKeyword" placeholder="输入关键词，AI探索灵感" size="large" @keyup.enter="handleExplore">
             <template #append><el-button type="warning" :loading="exploring" @click="handleExplore">✨ 探索</el-button></template>
@@ -63,28 +64,38 @@
           <span v-if="voiceError" class="voice-error">{{ voiceError }}</span>
         </div>
       </div>
-      <div class="row"><label>封面图</label>
-        <div class="upload-box" @click="triggerUpload">
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />
-          <div v-if="form.img" class="preview-wrap"><img :src="form.img" class="preview-img" /><span class="preview-del" @click.stop="form.img=''">✕</span></div>
-          <div v-else class="upload-placeholder"><div class="upload-icon">+</div><div class="upload-text">点击上传封面图</div></div>
+      <div class="row"><label>图片（可多张）</label>
+        <div class="image-grid">
+          <div v-for="(img, idx) in form.images" :key="idx" class="upload-box" style="width:100%;height:100%;">
+            <div class="preview-wrap"><img :src="img" class="preview-img" /><span class="preview-del" @click.stop="removeImage(idx)">✕</span></div>
+          </div>
+          <div class="upload-box add-box" @click="triggerUpload">
+            <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />
+            <div class="upload-placeholder"><div class="upload-icon">+</div><div class="upload-text">添加图片</div></div>
+          </div>
         </div>
       </div>
-      <el-button class="submit-btn" type="primary" :loading="loading" @click="submit">保存灵感</el-button>
+      <div v-if="editId" class="btn-row">
+        <el-button class="publish-btn" type="primary" :loading="loading" @click="submit(1)">📤 发布</el-button>
+        <el-button class="draft-btn" :loading="loading" @click="submit(0)">💾 保存到草稿</el-button>
+      </div>
+      <el-button v-else class="submit-btn" type="primary" :loading="loading" @click="submit(1)">保存灵感</el-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createInspire, exploreInspiration, uploadFile } from '@/api/inspire'
+import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile } from '@/api/inspire'
 const router = useRouter()
+const route = useRoute()
+const editId = computed(() => route.params.id)
 
 const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
 const loading = ref(false)
-const form = ref({ title: '', tag: '', content: '', img: '' })
+const form = ref({ title: '', tag: '', content: '', images: [] })
 
 // AI 探索状态
 const aiKeyword = ref('')
@@ -223,20 +234,48 @@ const handleFile = async (e) => {
   const fd = new FormData(); fd.append('file', file)
   try {
     const res = await uploadFile(fd)
-    if (res.code === 200 && res.data?.url) form.value.img = 'http://localhost:8083' + res.data.url
+    if (res.code === 200 && res.data?.url) form.value.images.push('http://localhost:8083' + res.data.url)
     else ElMessage.error('上传失败')
   } catch (e) { ElMessage.error('上传失败') }
   e.target.value = ''
 }
 
-const submit = async () => {
+const removeImage = (idx) => { form.value.images.splice(idx, 1) }
+// 编辑模式：预填表单
+onMounted(async () => {
+  if (route.params.id) {
+    document.title = '编辑灵感'
+    try {
+      const res = await getInspireDetail(route.params.id)
+      if (res.data) {
+        form.value.title = res.data.title || ''
+        form.value.tag = res.data.tag || ''
+        form.value.content = res.data.content || ''
+        if (res.data.images && res.data.images.length > 0) {
+          form.value.images = res.data.images
+        } else if (res.data.img) {
+          form.value.images = [res.data.img]
+        }
+      }
+    } catch (e) {}
+  }
+})
+
+const goBack = () => { router.back() }
+const submit = async (status) => {
   if (!form.value.title) return ElMessage.warning('请填写标题')
   if (!form.value.tag) return ElMessage.warning('请选择分类')
   if (!form.value.content) return ElMessage.warning('请填写灵感详情')
   loading.value = true
   try {
-    const res = await createInspire({ ...form.value, status: 1 })
-    ElMessage.success(res.msg || '灵感发布成功')
+    let payload = { ...form.value, status: status !== undefined ? status : 1 }; payload.images = JSON.stringify(payload.images)
+    let res
+    if (editId.value) {
+      res = await updateInspire(editId.value, payload)
+    } else {
+      res = await createInspire(payload)
+    }
+    ElMessage.success(res.msg || (editId.value ? '修改成功' : '发布成功'))
     router.push('/')
   } catch (e) {} finally { loading.value = false }
 }
@@ -269,12 +308,18 @@ const submit = async () => {
 .row { margin-bottom:18px; }
 .row label { display:block; font-size:14px; color:#1d1d1f; margin-bottom:8px; }
 .submit-btn { width:100%; height:46px; border-radius:14px; font-size:16px; background:#409eff; border:none; margin-top:10px; }
-.upload-box { border:2px dashed #dcdfe6; border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:0.25s; }
+.upload-box { border:2px dashed #dcdfe6; border-radius:12px; padding:12px; text-align:center; cursor:pointer; transition:0.25s; }
+.image-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:8px; }
+.add-box { display:flex; align-items:center; justify-content:center; aspect-ratio:1; }
 .upload-box:hover { border-color:#409eff; }
 .upload-placeholder { padding:10px 0; }
 .upload-icon { font-size:32px; color:#c0c4cc; }
 .upload-text { font-size:13px; color:#909399; margin-top:6px; }
 .preview-wrap { position:relative; display:inline-block; }
-.preview-img { max-height:160px; border-radius:8px; }
+.preview-img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; }
 .preview-del { position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:50%; background:#f56c6c; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
+.btn-row { display:flex; gap:10px; margin-top:16px; }
+.publish-btn { flex:1; }
+.draft-btn { flex:1; background:#f5f5f7; color:#1d1d1f; border:none; }
+.draft-btn:hover { background:#e8e8ed; }
 </style>

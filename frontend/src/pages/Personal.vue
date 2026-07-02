@@ -3,7 +3,7 @@
     <div class="top-nav">
       <div class="left-logo" @click="$router.push('/')">🍎</div>
       <div class="right-icons">
-        <div class="icon-item" @click="$router.push('/create')">+</div>
+        <div class="icon-item" @click="$router.push('/edit/' + item.id)">+</div>
         <div class="icon-item" @click="$router.push('/search')">🔍</div>
       </div>
     </div>
@@ -51,7 +51,7 @@
 
     <!-- 草稿列表 -->
     <div class="list-wrap" v-if="activeTab==='drafts'">
-      <div v-for="item in draftList" :key="item.id" class="draft-card" @click="$router.push('/create')">
+      <div v-for="item in draftList" :key="item.id" class="draft-card" @click="$router.push('/edit/' + item.id)">
         <div class="draft-title">{{ item.title || '无标题' }}</div>
         <div class="draft-meta">{{ item.tag }} &middot; {{ formatTime(item.createTime) }}</div>
       </div>
@@ -65,7 +65,7 @@
     </div>
 
     <div class="logout-wrap">
-      <el-button type="text" class="logout-btn" @click="handleLogout">退出登录</el-button>
+      <el-button type="link" class="logout-btn" @click="handleLogout">退出登录</el-button>
     </div>
 
     <!-- 编辑资料对话框 -->
@@ -274,10 +274,11 @@ const switchTab = async (tab) => {
       statList.value[1].num = collectList.value.length
     } catch (e) {}
   }
-  if (tab === 'drafts' && draftList.value.length === 0) {
+  if (tab === 'drafts') {
     try {
       const res = await getMyDrafts()
       draftList.value = res.data || []
+      console.log('[DRAFTS] 加载完成, 数量:', draftList.value.length)
     } catch (e) {}
   }
 }

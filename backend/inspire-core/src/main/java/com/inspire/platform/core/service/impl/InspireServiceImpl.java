@@ -21,7 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Slf4j
 @Service
@@ -36,6 +40,7 @@ public class InspireServiceImpl implements InspireService {
     private final NotificationService notificationService;
     private final MqProducer mqProducer;
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
@@ -52,7 +57,8 @@ public class InspireServiceImpl implements InspireService {
     @Override
     public InspireVO getDetail(Long id, Long loginUserId) {
         InspireMain m = mainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1 || m.getStatus() != 1) throw new BusinessException("灵感不存在");
+        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
+        if (m.getStatus() != 1 && (loginUserId == null || !m.getUserId().equals(loginUserId))) throw new BusinessException("灵感不存在");
         m.setViewCount(m.getViewCount() + 1); mainMapper.updateById(m);
         InspireContent c = contentMapper.selectById(id);
         return toVO(m, loginUserId, c != null ? c.getContent() : "");
@@ -73,7 +79,7 @@ public class InspireServiceImpl implements InspireService {
     public InspireMain create(InspireCreateRequest req, Long userId) {
         InspireMain m = new InspireMain();
         m.setId(nextId()); m.setTitle(req.getTitle());
-        m.setImg(req.getImg() != null ? req.getImg() : ""); m.setTag(req.getTag()); m.setUserId(userId);
+        m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
         // 内容审核：命中敏感词设为待审核（2），否则用请求的status
         String reason = TextFilter.check(req.getTitle());
         if (reason == null) reason = TextFilter.check(req.getContent());
@@ -103,8 +109,29 @@ public class InspireServiceImpl implements InspireService {
         if (req.getTitle() != null) m.setTitle(req.getTitle());
         if (req.getTag() != null) m.setTag(req.getTag());
         if (req.getImg() != null) m.setImg(req.getImg());
+        if (req.getImages() != null) m.setImages(req.getImages());
         if (req.getStatus() != null) m.setStatus(req.getStatus());
         if (req.getPublishCity() != null) m.setPublishCity(req.getPublishCity());
+        
+        // 保存当前版本到历史（仅已发布的灵感）
+        if (m.getStatus() == 1) {
+            try {
+                Integer verNum = jdbcTemplate.queryForObject(
+                    "SELECT COALESCE(MAX(version_number), 0) + 1 FROM inspire_version WHERE inspire_id = ?",
+                    Integer.class, id);
+                InspireContent oldContent = contentMapper.selectById(id);
+                jdbcTemplate.update(
+                    "INSERT INTO inspire_version(id, inspire_id, version_number, title, content, img, images, tag) VALUES(?,?,?,?,?,?,?,?)",
+                    com.inspire.platform.core.service.impl.InspireServiceImpl.nextId(), id, verNum,
+                    m.getTitle() != null ? m.getTitle() : "",
+                    oldContent != null ? oldContent.getContent() : "",
+                    m.getImg() != null ? m.getImg() : "",
+                    m.getImages() != null ? m.getImages() : "",
+                    m.getTag() != null ? m.getTag() : ""
+                );
+                log.info("Version saved: inspireId={}, version={}", id, verNum);
+            } catch (Exception e) { log.warn("Version save failed", e); }
+        }
         mainMapper.updateById(m);
         if (req.getContent() != null) {
             InspireContent c = contentMapper.selectById(id);
@@ -234,6 +261,10 @@ public class InspireServiceImpl implements InspireService {
         vo.setUserId(m.getUserId()); vo.setId(m.getId());
         try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId())); } catch(Exception e) { vo.setNickname(""); }
         vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
+        if (m.getImages() != null && !m.getImages().isEmpty()) {
+            try { vo.setImages(objectMapper.readValue(m.getImages(), new TypeReference<java.util.List<String>>() {})); }
+            catch (Exception e) { log.warn("解析多图失败", e); }
+        }
         vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
         vo.setShareCount(m.getShareCount());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
@@ -262,6 +293,46 @@ public class InspireServiceImpl implements InspireService {
         int off = (page - 1) * size;
         w.last("LIMIT " + size + " OFFSET " + off);
         return mainMapper.selectList(w).stream().map(m -> toVO(m, userId, null)).collect(Collectors.toList());
+    }
+
+    @Override
+    public java.util.List<java.util.Map<String, Object>> listVersions(Long inspireId) {
+        return jdbcTemplate.query(
+            "SELECT id, version_number, title, tag, change_summary, create_time FROM inspire_version WHERE inspire_id = ? ORDER BY version_number DESC",
+            (rs, n) -> {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("id", String.valueOf(rs.getLong("id")));
+                m.put("versionNumber", rs.getInt("version_number"));
+                m.put("title", rs.getString("title"));
+                m.put("tag", rs.getString("tag"));
+                m.put("changeSummary", rs.getString("change_summary"));
+                m.put("createTime", rs.getTimestamp("create_time") != null ?
+                    rs.getTimestamp("create_time").toLocalDateTime().toString() : "");
+                return m;
+            }, inspireId);
+    }
+
+    @Override
+    public Map<String, Object> getVersion(Long versionId) {
+        try {
+            Map<String, Object> m = jdbcTemplate.queryForMap(
+                "SELECT id, inspire_id, version_number, title, content, img, images, tag, create_time FROM inspire_version WHERE id = ?",
+                versionId);
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", String.valueOf(m.get("id")));
+            result.put("inspireId", String.valueOf(m.get("inspire_id")));
+            result.put("versionNumber", m.get("version_number"));
+            result.put("title", m.get("title"));
+            result.put("content", m.get("content"));
+            result.put("img", m.get("img") != null ? m.get("img") : "");
+            result.put("images", m.get("images") != null ? m.get("images") : "");
+            result.put("tag", m.get("tag"));
+            result.put("createTime", m.get("create_time") != null ? m.get("create_time").toString() : "");
+            return result;
+        } catch (Exception e) {
+            log.warn("版本详情查询失败: versionId={}", versionId);
+            return null;
+        }
     }
 
     /** 公开的静态ID生成器 */

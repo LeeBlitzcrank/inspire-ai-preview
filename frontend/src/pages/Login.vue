@@ -45,7 +45,8 @@ const handleLogin = async () => {
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
       if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
-      localStorage.setItem('userId', res.data.userId)
+      const _payload = JSON.parse(atob(res.data.token.split('.')[1]))
+      localStorage.setItem('userId', _payload.sub)
       ElMessage.success('登录成功')
       router.push('/')
     } else {
