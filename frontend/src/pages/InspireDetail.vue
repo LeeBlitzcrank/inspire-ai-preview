@@ -9,7 +9,8 @@
       <div class="img-box"><img :src="detail.img || 'https://picsum.photos/id/102/300/160'" @error="imgFallback" /></div>
       <div class="meta-row">
         <span class="meta-tag">{{ detail.tag }}</span>
-        <span class="meta-user">👤 用户</span>
+        <span class="meta-user">👤 {{ detail.nickname || detail.username || '用户' }}</span>
+        <span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-follow" @click="handleToggleFollow">{{ isFollowing ? '✅ 已关注' : '➕ 关注' }}</span>
       </div>
       <h1 class="title">{{ detail.title }}</h1>
       <div v-if="detail.content" class="desc-wrap">
@@ -107,7 +108,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireDetail, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment } from '@/api/inspire'
+import { getInspireDetail, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing } from '@/api/inspire'
 const route = useRoute(); const router = useRouter()
 const detail = ref({}); const liked = ref(false); const collected = ref(false); const loadErr = ref('')
 
@@ -160,6 +161,20 @@ const handleShare = () => {
 }
 const imgFallback = (e) => { e.target.src = 'https://picsum.photos/id/102/300/160' }
 
+const handleToggleFollow = async () => {
+  if (!isLogin.value) return
+  try {
+    let res
+    if (isFollowing.value) {
+      res = await unfollowUser(detail.value.userId)
+    } else {
+      res = await followUser(detail.value.userId)
+    }
+    if (res.code === 200) isFollowing.value = !isFollowing.value
+    else ElMessage.error(res.msg || '操作失败')
+  } catch (e) {}
+}
+
 const goBack = () => {
   // Use router.back() to preserve navigation context
   router.back()
@@ -176,6 +191,8 @@ const commentsLoading = ref(false)
 const commentPage = ref(1)
 const hasMoreComments = ref(false)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
+const currentUserId = computed(() => localStorage.getItem('userId') || '')
+const isFollowing = ref(false)
 const paragraphs = computed(() => {
   const text = detail.value.content
   if (!text) return []
@@ -259,6 +276,14 @@ const handleCommentClick = (e, item) => {
   }
 }
 
+const checkFollowing = async () => {
+  if (detail.value.userId && String(detail.value.userId) !== currentUserId.value) {
+    try {
+      const res = await getFollowing()
+      isFollowing.value = res.data?.some(u => String(u.id) === String(detail.value.userId)) || false
+    } catch(e) {}
+  }
+}
 const handleDeleteComment = async (commentId) => {
   try {
     const res = await deleteComment(detail.value.id, commentId)
@@ -289,9 +314,9 @@ const formatTime = (t) => {
   return d.toLocaleDateString('zh-CN')
 }
 
-// 详情加载后自动加载评论
+// 详情加载后自动加载评论和关注状态
 watch(() => detail.value.id, (id) => {
-  if (id) loadComments(true)
+  if (id) { loadComments(true); checkFollowing() }
 })
 
 // 调试：回复状态
@@ -311,6 +336,8 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 .meta-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 .meta-tag { font-size:12px; color:#fff; background:#409eff; border-radius:4px; padding:2px 8px; font-weight:400; }
 .meta-user { font-size:13px; color:#909399; }
+.meta-follow { font-size:12px; color:#409eff; cursor:pointer; margin-left:auto; padding:2px 10px; border:1px solid #409eff; border-radius:12px; transition:0.2s; }
+.meta-follow:hover { background:#409eff; color:#fff; }
 .title { font-size:22px; font-weight:600; margin:0 0 12px; color:#1d1d1f; line-height:1.4; }
 .desc-wrap { padding:16px 0 12px; border-top:1px solid #f0f0f0; margin-top:4px; }
 .desc-p { font-size:16px; color:#2c2c2e; line-height:1.75; margin:0 0 10px; text-indent:2em; letter-spacing:0.3px; }

@@ -28,4 +28,7 @@ public class RegisterRequest {
     @Schema(description = "确认密码，需与密码一致", example = "123456")
     @NotBlank(message = "确认密码不能为空")
     private String confirmPassword;
+
+    @Schema(description = "随机昵称（可不传，后端自动生成）", example = "快乐小鱼")
+    private String nickname;
 }

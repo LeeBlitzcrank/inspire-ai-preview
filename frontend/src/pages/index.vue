@@ -13,8 +13,9 @@
       <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
       <span class="tab-item" :class="{active: activeTab==='hot'}" @click="switchTab('hot')">🔥 热门排行</span>
       <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">💡 为你推荐</span>
+      <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='following'}" @click="switchTab('following')">👥 关注</span>
     </div>
-    <p id="category-main-title" class="all-title">{{ activeTab === 'category' ? '全部灵感分类' : (activeTab === 'hot' ? '🔥 热门排行' : '💡 为你推荐') }}</p>
+    <p id="category-main-title" class="all-title">{{ activeTab === 'category' ? '全部灵感分类' : (activeTab === 'hot' ? '🔥 热门排行' : (activeTab === 'recommend' ? '💡 为你推荐' : '👥 我关注的人')) }}</p>
 
     <div v-if="activeTab === 'category'">
     <!-- 一级分类 -->
@@ -68,6 +69,28 @@
     <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
     <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
   </div>
+
+  <!-- 关注：关注的人列表 / 灵感列表 -->
+  <div v-if="activeTab === 'following'" class="feed-list">
+    <div v-if="!selectedFollowee && !loading" class="following-list">
+      <div v-for="u in followingList" :key="u.id" class="follow-user-card" @click="selectFollowee(u)">
+        <span class="follow-user-avatar">{{ u.avatar || (u.nickname ? u.nickname[0] : u.username[0]) || '👤' }}</span>
+        <div class="follow-user-info">
+          <div class="follow-user-name">{{ u.nickname || u.username }}</div>
+          <div class="follow-user-meta">@{{ u.username }}</div>
+        </div>
+        <span class="follow-user-arrow">›</span>
+      </div>
+      <div v-if="followingList.length === 0" class="empty-sub" style="padding:40px 0">💭 还没有关注人</div>
+    </div>
+    <div v-if="selectedFollowee">
+      <div class="back-btn" @click="selectedFollowee = null; inspireList=[]; loadInspireList()">&larr; 返回关注列表</div>
+      <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
+      <div v-if="loading" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
+      <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
+      <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+    </div>
+  </div>
   </div>
 </template>
 <script setup>
@@ -75,17 +98,34 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire, getRecommendList } from '@/api/inspire'
+import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing } from '@/api/inspire'
 const router = useRouter()
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
 const activeTab = ref('category')
 
-const switchTab = (tab) => {
+const switchTab = async (tab) => {
   activeTab.value = tab
   inspireList.value = []
   currentPage.value = 1
   hasMore.value = true
+  selectedFollowee.value = null
   resetCategory()
+  if (tab === 'following') {
+    try {
+      const res = await getFollowing()
+      followingList.value = res.data || []
+    } catch (e) { followingList.value = [] }
+  }
+  loadInspireList()
+}
+const selectedFollowee = ref(null)
+const followingList = ref([])
+
+const selectFollowee = (u) => {
+  selectedFollowee.value = u.id
+  inspireList.value = []
+  hasMore.value = true
+  currentPage.value = 1
   loadInspireList()
 }
 
@@ -148,6 +188,12 @@ const loadInspireList = async () => {
       const res = await getRecommendList({ page: currentPage.value, size: 10 })
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
       if (!res.data || res.data.length < 10) hasMore.value = false
+    } else if (activeTab.value === 'following') {
+      const params = { page: currentPage.value, size: 10 }
+      if (selectedFollowee.value) params.followeeId = selectedFollowee.value
+      const res = await getFollowingFeed(params)
+      if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
+      if (!res.data || res.data.length < 10) hasMore.value = false
     } else if (activeSubItem.value) {
       const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
@@ -201,6 +247,14 @@ const handleCollect = async (targetId) => {
 .tab-item { flex:1; text-align:center; padding:8px 4px; font-size:14px; color:#666; cursor:pointer; border-radius:10px; transition:0.25s; }
 .tab-item.active { background:#fff; color:#409eff; font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
 .feed-list { display:flex; flex-direction:column; gap:16px; }
+.following-list { display:flex; flex-direction:column; gap:10px; }
+.follow-user-card { display:flex; align-items:center; gap:12px; padding:14px 16px; background:#fff; border-radius:14px; cursor:pointer; transition:0.2s; border:1px solid #f0f3f9; }
+.follow-user-card:hover { border-color:#409eff; box-shadow:0 2px 8px rgba(64,158,255,.08); }
+.follow-user-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.follow-user-info { flex:1; min-width:0; }
+.follow-user-name { font-size:15px; font-weight:500; color:#1d1d1f; }
+.follow-user-meta { font-size:12px; color:#909399; margin-top:2px; }
+.follow-user-arrow { font-size:20px; color:#c0c4cc; }
 .all-title { font-size:20px; font-weight:600; color:#1d1d1f; margin:0 0 20px; }
 .category-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
 .category-card { padding:32px 14px; background:#fff; border-radius:20px; text-align:center; cursor:pointer; transition:all 0.26s; animation:fadeUp 0.4s forwards; animation-delay:calc(var(--idx)*65ms); opacity:0; border:1px solid #f0f3f9; }

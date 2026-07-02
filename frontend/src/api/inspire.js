@@ -64,3 +64,10 @@ export const adminApproveInspire = (id) => request.put(`/admin/inspire/${id}/app
 export const adminRejectInspire = (id) => request.put(`/admin/inspire/${id}/reject`)
 
 export const getRecommendList = (params) => request.get('/inspire/public/recommend', { params })
+
+// ===== 关注 =====
+export const followUser = (userId) => request.post(`/inspire/follow/${userId}`)
+export const unfollowUser = (userId) => request.delete(`/inspire/follow/${userId}`)
+export const getFollowing = () => request.get('/inspire/follow/following')
+export const getFollowers = () => request.get('/inspire/follow/followers')
+export const getFollowingFeed = (params) => request.get('/inspire/follow/feed', { params })

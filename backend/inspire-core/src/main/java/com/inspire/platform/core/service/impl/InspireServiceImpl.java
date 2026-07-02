@@ -12,6 +12,7 @@ import com.inspire.platform.common.util.TextFilter;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import com.inspire.platform.core.service.es.EsSyncService;
+import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class InspireServiceImpl implements InspireService {
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
     private final MqProducer mqProducer;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
@@ -194,7 +196,9 @@ public class InspireServiceImpl implements InspireService {
 
     private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
         InspireVO vo = new InspireVO();
-        vo.setId(m.getId()); vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
+        vo.setUserId(m.getUserId()); vo.setId(m.getId());
+        try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId())); } catch(Exception e) { vo.setNickname(""); }
+        vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
         vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
         vo.setPublishCity(m.getPublishCity()); vo.setCreateTime(m.getCreateTime());

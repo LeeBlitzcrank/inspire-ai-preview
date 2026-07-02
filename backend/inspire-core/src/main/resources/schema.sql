@@ -92,3 +92,16 @@ CREATE TABLE IF NOT EXISTS `ai_call_log` (
   PRIMARY KEY (`id`),
   KEY `idx_call_date` (`call_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI调用日志表';
+
+
+-- ========== 用户关注表 ==========
+CREATE TABLE IF NOT EXISTS `user_follow` (
+  `id` BIGINT NOT NULL,
+  `follower_id` BIGINT NOT NULL COMMENT '关注者',
+  `followee_id` BIGINT NOT NULL COMMENT '被关注者',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_follow` (`follower_id`,`followee_id`),
+  KEY `idx_follower` (`follower_id`),
+  KEY `idx_followee` (`followee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';

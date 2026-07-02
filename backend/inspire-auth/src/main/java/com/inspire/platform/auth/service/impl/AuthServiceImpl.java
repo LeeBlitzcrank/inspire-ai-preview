@@ -72,7 +72,7 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.getUsername());
         user.setPassword(PASSWORD_ENCODER.encode(request.getPassword()));
         user.setEmail(request.getEmail());
-        user.setNickname(request.getUsername());
+        user.setNickname(request.getNickname() != null && !request.getNickname().isEmpty() ? request.getNickname() : request.getUsername());
         user.setAvatar("");
         user.setCity("");
         user.setDeleted(0);
@@ -113,7 +113,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User updateUserInfo(Long userId, UserUpdateRequest request) {
         User user = getUserById(userId);
-        if (request.getNickname() != null) user.setNickname(request.getNickname());
+        if (request.getNickname() != null) user.setNickname(request.getNickname().isEmpty() ? user.getUsername() : request.getNickname());
         if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
         if (request.getCity() != null) user.setCity(request.getCity());
         userMapper.updateById(user);

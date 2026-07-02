@@ -81,7 +81,7 @@
         </div>
         <div class="form-row">
           <label>昵称</label>
-          <el-input v-model="editForm.nickname" placeholder="输入昵称" maxlength="20" />
+          <div style="display:flex;gap:8px"><el-input v-model="editForm.nickname" placeholder="输入昵称" maxlength="20" /><el-button size="small" @click="editForm.nickname = randomNickname()">🎲</el-button></div>
         </div>
         <div class="form-row">
           <label>城市</label>
@@ -128,6 +128,7 @@ import { ElMessage } from 'element-plus'
 import { getUserInfo, getMyInspires, getMyCollects, getMyDrafts,
          uncollectInspire, updateUserInfo, changePassword } from '@/api/inspire'
 import { cityOptions, findCityPath } from '@/utils/cityData'
+import { randomNickname } from '@/utils/nickname'
 
 const router = useRouter()
 const userInfo = ref({})

@@ -12,7 +12,10 @@ public class InspireVO {
     @Schema(description = "标题") private String title;
     @Schema(description = "封面图") private String img;
     @Schema(description = "分类") private String tag;
+    @JsonSerialize(using = ToStringSerializer.class)
+    @Schema(description = "发布人ID") private Long userId;
     @Schema(description = "发布人用户名") private String username;
+    @Schema(description = "发布人昵称") private String nickname;
     @Schema(description = "浏览量") private Long viewCount;
     @Schema(description = "点赞数") private Integer likeCount;
     @Schema(description = "收藏数") private Integer collectCount;

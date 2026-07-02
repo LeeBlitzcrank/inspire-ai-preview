@@ -20,10 +20,11 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register } from '@/api/inspire'
+import { randomNickname } from '@/utils/nickname'
 const router = useRouter()
 const loading = ref(false)
 const form = ref({ account: '', email: '', pwd: '', rePwd: '' })

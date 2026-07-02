@@ -140,3 +140,33 @@ docker exec rmq-broker sh mqadmin consumerProgress \
 - 换一个人搜「鸡腿」→ **0 次 API**（全缓存）
 
 
+# 1. 登录获取 token
+TOKEN=$(curl -s -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"112233"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['token'])")
+
+# 2. 关注用户（带上 token）
+curl -X POST "http://localhost:8080/api/inspire/follow/197263636484329473" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. 查看关注流
+curl "http://localhost:8080/api/inspire/follow/feed?page=1&size=10" \
+  -H "Authorization: Bearer $TOKEN"
+
+
+  # 用 TOKEN 关注（从登录接口获取 token，见上文）
+  curl -X POST "http://localhost:8080/api/inspire/follow/197263636484329473" \
+    -H "Authorization: Bearer <token>"
+
+  # 查看我关注的人列表
+  curl "http://localhost:8080/api/inspire/follow/following" \
+    -H "Authorization: Bearer <token>"
+
+
+
+# 用刚才复制的 token 关注
+curl -X POST "http://localhost:8080/api/inspire/follow/197263636484329473" \
+  -H "Authorization: Bearer <eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxOTcyMjI1MDI0NjY4NTA4MTciLCJ1c2VybmFtZSI6ImFkbWluIiwiaWF0IjoxNzgyOTU3ODUxLCJleHAiOjE3ODM1NjI2NTF9.7OiXbevyrZKRpS4tIC8trTHtUFJNkyJTL1YdfGwOK3nb_1no5GEb3JpXtOuncAg1>"
+# 验证是否关注成功
+curl "http://localhost:8080/api/inspire/follow/following" \
+  -H "Authorization: Bearer <粘贴token>"
