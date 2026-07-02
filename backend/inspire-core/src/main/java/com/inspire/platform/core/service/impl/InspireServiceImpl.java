@@ -213,6 +213,17 @@ public class InspireServiceImpl implements InspireService {
     }
 
     private static long seq = 0L, lastTs = -1L;
+
+    @Override
+    public List<InspireVO> recommend(Long userId, int page, int size) {
+        LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
+        w.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
+        w.orderByDesc(InspireMain::getHeat, InspireMain::getCreateTime);
+        int off = (page - 1) * size;
+        w.last("LIMIT " + size + " OFFSET " + off);
+        return mainMapper.selectList(w).stream().map(m -> toVO(m, userId, null)).collect(Collectors.toList());
+    }
+
     /** 公开的静态ID生成器 */
     public static synchronized long nextId() {
         long ts = System.currentTimeMillis();

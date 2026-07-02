@@ -106,6 +106,15 @@ public class InspireController {
         return Result.success("点赞成功", null);
     }
 
+    @Operation(summary = "推荐灵感", description = "基于热度的推荐列表（未来可按用户偏好个性化）")
+    @GetMapping("/public/recommend")
+    public Result<List<InspireVO>> recommend(
+            @RequestHeader(value = "X-Inspire-UserId", required = false) Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.success(inspireService.recommend(userId, page, size));
+    }
+
     @Operation(summary = "取消点赞", description = "取消后点赞数-1")
     @DeleteMapping("/{id}/like")
     public Result<Void> unlike(@PathVariable("id") Long inspireId,

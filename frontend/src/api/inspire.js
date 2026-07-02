@@ -62,3 +62,5 @@ export const deleteComment = (id, commentId) => request.delete(`/inspire/${id}/c
 export const adminPendingList = (params) => request.get('/admin/inspire/pending', { params })
 export const adminApproveInspire = (id) => request.put(`/admin/inspire/${id}/approve`)
 export const adminRejectInspire = (id) => request.put(`/admin/inspire/${id}/reject`)
+
+export const getRecommendList = (params) => request.get('/inspire/public/recommend', { params })

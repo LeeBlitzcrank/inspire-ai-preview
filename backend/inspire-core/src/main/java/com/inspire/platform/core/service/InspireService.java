@@ -9,6 +9,7 @@ public interface InspireService {
 
     /** 公开列表（分页+分类） */
     List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId);
+    List<InspireVO> recommend(Long userId, int page, int size);
 
     /** 公开详情 */
     InspireVO getDetail(Long id, Long loginUserId);

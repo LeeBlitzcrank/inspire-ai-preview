@@ -8,8 +8,15 @@
         <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
-    <p id="category-main-title" class="all-title">全部灵感分类</p>
+    <!-- 选项卡 -->
+    <div class="tab-bar">
+      <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
+      <span class="tab-item" :class="{active: activeTab==='hot'}" @click="switchTab('hot')">🔥 热门排行</span>
+      <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">💡 为你推荐</span>
+    </div>
+    <p id="category-main-title" class="all-title">{{ activeTab === 'category' ? '全部灵感分类' : (activeTab === 'hot' ? '🔥 热门排行' : '💡 为你推荐') }}</p>
 
+    <div v-if="activeTab === 'category'">
     <!-- 一级分类 -->
     <transition name="slide-fade">
       <div id="category-grid-wrap" class="category-grid" v-if="!activeCategory">
@@ -53,15 +60,34 @@
     <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
       </div>
     </transition>
+    </div>
+    <!-- 热门 / 推荐 -->
+  <div v-if="activeTab === 'hot' || activeTab === 'recommend'" class="feed-list">
+    <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
+    <div v-if="loading" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
+    <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
+    <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+  </div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire } from '@/api/inspire'
+import { getInspireList, collectInspire, getRecommendList } from '@/api/inspire'
 const router = useRouter()
+const isLogin = computed(() => !!localStorage.getItem('isLogin'))
+const activeTab = ref('category')
+
+const switchTab = (tab) => {
+  activeTab.value = tab
+  inspireList.value = []
+  currentPage.value = 1
+  hasMore.value = true
+  resetCategory()
+  loadInspireList()
+}
 
 const goCreate = () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
@@ -110,6 +136,29 @@ const selectSubItem = async (item) => {
   } finally { loading.value = false }
 }
 
+const loadInspireList = async () => {
+  if (loading.value) return
+  loading.value = true
+  try {
+    if (activeTab.value === 'hot') {
+      const res = await getInspireList({ sort: 'heat', page: currentPage.value, size: 10 })
+      if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
+      if (!res.data || res.data.length < 10) hasMore.value = false
+    } else if (activeTab.value === 'recommend') {
+      const res = await getRecommendList({ page: currentPage.value, size: 10 })
+      if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
+      if (!res.data || res.data.length < 10) hasMore.value = false
+    } else if (activeSubItem.value) {
+      const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
+      if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
+      if (!res.data || res.data.length < 10) hasMore.value = false
+    } else {
+      hasMore.value = false
+    }
+  } catch (e) {}
+  finally { loading.value = false }
+}
+
 const loadMore = async () => {
   if (loading.value || !hasMore.value) return
   currentPage.value++
@@ -148,6 +197,10 @@ const handleCollect = async (targetId) => {
 .left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
 .right-icons { display:flex; gap:20px; }
 .icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.tab-bar { display:flex; gap:8px; margin-bottom:20px; background:#f4f7fd; border-radius:12px; padding:4px; }
+.tab-item { flex:1; text-align:center; padding:8px 4px; font-size:14px; color:#666; cursor:pointer; border-radius:10px; transition:0.25s; }
+.tab-item.active { background:#fff; color:#409eff; font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.feed-list { display:flex; flex-direction:column; gap:16px; }
 .all-title { font-size:20px; font-weight:600; color:#1d1d1f; margin:0 0 20px; }
 .category-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
 .category-card { padding:32px 14px; background:#fff; border-radius:20px; text-align:center; cursor:pointer; transition:all 0.26s; animation:fadeUp 0.4s forwards; animation-delay:calc(var(--idx)*65ms); opacity:0; border:1px solid #f0f3f9; }
