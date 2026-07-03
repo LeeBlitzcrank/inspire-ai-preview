@@ -5,17 +5,16 @@
       <div id="nav-icon-group" class="right-icons">
         <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
-        <div id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
+        <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
     <!-- 选项卡 -->
     <div class="tab-bar">
-      <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
-      <span class="tab-item" :class="{active: activeTab==='hot'}" @click="switchTab('hot')">🔥 热门排行</span>
-      <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">💡 为你推荐</span>
-      <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='following'}" @click="switchTab('following')">👥 关注</span>
-    </div>
-    <p id="category-main-title" class="all-title">{{ activeTab === 'category' ? '全部灵感分类' : (activeTab === 'hot' ? '🔥 热门排行' : (activeTab === 'recommend' ? '💡 为你推荐' : '👥 我关注的人')) }}</p>
+     <span class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">👇 推荐卡片</span>
+     <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
+     <span class="tab-item" :class="{active: activeTab==='hot'}" @click="switchTab('hot')">🔥 热门排行</span>
+     <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='following'}" @click="switchTab('following')">👥 关注</span>
+   </div>
 
     <div v-if="activeTab === 'category'">
     <!-- 一级分类 -->
@@ -26,7 +25,7 @@
           <div class="cate-icon">{{ item.icon }}</div>
           <div class="cate-name">{{ item.name }}</div>
           <div class="cate-num">{{ item.count }}条灵感</div>
-        </div>
+   </div>
       </div>
     </transition>
 
@@ -63,7 +62,7 @@
     </transition>
     </div>
     <!-- 热门 / 推荐 -->
-  <div v-if="activeTab === 'hot' || activeTab === 'recommend'" class="feed-list">
+  <div v-if="activeTab === 'hot'" class="feed-list">
     <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
     <div v-if="loading" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
     <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
@@ -91,6 +90,26 @@
       <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
     </div>
   </div>
+  <!-- 推荐卡片滑动 -->
+  <div v-if="activeTab === 'recommend'" class="swipe-section" style="padding:10px 0 40px;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <h1 style="font-size:28px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">灵感推荐</h1>
+      <p style="color:#999;font-size:13px;">拖动卡片左右滑动，左滑跳过，右滑收藏</p>
+    </div>
+    <div class="swipe-container" style="width:100%;max-width:360px;height:420px;margin:0 auto;position:relative;overflow:hidden;">
+      <div v-if="currentCard" class="card" :class="currentCard.type"
+           style="width:100%;height:100%;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:500;position:absolute;top:0;left:0;cursor:grab;touch-action:none;user-select:none;box-shadow:0 4px 20px rgba(0,0,0,0.08);z-index:1;"
+           @mousedown="onSwipeStart" @touchstart.passive="onSwipeStart" @mousemove="onSwipeMove" @touchmove="onSwipeMove" @mouseup="onSwipeEnd" @touchend="onSwipeEnd">
+        <div class="like-mark" :style="{position:'absolute',top:'40px',right:'80px',fontSize:'32px',fontWeight:'bold',opacity:likeOpacity,transform:'rotate(-20deg)',pointerEvents:'none',zIndex:2,color:'#52c41a'}">收藏</div>
+        <div class="pass-mark" :style="{position:'absolute',top:'40px',left:'80px',fontSize:'32px',fontWeight:'bold',opacity:passOpacity,transform:'rotate(-20deg)',pointerEvents:'none',zIndex:2,color:'#ff4d4f'}">跳过</div>
+        <span class="card-word" @click.stop="goToCardDetail" style="padding:20px;text-align:center;line-height:1.5;">{{ currentCard.word }}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:30px;margin-top:30px;justify-content:center;">
+      <button class="btn-left" style="width:56px;height:56px;border-radius:50%;border:none;font-size:22px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.1);background:#fff;color:#ff4d4f;display:flex;align-items:center;justify-content:center;" @click="swipeLeft">✕</button>
+      <button class="btn-right" style="width:56px;height:56px;border-radius:50%;border:none;font-size:22px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.1);background:#fff;color:#52c41a;display:flex;align-items:center;justify-content:center;" @click="swipeRight">♥</button>
+    </div>
+  </div>
   </div>
 </template>
 <script setup>
@@ -102,7 +121,7 @@ import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, get
 const router = useRouter()
 const unreadCount = ref(0)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
-const activeTab = ref('category')
+	const activeTab = ref('recommend')
 
 const switchTab = async (tab) => {
   activeTab.value = tab
@@ -237,6 +256,7 @@ const onScroll = () => {
 onMounted(() => {
   window.addEventListener("scroll", onScroll)
   if (isLogin.value) fetchUnreadCount()
+  loadSwipeCards()
 })
 onBeforeUnmount(() => window.removeEventListener("scroll", onScroll))
 
@@ -251,6 +271,108 @@ const handleCollect = async (targetId) => {
     else ElMessage.warning(res.msg || '操作失败')
   } catch (e) { ElMessage.error('网络异常请重试') }
 }
+  const swipeCards = ref([])
+  const currentIndex = ref(0)
+  const currentCard = computed(() => swipeCards.value[currentIndex.value] || null)
+  const likeOpacity = ref(0)
+  const passOpacity = ref(0)
+  const isDragging = ref(false)
+  const startX = ref(0)
+  const offsetX = ref(0)
+  
+  function typeFromTag(tag) {
+    if (tag === '美食' || tag === '饮食') return 'food'
+    if (tag === '运动' || tag === '健身') return 'sport'
+    if (tag === '电影') return 'movie'
+    if (tag === '穿搭') return 'wear'
+    if (tag === '文案') return 'text'
+    return 'food'
+  }
+  
+  async function loadSwipeCards() {
+    try {
+      const res = await getRecommendList({ page: 1, size: 20 })
+      if (res.data && res.data.length > 0) {
+        swipeCards.value = res.data.map(function(i) {
+          return { word: i.title, type: typeFromTag(i.tag), inspireId: i.id }
+        })
+        currentIndex.value = 0
+      }
+    } catch (e) {}
+  }
+  
+  const onSwipeStart = (e) => {
+    isDragging.value = true
+    startX.value = e.clientX || (e.touches && e.touches[0].clientX)
+  }
+  const onSwipeMove = (e) => {
+    if (!isDragging.value) return
+    const cx = e.clientX || (e.touches && e.touches[0].clientX)
+    if (!cx) return
+    offsetX.value = cx - startX.value
+    const card = document.querySelector('.card')
+    if (card) card.style.transform = 'translateX(' + offsetX.value + 'px) rotate(' + (offsetX.value / 12) + 'deg)'
+    likeOpacity.value = offsetX.value > 0 ? Math.min(offsetX.value / 120, 1) : 0
+    passOpacity.value = offsetX.value < 0 ? Math.min(Math.abs(offsetX.value) / 120, 1) : 0
+  }
+  const onSwipeEnd = () => {
+    if (!isDragging.value) return
+    isDragging.value = false
+    const card = document.querySelector('.card')
+    if (!card) return
+    card.style.transition = 'transform 0.3s ease'
+    if (offsetX.value > 100) {
+      // 右滑 → 收藏
+      if (currentCard.value && currentCard.value.inspireId) {
+        collectInspire(currentCard.value.inspireId).then(function(r) {
+          if (r.code === 200) ElMessage.success('收藏成功')
+        }).catch(function() {})
+      }
+      card.style.transform = 'translateX(450px) rotate(25deg)'
+      setTimeout(nextCard, 300)
+    } else if (offsetX.value < -100) {
+      card.style.transform = 'translateX(-450px) rotate(-25deg)'
+      setTimeout(nextCard, 300)
+    } else {
+      card.style.transform = 'translateX(0) rotate(0)'
+      likeOpacity.value = 0; passOpacity.value = 0
+    }
+    offsetX.value = 0
+  }
+  const nextCard = () => {
+    currentIndex.value++
+    if (currentIndex.value >= swipeCards.value.length) currentIndex.value = 0
+    const c = document.querySelector('.card')
+    if (c) { c.style.transition = 'none'; c.style.transform = 'translateX(0) rotate(0)' }
+    likeOpacity.value = 0; passOpacity.value = 0
+  }
+  const goToCardDetail = () => {
+    const c = currentCard.value
+    if (c && c.inspireId) {
+      router.push({ name: 'InspireDetail', params: { id: c.inspireId } })
+    }
+  }
+  const swipeLeft = () => {
+    const card = document.querySelector('.card')
+    if (!card) return
+    card.style.transition = 'transform 0.3s ease'
+    card.style.transform = 'translateX(-450px) rotate(-25deg)'
+    setTimeout(nextCard, 300)
+  }
+  const swipeRight = async () => {
+    if (currentCard.value && currentCard.value.inspireId) {
+      try {
+        const res = await collectInspire(currentCard.value.inspireId)
+        if (res.code === 200) ElMessage.success('收藏成功')
+        else ElMessage.warning(res.msg || '收藏失败')
+      } catch (e) { ElMessage.error('网络异常，收藏失败') }
+    }
+    const card = document.querySelector('.card')
+    if (!card) return
+    card.style.transition = 'transform 0.3s ease'
+    card.style.transform = 'translateX(450px) rotate(25deg)'
+    setTimeout(nextCard, 300)
+  }
 </script>
 <style scoped>
 .index-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
@@ -297,4 +419,12 @@ const handleCollect = async (targetId) => {
 .noti-badge { position:absolute; top:-2px; right:-2px; min-width:16px; height:16px; border-radius:8px; background:#f56c6c; color:#fff; font-size:11px; line-height:16px; text-align:center; padding:0 4px; font-weight:600; pointer-events:none; }
 #icon-noti { position:relative; }
 
+/* Swipe card styles */
+.food{background:#fff1e9;color:#e64340;border:1px solid #ffccc7;}
+.sport{background:#f0fff4;color:#00b42a;border:1px solid #b7eb8f;}
+.movie{background:#e8f4ff;color:#1677ff;border:1px solid #91caff;}
+.wear{background:#fff0f6;color:#eb2f96;border:1px solid #ffadd2;}
+.text{background:#f9f0ff;color:#722ed1;border:1px solid #d3adf7;}
+.btn-left:hover{transform:scale(1.1);}
+.btn-right:hover{transform:scale(1.1);}
 </style>

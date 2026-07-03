@@ -45,6 +45,7 @@ public class InspireServiceImpl implements InspireService {
     private final ObjectMapper objectMapper;
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "publicList", key = "#query.page + ':' + #query.tag + ':' + #query.sort", unless = "#loginUserId != null")
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
         LambdaQueryWrapper<InspireMain> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
@@ -57,6 +58,7 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public InspireVO getDetail(Long id, Long loginUserId) {
         InspireMain m = mainMapper.selectById(id);
         if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
@@ -288,6 +290,7 @@ public class InspireServiceImpl implements InspireService {
     private static long seq = 0L, lastTs = -1L;
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "recommend", key = "#page + ':' + #size", unless = "#userId != null")
     public List<InspireVO> recommend(Long userId, int page, int size) {
         LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
         w.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
@@ -298,6 +301,7 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String, Object>> listVersions(Long inspireId) {
         return jdbcTemplate.query(
             "SELECT id, version_number, title, tag, change_summary, create_time FROM inspire_version WHERE inspire_id = ? ORDER BY version_number DESC",

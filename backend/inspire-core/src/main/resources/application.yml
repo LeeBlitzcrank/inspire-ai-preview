@@ -17,6 +17,8 @@ spring:
   web:
     resources:
       static-locations: file:/tmp/inspire-uploads/
+      cache:
+        period: 86400
   jackson:
     serialization:
       write-dates-as-timestamps: false
