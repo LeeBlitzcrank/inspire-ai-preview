@@ -84,3 +84,13 @@ export const shareInspire = (id) => request.post(`/inspire/${id}/share`)
 export const getInspireVersions = (id) => request.get(`/inspire/${id}/versions`)
 
 export const getInspireVersionDetail = (id, versionId) => request.get('/inspire/' + id + '/versions/' + versionId)
+
+// ===== 收藏夹 =====
+export const createCollectFolder = (name, icon) => request.post('/inspire/collect/folder', { name, icon })
+export const getCollectFolders = () => request.get('/inspire/collect/folders')
+export const deleteCollectFolder = (id) => request.delete(`/inspire/collect/folder/${id}`)
+export const renameCollectFolder = (id, name) => request.put(`/inspire/collect/folder/${id}`, { name })
+export const collectToFolder = (inspireId, folderId) => request.post(`/inspire/collect/${inspireId}/folder`, { folderId })
+export const getCollectListByFolder = (folderId) => request.get('/inspire/collect/list', { params: { folderId } })
+
+export const moveCollectToFolder = (inspireId, folderId) => request.put(`/inspire/collect/${inspireId}/move`, { folderId })

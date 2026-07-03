@@ -14,7 +14,29 @@
     </div>
     <div id="search-input-wrap" class="search-input-wrap">
       <el-input v-model="keyword" placeholder="输入关键词查找灵感" clearable size="large" @keyup.enter="doSearch">
-        <template #append><el-button type="primary" size="large" @click="doSearch">搜索</el-button></template>
+        <template #append><el-button type="primary" size="large" @click="doSearch">搜索</el-button>
+  <!-- 收藏文件夹选择器 -->
+  <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div v-for="f in collectFolders" :key="f.id" class="folder-option"
+           :class="{selected: selectedFolder === f.id}"
+           @click="selectedFolder = f.id"
+           style="flex:1;min-width:100px;padding:12px;border-radius:12px;border:2px solid #e4e7ed;text-align:center;cursor:pointer;">
+        <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
+        <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
+      <el-button size="small" @click="createAndUseCollectFolder">新建</el-button>
+    </div>
+    <div style="margin-top:16px;text-align:right;">
+      <el-button @click="folderDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
+    </div>
+  </el-dialog>
+
+</template>
       </el-input>
     </div>
     <div id="search-result-block" class="result-block" v-if="searched">
@@ -38,13 +60,35 @@
       </div>
     </div>
   </div>
+
+  <!-- 收藏文件夹选择器 -->
+  <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div v-for="f in collectFolders" :key="f.id" class="folder-option"
+           :class="{selected: selectedFolder === f.id}"
+           @click="selectedFolder = f.id"
+           style="flex:1;min-width:100px;padding:12px;border-radius:12px;border:2px solid #e4e7ed;text-align:center;cursor:pointer;">
+        <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
+        <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
+      <el-button size="small" @click="createAndUseCollectFolder">新建</el-button>
+    </div>
+    <div style="margin-top:16px;text-align:right;">
+      <el-button @click="folderDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
+    </div>
+  </el-dialog>
+
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { searchInspires, getInspireList, collectInspire } from '@/api/inspire'
+import { searchInspires, getInspireList, collectInspire, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
 const router = useRouter()
 const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
 const goCreate = () => {
@@ -120,4 +164,7 @@ onMounted(async () => {
 .s-w-60 { width:60%; } .s-w-90 { width:90%; }
 @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 .empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
+
+.folder-option.selected { border-color: #409eff; background: #f0f8ff; }
+.folder-option:hover { border-color: #409eff44; }
 </style>

@@ -1,16 +1,19 @@
 package com.inspire.platform.core.entity;
+
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("collect")
-@Schema(description = "用户收藏记录（分表 collect_0~9，按user_id%10路由）")
-public class CollectAction {
+@TableName("collect_folder")
+@Schema(description = "收藏文件夹")
+public class CollectFolder {
     private Long id;
     private Long userId;
-    private Long inspireId;
-    private Long folderId;
+    private String name;
+    private String icon;
+    private Integer sortOrder;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

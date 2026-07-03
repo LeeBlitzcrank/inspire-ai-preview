@@ -17,7 +17,9 @@ const AdminConfig = () => import('@/pages/admin/AdminConfig.vue')
 const NotFound = () => import('@/pages/NotFound.vue')
 const Notifications = () => import("@/pages/Notifications.vue")
 const Forbidden = () => import('@/pages/Forbidden.vue')
-const ServerError = () => import('@/pages/ServerError.vue')
+	const ServerError = () => import('@/pages/ServerError.vue')
+	const Collections = () => import('@/pages/Collections.vue')
+	const Messages = () => import('@/pages/Messages.vue')
 
 const routes = [
   { path: '/', name: 'Index', component: Index },
@@ -25,6 +27,8 @@ const routes = [
   { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail, meta: { needLogin: true } },
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
   { path: '/notifications', name: 'Notifications', component: Notifications, meta: { needLogin: true } },
+  { path: '/collections', name: 'Collections', component: Collections, meta: { needLogin: true } },
+  { path: '/messages', name: 'Messages', component: Messages, meta: { needLogin: true } },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/create', name: 'Create', component: Create, meta: { needLogin: true } },

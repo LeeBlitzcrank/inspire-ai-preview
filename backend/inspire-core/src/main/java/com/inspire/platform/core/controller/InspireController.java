@@ -1,8 +1,10 @@
 package com.inspire.platform.core.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import com.inspire.platform.common.result.Result;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.InspireMain;
+import com.inspire.platform.core.entity.CollectFolder;
 import com.inspire.platform.core.service.InspireService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "灵感核心", description = "灵感列表、详情、创建、收藏、点赞")
 @RestController
@@ -142,4 +145,85 @@ public class InspireController {
     public Result<java.util.Map<String, Object>> getVersion(@PathVariable Long id, @PathVariable Long versionId) {
         return Result.success(inspireService.getVersion(versionId));
     }
+
+    @PostMapping("/collect/folder")
+    @Operation(summary = "创建收藏文件夹")
+    public Result<CollectFolder> createFolder(@RequestBody Map<String, String> body,
+                                               HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        String name = body.get("name");
+        String icon = body.get("icon");
+        return Result.success(inspireService.createCollectFolder(userId, name, icon));
+    }
+
+    @GetMapping("/collect/folders")
+    @Operation(summary = "收藏文件夹列表")
+    public Result<List<CollectFolder>> folders(HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        return Result.success(inspireService.getCollectFolders(userId));
+    }
+
+    @DeleteMapping("/collect/folder/{id}")
+    @Operation(summary = "删除收藏文件夹")
+    public Result<Void> deleteFolder(@PathVariable("id") Long id, HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        inspireService.deleteCollectFolder(userId, id);
+        return Result.success();
+    }
+
+    @PutMapping("/collect/folder/{id}")
+    @Operation(summary = "重命名收藏文件夹")
+    public Result<Void> renameFolder(@PathVariable("id") Long id, @RequestBody Map<String, String> body,
+                                      HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        String name = body.get("name");
+        inspireService.renameCollectFolder(userId, id, name);
+        return Result.success();
+    }
+
+    @PostMapping("/collect/{id}/folder")
+    @Operation(summary = "收藏到指定文件夹")
+    public Result<Void> collectToFolder(@PathVariable("id") Long inspireId,
+                                         @RequestBody Map<String, Object> body,
+                                         HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
+        inspireService.collectToFolder(userId, inspireId, folderId);
+        return Result.success();
+    }
+
+    @GetMapping("/collect/list")
+    @Operation(summary = "按文件夹获取收藏列表")
+    public Result<List<InspireVO>> collectList(@RequestParam(required = false) Long folderId,
+                                                HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        return Result.success(inspireService.listCollectsByFolder(userId, folderId));
+    }
+
+
+
+    private Long getUserId(HttpServletRequest request) {
+        String userId = request.getHeader("X-Inspire-UserId");
+        return userId != null ? Long.parseLong(userId) : null;
+    }
+
+
+    @PutMapping("/collect/{id}/move")
+    @Operation(summary = "移动收藏到文件夹")
+    public Result<Void> moveCollect(@PathVariable("id") Long inspireId,
+                                     @RequestBody Map<String, Object> body,
+                                     HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) return Result.error(401, "未登录");
+        Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
+        inspireService.moveCollectToFolder(userId, inspireId, folderId);
+        return Result.success();
+    }
+
 }

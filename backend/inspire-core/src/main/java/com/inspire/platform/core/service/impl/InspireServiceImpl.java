@@ -37,6 +37,7 @@ public class InspireServiceImpl implements InspireService {
     private final InspireMainMapper mainMapper;
     private final InspireContentMapper contentMapper;
     private final CollectMapper collectMapper;
+    private final CollectFolderMapper collectFolderMapper;
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
     private final NotificationService notificationService;
@@ -58,7 +59,6 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public InspireVO getDetail(Long id, Long loginUserId) {
         InspireMain m = mainMapper.selectById(id);
         if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
@@ -157,12 +157,18 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void collect(Long userId, Long inspireId) {
+        collectToFolder(userId, inspireId, null);
+    }
+
+    @Override @Transactional
+    public void collectToFolder(Long userId, Long inspireId, Long folderId) {
         ShardContext.setByUserId(userId);
         try {
             if (collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId)) != null)
                 throw new BusinessException("已收藏");
             CollectAction a = new CollectAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
+            if (folderId != null) a.setFolderId(folderId);
             collectMapper.insert(a);
         } finally { ShardContext.clear(); }
         InspireMain inspireForMsg = mainMapper.selectById(inspireId);
@@ -350,4 +356,94 @@ public class InspireServiceImpl implements InspireService {
         lastTs = ts;
         return ((ts - 1735689600000L) << 22) | (1L << 12) | 1L;
     }
+
+    @Override
+    public List<CollectFolder> getCollectFolders(Long userId) {
+        return collectFolderMapper.selectList(Wrappers.lambdaQuery(CollectFolder.class)
+                .eq(CollectFolder::getUserId, userId).orderByAsc(CollectFolder::getSortOrder));
+    }
+
+    @Override @Transactional
+    public CollectFolder createCollectFolder(Long userId, String name, String icon) {
+        CollectFolder f = new CollectFolder();
+        f.setId(nextId()); f.setUserId(userId); f.setName(name);
+        f.setIcon(icon != null ? icon : "📁"); f.setSortOrder(0);
+        collectFolderMapper.insert(f);
+        return f;
+    }
+
+    @Override @Transactional
+    public void deleteCollectFolder(Long userId, Long folderId) {
+        CollectFolder f = collectFolderMapper.selectById(folderId);
+        if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
+        collectFolderMapper.deleteById(folderId);
+        // 将该文件夹下的收藏记录 folder_id 置空
+        for (int i = 0; i < 10; i++) {
+            try {
+                jdbcTemplate.update("UPDATE collect_" + i + " SET folder_id = NULL WHERE folder_id = ?", folderId);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @Override @Transactional
+    public void renameCollectFolder(Long userId, Long folderId, String name) {
+        CollectFolder f = collectFolderMapper.selectById(folderId);
+        if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
+        f.setName(name);
+        collectFolderMapper.updateById(f);
+    }
+
+    @Override
+    public List<InspireVO> listCollectsByFolder(Long userId, Long folderId) {
+        ShardContext.setByUserId(userId);
+        try {
+            List<CollectAction> collects;
+            if (folderId != null && folderId > 0) {
+                collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
+                        .eq(CollectAction::getUserId, userId)
+                        .eq(CollectAction::getFolderId, folderId)
+                        .orderByDesc(CollectAction::getCreateTime));
+            } else {
+                collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
+                        .eq(CollectAction::getUserId, userId)
+                        .isNull(CollectAction::getFolderId)
+                        .orderByDesc(CollectAction::getCreateTime));
+            }
+            if (collects.isEmpty()) return List.of();
+            List<Long> ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
+            // 查 inspire_main 前清除分片（inspire_main 不分表）
+            ShardContext.clear();
+            List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                    .in(InspireMain::getId, ids));
+            Map<Long, InspireMain> map = mains.stream().collect(Collectors.toMap(InspireMain::getId, m -> m));
+            List<InspireVO> result = new ArrayList<>();
+            for (CollectAction c : collects) {
+                InspireMain m = map.get(c.getInspireId());
+                if (m != null) {
+                    // toVO 内部需要分片查询（collect/like），所以恢复 userId 分片
+                    ShardContext.setByUserId(userId);
+                    InspireVO vo = toVO(m, userId, null);
+                    vo.setCollected(true);
+                    result.add(vo);
+                }
+            }
+            return result;
+        } finally { ShardContext.clear(); }
+    }
+
+
+    @Override @Transactional
+    public void moveCollectToFolder(Long userId, Long inspireId, Long folderId) {
+        ShardContext.setByUserId(userId);
+        try {
+            CollectAction a = collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
+                    .eq(CollectAction::getUserId, userId)
+                    .eq(CollectAction::getInspireId, inspireId));
+            if (a != null) {
+                a.setFolderId(folderId);
+                collectMapper.updateById(a);
+            }
+        } finally { ShardContext.clear(); }
+    }
+
 }

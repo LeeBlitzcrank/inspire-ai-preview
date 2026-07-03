@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/backend/inspire-core/src/main/resources/schema.sql" value="0874e0db-2061-4cfb-96f2-e801ae1106a6" />
+  </component>
+</project>

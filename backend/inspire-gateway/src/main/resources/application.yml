@@ -54,6 +54,14 @@ spring:
             - Path=/api/admin/**
           filters:
             - StripPrefix=1
+
+        - id: inspire-message
+          uri: ${routes.core-service:http://localhost:8083}
+          predicates:
+            - Path=/api/message/**
+          filters:
+            - StripPrefix=1
+
         # 搜索服务
         - id: inspire-search
           uri: ${routes.search-service:http://localhost:8086}

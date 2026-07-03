@@ -18,7 +18,7 @@
       <div class="meta-row">
         <span class="meta-tag">{{ detail.tag }}</span>
         <span class="meta-user">👤 {{ detail.nickname || detail.username || '用户' }}</span>
-        <span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-follow" @click="handleToggleFollow">{{ isFollowing ? '✅ 已关注' : '➕ 关注' }}</span>
+        <span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-follow" @click="handleToggleFollow">{{ isFollowing ? '✅ 已关注' : '➕ 关注' }}</span><span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-msg" @click="goChat(detail.userId)" style="font-size:12px;color:#6366f1;cursor:pointer;padding:2px 10px;border:1px solid #6366f1;border-radius:12px;margin-left:6px;">💬 私信</span>
       </div>
       <h1 class="title">{{ detail.title }}</h1>
       <div v-if="detail.content" class="desc-wrap">
@@ -33,7 +33,7 @@
       </div>
       <div class="action-row">
         <div class="action-btn" :class="{ active: liked }" @click="handleLike">⭐ {{ detail.likeCount || 0 }}</div>
-        <div class="action-btn" :class="{ active: collected }" @click="handleCollect">🔖 {{ detail.collectCount || 0 }}</div>
+        <div class="action-btn" :class="{ active: collected }" @click="toggleCollect">🔖 {{ detail.collectCount || 0 }}</div>
         <div v-if="isLogin && String(detail.userId) === currentUserId" class="action-btn" @click="goEdit">✏️ 编辑</div>
         <div class="action-btn" @click="handleShare">🔗 {{ detail.shareCount || 0 }}</div>
       </div>
@@ -154,12 +154,35 @@
       <el-link type="primary" @click="$router.push('/login')">登录后发表评论</el-link>
     </div>
   </div>
+
+    <!-- 收藏文件夹选择器 -->
+    <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div v-for="f in collectFolders" :key="f.id" class="folder-option"
+             :class="{selected: selectedFolder === f.id}"
+             @click="selectedFolder = f.id"
+             style="flex:1;min-width:100px;padding:12px;border-radius:12px;border:2px solid #e4e7ed;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
+          <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
+        <el-button size="small" @click="createAndUseFolder">新建</el-button>
+      </div>
+      <div style="margin-top:16px;text-align:right;">
+        <el-button @click="folderDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
+      </div>
+    </el-dialog>
+
 </template>
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing, getInspireVersions, getInspireVersionDetail } from '@/api/inspire'
+import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing, getInspireVersions, getInspireVersionDetail, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
+import { startConversation } from '@/api/message'
 const route = useRoute(); const router = useRouter()
 const detail = ref({}); const liked = ref(false); const collected = ref(false); const loadErr = ref('')
 
@@ -442,6 +465,59 @@ watch(() => detail.value.id, (id) => {
 watch(replyToId, (v) => { console.log('[回复] watch replyToId:', v); })
 watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 
+
+const folderDialogVisible = ref(false)
+const collectFolders = ref([])
+const selectedFolder = ref(null)
+const newFolderName = ref('')
+const loadCollectFolders = async () => {
+  try { const res = await getCollectFolders(); collectFolders.value = res.data || [] }
+  catch (e) { collectFolders.value = [] }
+}
+const createAndUseFolder = async () => {
+  if (!newFolderName.value.trim()) return
+  try { const res = await createCollectFolder(newFolderName.value.trim()); collectFolders.value.push(res.data); selectedFolder.value = res.data.id; newFolderName.value = ''; ElMessage.success('创建成功') }
+  catch (e) { ElMessage.error('创建失败') }
+}
+const confirmCollectToFolder = async () => {
+  try { await collectToFolder(detail.value.id, selectedFolder.value); ElMessage.success('已收藏到文件夹'); folderDialogVisible.value = false; detail.value.collected = true }
+  catch (e) { ElMessage.error('收藏失败') }
+}
+// 覆盖收藏按钮行为
+const toggleCollect = async () => {
+  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (detail.value.collected) {
+    try { await uncollectInspire(detail.value.id); detail.value.collected = false; ElMessage.success('已取消收藏') }
+    catch (e) { ElMessage.error('操作失败') }
+  } else {
+    await loadCollectFolders()
+    if (collectFolders.value.length === 0) {
+      // 没有文件夹时自动创建默认文件夹
+      try {
+        await createCollectFolder('默认收藏')
+        await loadCollectFolders()
+      } catch (e) {}
+    }
+    if (collectFolders.value.length > 0) {
+      selectedFolder.value = collectFolders.value[0].id
+      folderDialogVisible.value = true
+    } else {
+      try { await collectInspire(detail.value.id); detail.value.collected = true; ElMessage.success('收藏成功') }
+      catch (e) { ElMessage.error('收藏失败') }
+    }
+  }
+}
+
+
+const goChat = async (userId) => {
+  try {
+    const res = await startConversation(userId)
+    if (res.data && res.data.id) {
+      router.push('/messages?convId=' + res.data.id)
+    }
+  } catch (e) {}
+}
+
 </script>
 <style scoped>
 .detail-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 24px; }
@@ -534,4 +610,7 @@ watch(replyToName, (v) => { console.log('[回复] watch replyToName:', v); })
 .ver-num { font-weight:600; color:#409eff; min-width:28px; }
 .ver-time { color:#909399; min-width:80px; }
 .ver-title { color:#1d1d1f; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.folder-option.selected { border-color: #409eff; background: #f0f8ff; }
+.folder-option:hover { border-color: #409eff44; }
 </style>

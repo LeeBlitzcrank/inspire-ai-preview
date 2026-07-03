@@ -38,11 +38,21 @@ public interface InspireService {
     void unlike(Long userId, Long inspireId);
 
     /** 分享 */
-    void share(Long userId, Long inspireId);    List<InspireVO> listMyCollects(Long userId);
+    void share(Long userId, Long inspireId);
+    List<InspireVO> listMyCollects(Long userId);
 
     /** 版本历史列表 */
     java.util.List<java.util.Map<String, Object>> listVersions(Long inspireId);
 
     /** 版本详情 */
     java.util.Map<String, Object> getVersion(Long versionId);
+
+    /** 收藏文件夹 */
+    List<com.inspire.platform.core.entity.CollectFolder> getCollectFolders(Long userId);
+    com.inspire.platform.core.entity.CollectFolder createCollectFolder(Long userId, String name, String icon);
+    void deleteCollectFolder(Long userId, Long folderId);
+    void renameCollectFolder(Long userId, Long folderId, String name);
+    void collectToFolder(Long userId, Long inspireId, Long folderId);
+    void moveCollectToFolder(Long userId, Long inspireId, Long folderId);
+    List<com.inspire.platform.core.dto.InspireVO> listCollectsByFolder(Long userId, Long folderId);
 }

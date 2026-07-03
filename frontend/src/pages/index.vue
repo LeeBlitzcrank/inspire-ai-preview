@@ -5,6 +5,7 @@
       <div id="nav-icon-group" class="right-icons">
         <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
+        <div id="icon-message" class="icon-item" @click="$router.push('/messages')" style="position:relative;">💬</div>
         <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
@@ -78,7 +79,8 @@
           <div class="follow-user-name">{{ u.nickname || u.username }}</div>
           <div class="follow-user-meta">@{{ u.username }}</div>
         </div>
-        <span class="follow-user-arrow">›</span>
+        <span class="follow-user-arrow" @click.stop="handleMsgFromFollow(u)" style="color:#6366f1;font-size:12px;border:1px solid #6366f1;border-radius:8px;padding:3px 8px;margin-right:6px;cursor:pointer;">💬 私信</span>
+        <span class="follow-user-arrow" style="font-size:18px;">›</span>
       </div>
       <div v-if="followingList.length === 0" class="empty-sub" style="padding:40px 0">💭 还没有关注人</div>
     </div>
@@ -111,13 +113,36 @@
     </div>
   </div>
   </div>
+
+  <!-- 收藏文件夹选择器 -->
+  <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div v-for="f in collectFolders" :key="f.id" class="folder-option"
+           :class="{selected: selectedFolder === f.id}"
+           @click="selectedFolder = f.id"
+           style="flex:1;min-width:100px;padding:12px;border-radius:12px;border:2px solid #e4e7ed;text-align:center;cursor:pointer;">
+        <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
+        <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
+      <el-button size="small" @click="createAndUseCollectFolder">新建</el-button>
+    </div>
+    <div style="margin-top:16px;text-align:right;">
+      <el-button @click="folderDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
+    </div>
+  </el-dialog>
+
 </template>
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount } from '@/api/inspire'
+import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
+import { startConversation } from '@/api/message'
 const router = useRouter()
 const unreadCount = ref(0)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))
@@ -278,6 +303,10 @@ const handleCollect = async (targetId) => {
   const passOpacity = ref(0)
   const isDragging = ref(false)
   const startX = ref(0)
+const collectFolders = ref([])
+const selectedFolder = ref(null)
+const folderDialogVisible = ref(false)
+const newFolderName = ref('')
   const offsetX = ref(0)
   
   function typeFromTag(tag) {
@@ -362,10 +391,18 @@ const handleCollect = async (targetId) => {
   const swipeRight = async () => {
     if (currentCard.value && currentCard.value.inspireId) {
       try {
-        const res = await collectInspire(currentCard.value.inspireId)
-        if (res.code === 200) ElMessage.success('收藏成功')
-        else ElMessage.warning(res.msg || '收藏失败')
-      } catch (e) { ElMessage.error('网络异常，收藏失败') }
+        await loadCollectFolders()
+        if (collectFolders.value.length === 0) {
+          try { await createCollectFolder('默认收藏'); await loadCollectFolders() } catch (e) {}
+        }
+        if (collectFolders.value.length > 0) {
+          await collectToFolder(currentCard.value.inspireId, collectFolders.value[0].id)
+          ElMessage.success('已收藏到 ' + collectFolders.value[0].name)
+        } else {
+          const res = await collectInspire(currentCard.value.inspireId)
+          if (res && res.code === 200) ElMessage.success('收藏成功')
+        }
+      } catch (e) { ElMessage.error('收藏失败') }
     }
     const card = document.querySelector('.card')
     if (!card) return
@@ -373,6 +410,18 @@ const handleCollect = async (targetId) => {
     card.style.transform = 'translateX(450px) rotate(25deg)'
     setTimeout(nextCard, 300)
   }
+
+const handleMsgFromFollow = async (u) => {
+  const otherId = u.userId || u.id
+  if (!otherId) return
+  try {
+    const res = await startConversation(otherId)
+    if (res.data && res.data.id) {
+      router.push('/messages?convId=' + res.data.id + '&direct=1')
+    }
+  } catch (e) {}
+}
+
 </script>
 <style scoped>
 .index-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
@@ -427,4 +476,7 @@ const handleCollect = async (targetId) => {
 .text{background:#f9f0ff;color:#722ed1;border:1px solid #d3adf7;}
 .btn-left:hover{transform:scale(1.1);}
 .btn-right:hover{transform:scale(1.1);}
+
+.folder-option.selected { border-color: #409eff; background: #f0f8ff; }
+.folder-option:hover { border-color: #409eff44; }
 </style>

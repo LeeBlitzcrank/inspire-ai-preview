@@ -1,3 +1,4 @@
+use inspire_ai_preview;
 -- =============================================
 -- 灵感核心服务 自动建表
 -- safe: CREATE IF NOT EXISTS + continue-on-error
@@ -105,3 +106,44 @@ CREATE TABLE IF NOT EXISTS `user_follow` (
   KEY `idx_follower` (`follower_id`),
   KEY `idx_followee` (`followee_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
+
+-- ========== 收藏文件夹 collect_folder ==========
+CREATE TABLE IF NOT EXISTS `collect_folder` (
+  `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `name` VARCHAR(50) NOT NULL,
+  `icon` VARCHAR(10) DEFAULT '📁', `sort_order` INT DEFAULT 0,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE collect_0 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_1 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_2 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_3 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_4 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_5 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_6 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_7 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_8 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+ALTER TABLE collect_9 ADD COLUMN folder_id BIGINT NULL AFTER inspire_id;
+
+-- ========== 私信系统 ==========
+CREATE TABLE IF NOT EXISTS `message_conversation` (
+  `id` BIGINT NOT NULL, `user1_id` BIGINT NOT NULL, `user2_id` BIGINT NOT NULL,
+  `last_content` VARCHAR(500) DEFAULT '', `last_time` DATETIME,
+  `unread_user1` INT DEFAULT 0, `unread_user2` INT DEFAULT 0,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_users` (`user1_id`, `user2_id`),
+  KEY `idx_user1` (`user1_id`), KEY `idx_user2` (`user2_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `message` (
+  `id` BIGINT NOT NULL, `conversation_id` BIGINT NOT NULL,
+  `from_user_id` BIGINT NOT NULL, `to_user_id` BIGINT NOT NULL,
+  `content` VARCHAR(1000) NOT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_conversation` (`conversation_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

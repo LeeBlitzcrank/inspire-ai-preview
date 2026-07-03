@@ -38,7 +38,7 @@
     <div class="tab-bar">
       <div class="tab-item" :class="{active: activeTab==='published'}" @click="switchTab('published')">我的发布</div>
       <div class="tab-item" :class="{active: activeTab==='drafts'}" @click="switchTab('drafts')">我的草稿</div>
-      <div class="tab-item" :class="{active: activeTab==='collects'}" @click="switchTab('collects')">我的收藏</div>
+      <div class="tab-item" :class="{active: activeTab==='collects'}" @click="switchTab('collects')">我的收藏夹 <span style="font-size:11px;color:#409eff;cursor:pointer;" @click.stop="$router.push('/collections')">管理</span></div>
     </div>
 
     <div v-if="loading" class="empty-sub"><div v-for="n in 3" :key="n" class="skeleton-card" style="padding:20px"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div><div class="s-line s-w-40"></div></div></div>
@@ -93,7 +93,10 @@
       <template #footer>
         <el-button @click="showProfileDialog = false">取消</el-button>
         <el-button type="primary" :loading="savingProfile" @click="handleSaveProfile">保存</el-button>
-      </template>
+      
+    <!-- 导航入口已移除 -->
+
+</template>
     </el-dialog>
 
     <!-- 修改密码对话框 -->
@@ -115,9 +118,15 @@
       <template #footer>
         <el-button @click="showPwdDialog = false">取消</el-button>
         <el-button type="primary" :loading="savingPwd" @click="handleChangePassword">确认修改</el-button>
-      </template>
+      
+    <!-- 导航入口已移除 -->
+
+</template>
     </el-dialog>
   </div>
+
+    <!-- 导航入口已移除 -->
+
 </template>
 
 <script setup>
@@ -137,6 +146,7 @@ const draftList = ref([])
 const collectList = ref([])
 const loading = ref(false)
 const activeTab = ref('published')
+const followingList = ref([])
 
 const statList = ref([
   { id: 1, num: 0, label: '总发布' },
@@ -337,6 +347,21 @@ const handleLogout = () => {
   localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser')
   ElMessage.success('已退出登录'); router.push('/login')
 }
+
+const goChat = async (u) => {
+  try {
+    const res = await startConversation(u.userId || u.id)
+    if (res.data && res.data.id) {
+      router.push('/messages?convId=' + res.data.id)
+    }
+  } catch (e) {}
+}
+
+
+const selectFollowee = (u) => {
+  router.push({ name: 'Search', query: { userId: u.userId || u.id } })
+}
+
 </script>
 
 <style scoped>
