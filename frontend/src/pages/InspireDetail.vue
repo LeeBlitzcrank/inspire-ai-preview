@@ -6,9 +6,9 @@
       <div class="placeholder"></div>
     </div>
     <div v-if="detail.id" id="detail-main-card" class="main-card">
-      <div v-if="!images.length" class="img-box"><img :src="detail.img || 'https://picsum.photos/id/102/300/160'" @error="imgFallback" /></div>
+      <div v-if="!images.length" class="img-box"><img loading="lazy" :src="detail.img || 'https://picsum.photos/id/102/300/160'" @error="imgFallback" /></div>
       <div v-else class="carousel-wrap">
-        <img :src="images[curImage]" class="carousel-img" @error="imgFallback" />
+        <img loading="lazy" :src="images[curImage]" class="carousel-img" @error="imgFallback" />
         <div v-if="images.length > 1" class="carousel-nav">
           <span class="carousel-arrow left" @click="prevImage">‹</span>
           <div class="carousel-dots"><span v-for="(_,i) in images" :key="i" class="dot" :class="{active:i===curImage}" @click="curImage=i"></span></div>
@@ -261,7 +261,6 @@ const handleToggleFollow = async () => {
 }
 
 const goBack = () => {
-  // Use router.back() to preserve navigation context
   router.back()
 }
 

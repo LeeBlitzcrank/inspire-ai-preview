@@ -3,7 +3,7 @@
     <div class="top-nav">
       <div class="left-logo" @click="$router.push('/')">🍎</div>
       <div class="right-icons">
-        <div class="icon-item" @click="$router.push('/edit/' + item.id)">+</div>
+        <div class="icon-item" @click="$router.push('/create')">✨</div>
         <div class="icon-item" @click="$router.push('/search')">🔍</div>
       </div>
     </div>

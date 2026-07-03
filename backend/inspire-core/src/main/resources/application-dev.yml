@@ -5,7 +5,10 @@ spring:
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 3000
+      max-lifetime: 1800000
 logging:
   level:
     com.inspire: debug

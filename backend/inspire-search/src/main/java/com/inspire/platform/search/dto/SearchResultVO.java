@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 @Data @Schema(description = "搜索结果项")
 public class SearchResultVO {
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
     @Schema(description = "灵感ID", example = "197197582563282945") private Long id;
     @Schema(description = "灵感标题", example = "鸡腿的五种神仙吃法") private String title;
     @Schema(description = "封面图") private String img;

@@ -39,3 +39,5 @@ rocketmq:
 inspire:
   upload:
     dir: /tmp/inspire-uploads
+  redis:
+    ttl-seconds: 30

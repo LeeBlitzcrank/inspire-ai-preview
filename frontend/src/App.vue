@@ -1,6 +1,8 @@
 <template>
   <router-view v-slot="{ Component, route }">
-    <component :is="Component" :key="route.fullPath" />
+    <transition name="page">
+      <component :is="Component" :key="route.fullPath" />
+    </transition>
   </router-view>
   <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
   <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
@@ -26,4 +28,21 @@ onBeforeUnmount(() => {
 .offline-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#f56c6c; color:#fff; text-align:center; padding:6px; font-size:13px; }
 .back-top { position:fixed; right:16px; bottom:80px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.9); color:#909399; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; z-index:999; transition:all 0.25s; backdrop-filter:blur(4px); box-shadow:0 1px 6px rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.05); }
 .back-top:hover { color:#606266; border-color:#c0c4cc; box-shadow:0 2px 10px rgba(0,0,0,.12); }
+</style>
+
+<style>
+/* 页面过渡动画 */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-3px);
+}
 </style>

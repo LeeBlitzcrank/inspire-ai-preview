@@ -29,7 +29,7 @@
       <div v-if="loadingHot" class="hot-card-list"><div v-for="n in 3" :key="n" class="hot-card"><div class="card-img skeleton-img"></div><div class="card-content"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div></div></div></div>
       <div v-else class="hot-card-list">
         <div class="hot-card" v-for="item in hotList" :key="item.id" @click="goDetail(item.id)">
-          <div class="card-img"><img :src="item.img || 'https://picsum.photos/id/102/300/160'" /></div>
+          <div class="card-img"><img loading="lazy" :src="item.img || 'https://picsum.photos/id/102/300/160'" /></div>
           <div class="card-content">
             <div class="card-top"><h3 class="card-title">{{ item.title }}</h3><span class="heat">{{ item.heat }} 热度</span></div>
             <p class="card-desc">{{ item.content || item.title }}</p>
@@ -57,13 +57,25 @@ const goPersonal = () => {
 }
 const keyword = ref(''); const searched = ref(false); const searchResult = ref([])
 const hotList = ref([]); const loadingHot = ref(false)
+const hasMore = ref(true)
+const searchAfter = ref('')
 
-const doSearch = async () => {
+const doSearch = async (loadMore) => {
   if (!keyword.value.trim()) return ElMessage.warning('请输入搜索关键词')
-  searched.value = true; searchResult.value = []
+  searched.value = true
+  if (!loadMore) { searchResult.value = []; searchAfter.value = '' }
   try {
-    const res = await searchInspires({ keyword: keyword.value, page: 1, size: 20 })
-    searchResult.value = res.data || []
+    const params = { keyword: keyword.value, size: 20 }
+    if (searchAfter.value) params.searchAfter = searchAfter.value
+    const res = await searchInspires(params)
+    if (res.data && res.data.length > 0) {
+      searchResult.value.push(...res.data)
+      const last = res.data[res.data.length - 1]
+      searchAfter.value = (last.heat || 0) + '_' + (last.id || '')
+      hasMore.value = res.data.length >= 20
+    } else {
+      hasMore.value = false
+    }
   } catch (e) {}
 }
 const handleCollect = async (id) => {

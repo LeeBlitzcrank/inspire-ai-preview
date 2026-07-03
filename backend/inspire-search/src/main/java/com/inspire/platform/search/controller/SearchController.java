@@ -25,7 +25,8 @@ public class SearchController {
             @Parameter(description = "搜索关键词", example = "鸡腿") @RequestParam String keyword,
             @Parameter(description = "分类筛选", example = "美食") @RequestParam(required = false) String tag,
             @Parameter(description = "页码", example = "1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数", example = "20") @RequestParam(defaultValue = "20") int size) {
-        return Result.success(searchServiceManager.search(keyword, tag, page, size));
+            @Parameter(description = "每页条数", example = "20") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "游标(search_after)，格式: heat_id") @RequestParam(required = false) String searchAfter) {
+        return Result.success(searchServiceManager.search(keyword, tag, page, size, searchAfter));
     }
 }

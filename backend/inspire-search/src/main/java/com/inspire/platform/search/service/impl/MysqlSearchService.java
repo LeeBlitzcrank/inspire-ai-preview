@@ -19,7 +19,7 @@ public class MysqlSearchService implements SearchService {
     }
 
     @Override
-    public List<SearchResultVO> search(String keyword, String tag, int page, int size) {
+    public List<SearchResultVO> search(String keyword, String tag, int page, int size, String searchAfter) {
         int offset = (page - 1) * size;
         String like = "%" + keyword + "%";
 

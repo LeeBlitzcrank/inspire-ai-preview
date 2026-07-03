@@ -67,7 +67,7 @@
       <div class="row"><label>图片（可多张）</label>
         <div class="image-grid">
           <div v-for="(img, idx) in form.images" :key="idx" class="upload-box" style="width:100%;height:100%;">
-            <div class="preview-wrap"><img :src="img" class="preview-img" /><span class="preview-del" @click.stop="removeImage(idx)">✕</span></div>
+            <div class="preview-wrap"><img loading="lazy" :src="img" class="preview-img" /><span class="preview-del" @click.stop="removeImage(idx)">✕</span></div>
           </div>
           <div class="upload-box add-box" @click="triggerUpload">
             <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />

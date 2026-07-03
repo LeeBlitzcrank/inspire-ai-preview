@@ -41,7 +41,7 @@ public class EsSearchService implements SearchService {
     }
 
     @Override
-    public List<SearchResultVO> search(String keyword, String tag, int page, int size) {
+    public List<SearchResultVO> search(String keyword, String tag, int page, int size, String searchAfter) {
         try {
             Request req = new Request("POST", "/" + INDEX + "/_search");
             req.setJsonEntity(buildQuery(keyword, tag, (page - 1) * size, size));
