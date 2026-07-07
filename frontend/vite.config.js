@@ -7,6 +7,10 @@ export default defineConfig({
     alias: { '@': '/src' }
   },
   server: {
+/*    allowedHosts: true, // 放行任意外部域名
+    host: "0.0.0.0",
+    port: 5173,*/
+    base: 'https://github.com/LeeBlitzcrank/inspire-ai-preview',
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
