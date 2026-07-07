@@ -10,7 +10,7 @@ public class RedisConfig {
     @Bean
     public JedisPool jedisPool(@Value("${redis.host:localhost}") String host,
                                 @Value("${redis.port:6379}") int port,
-                                @Value("${redis.password:123456}") String password) {
+                                @Value("${redis.password:}") String password) {
         JedisPoolConfig cfg = new JedisPoolConfig();
         cfg.setMaxTotal(10);
         cfg.setMaxIdle(5);

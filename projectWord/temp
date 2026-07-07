@@ -400,3 +400,8 @@ git add .
 git commit -m "fix: 环境变量化敏感配置，清理 .env 跟踪"
 git push
 
+
+cd "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview"
+git add .
+git commit -m "fix: 全部敏感配置环境变量化 + .gitignore"
+git push
