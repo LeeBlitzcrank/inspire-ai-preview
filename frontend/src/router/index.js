@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Index from '@/pages/Index.vue'
+import Index from '@/pages/index.vue'
 const Search = () => import('@/pages/Search.vue')
 const InspireDetail = () => import('@/pages/InspireDetail.vue')
 const Personal = () => import('@/pages/Personal.vue')
