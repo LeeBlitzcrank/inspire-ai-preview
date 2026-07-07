@@ -1,10 +1,30 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+// 生产环境使用内网穿透地址，开发环境使用 Vite proxy
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
 const service = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   timeout: 15000
 })
+
+// 生产环境下，将后端返回的 localhost:8083 图片 URL 替换为穿透地址
+function fixImageUrls(obj) {
+  if (!obj || typeof obj !== 'object') return
+  const replacer = import.meta.env.VITE_API_BASE
+  if (!replacer) return
+  for (const key of Object.keys(obj)) {
+    const val = obj[key]
+    if (typeof val === 'string' && val.startsWith('http://localhost:8083/')) {
+      obj[key] = val.replace('http://localhost:8083', replacer)
+    } else if (Array.isArray(val)) {
+      val.forEach(fixImageUrls)
+    } else if (val && typeof val === 'object') {
+      fixImageUrls(val)
+    }
+  }
+}
 
 service.interceptors.request.use(config => {
   const isAdminApi = config.url && config.url.includes('/admin/')
@@ -14,7 +34,12 @@ service.interceptors.request.use(config => {
 })
 
 service.interceptors.response.use(
-    res => res.data,
+    res => {
+      const data = res.data
+      // 生产环境修复图片 URL
+      if (import.meta.env.PROD) fixImageUrls(data)
+      return data
+    },
     err => {
       ElMessage.error(err.response?.data?.msg || '服务异常')
       if (err.response?.status === 401) {

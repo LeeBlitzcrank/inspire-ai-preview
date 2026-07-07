@@ -42,6 +42,11 @@ spring:
             - Path=/api/inspire/**
           filters:
             - StripPrefix=1
+        # 静态文件（上传的图片）
+        - id: inspire-uploads
+          uri: ${routes.core-service:http://localhost:8083}
+          predicates:
+            - Path=/uploads/**
         - id: inspire-recommend
           uri: ${routes.recommend-service:http://localhost:8084}
           predicates:
