@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/inspire_ai_preview?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&connectionTimeZone=%2B08:00&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
     username: root
-    password: 123456
+    password: ${INSPIRE_DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 15
@@ -20,7 +20,7 @@ inspire:
 
 # Unsplash API 配置（注册获取 Access Key: https://unsplash.com/developers）
   unsplash:
-    access-key: 7nR53_pCZwNAYTd3-rglfNylc25oClSXZO3GSJaAw9o
+    access-key: ${INSPIRE_UNSPLASH_ACCESS_KEY:}
 
 
 #  curl "https://api.unsplash.com/search/photos?query=香煎海%20苔豆腐配柚子酱&per_page=6" \

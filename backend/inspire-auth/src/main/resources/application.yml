@@ -19,7 +19,7 @@ spring:
     host: smtp.qq.com
     port: 587
     username: 45257209@qq.com
-    password: csqrlhvdxuewbghe
+    password: ${INSPIRE_AUTH_DB_PASSWORD:csqrlhvdxuewbghe}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -37,7 +37,7 @@ mybatis-plus:
 
 inspire:
   jwt:
-    secret: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
+    secret: ${INSPIRE_JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}
     expiration: 604800000
   app:
     frontend-url: http://localhost:5173

@@ -1,0 +1,28 @@
+# Node
+node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files (contain sensitive info)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Java
+*.class
+*.jar
+target/
+*.log
+
+# Flink
+checkpoints/

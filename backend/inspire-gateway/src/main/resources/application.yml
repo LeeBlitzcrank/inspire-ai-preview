@@ -95,7 +95,7 @@ spring:
             - Path=/swagger-ui/**,/v3/api-docs/**
 inspire:
   jwt:
-    secret: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
+    secret: ${INSPIRE_JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}
     expiration: 604800000
     white-list: /api/admin/login,/api/admin/public/**,/api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/api/search/public/**,/swagger-ui/**,/v3/api-docs/**
 
