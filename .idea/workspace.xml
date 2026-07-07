@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <change beforePath="$PROJECT_DIR$/.idea/inspire-ai-preview.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspire-ai-preview.iml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Vue Composition API Component" />
+        <option value="HTML File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="QODANA_PROBLEMS_VIEW_TAB" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3FfAToqdbmlNbT1sAGke82EzIZZ" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "database.data.extractors.current.export.id": "JSON-Groovy.json.groovy",
+    "git-widget-placeholder": "main",
+    "javascript.preferred.runtime.type.id": "node",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/frontend",
+    "nodejs_interpreter_path": "node",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "项目",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.28965518",
+    "settings.editor.selected.configurable": "settings.javascript.runtime",
+    "ts.external.directory.path": "/Applications/IntelliJ IDEA.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external",
+    "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "redis",
+      "mysql"
+    ],
+    "vue.recent.templates": [
+      "Vue Composition API Component"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/frontend" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/frontend" />
+      <recent name="$PROJECT_DIR$/public" />
+      <recent name="$PROJECT_DIR$/projectWord/project Progress" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.32098.37" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.32098.37" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="" />
+      <created>1782455759538</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1782455759538</updated>
+      <workItem from="1782455760792" duration="14303000" />
+      <workItem from="1782482757806" duration="27128000" />
+      <workItem from="1782721492113" duration="5955000" />
+      <workItem from="1782787225051" duration="102308000" />
+      <workItem from="1783390721698" duration="9094000" />
+    </task>
+    <task id="LOCAL-00001" summary="init frontend">
+      <option name="closed" value="true" />
+      <created>1782483201185</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1782483201185</updated>
+    </task>
+    <task id="LOCAL-00002" summary="init auth">
+      <option name="closed" value="true" />
+      <created>1782700889893</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1782700889893</updated>
+    </task>
+    <task id="LOCAL-00003" summary="init 用户认证开发&amp;引入swaggger">
+      <option name="closed" value="true" />
+      <created>1782703444913</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1782703444913</updated>
+    </task>
+    <task id="LOCAL-00004" summary="init 灵感创作服务开发">
+      <option name="closed" value="true" />
+      <created>1782704653668</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1782704653668</updated>
+    </task>
+    <task id="LOCAL-00005" summary="init 灵感核心服务开发，收藏&amp;点赞功能实现">
+      <option name="closed" value="true" />
+      <created>1782706327835</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1782706327835</updated>
+    </task>
+    <task id="LOCAL-00006" summary="init 灵感搜索服务&amp;引入ES&amp;ES和mysql数据同步">
+      <option name="closed" value="true" />
+      <created>1782710586192</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1782710586192</updated>
+    </task>
+    <task id="LOCAL-00007" summary="init 前端联调。引入Email重置密码。前端功能实现用户注册，登陆，重置密码。灵感收藏、点赞、查询">
+      <option name="closed" value="true" />
+      <created>1782717914684</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1782717914684</updated>
+    </task>
+    <task id="LOCAL-00008" summary="init 引入rocketMq，实现注册、发送灵感通过mq服务">
+      <option name="closed" value="true" />
+      <created>1782788825794</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1782788825794</updated>
+    </task>
+    <task id="LOCAL-00009" summary="init 管理员后台开发，监控大屏，灵感管理，推送配置">
+      <option name="closed" value="true" />
+      <created>1782792727644</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1782792727644</updated>
+    </task>
+    <task id="LOCAL-00010" summary="init 引入Flink接入RocketMQ">
+      <option name="closed" value="true" />
+      <created>1782800536065</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1782800536065</updated>
+    </task>
+    <task id="LOCAL-00011" summary="init 前端页面动画&amp;用户体验优化">
+      <option name="closed" value="true" />
+      <created>1782802788877</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1782802788877</updated>
+    </task>
+    <task id="LOCAL-00012" summary="init 灵感创建引入deepseek&amp;引入redis缓存">
+      <option name="closed" value="true" />
+      <created>1782809643745</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1782809643745</updated>
+    </task>
+    <task id="LOCAL-00013" summary="init 灵感创建引入deepseek&amp;引入redis缓存">
+      <option name="closed" value="true" />
+      <created>1782810100688</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1782810100688</updated>
+    </task>
+    <task id="LOCAL-00014" summary="init 评论系统 &amp; 用户中心功能">
+      <option name="closed" value="true" />
+      <created>1782886178118</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1782886178118</updated>
+    </task>
+    <task id="LOCAL-00015" summary="init 内容审核服务&amp;数据看板服务">
+      <option name="closed" value="true" />
+      <created>1782897246363</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1782897246363</updated>
+    </task>
+    <task id="LOCAL-00016" summary="init 热门榜单&amp;推荐灵感服务（15min）">
+      <option name="closed" value="true" />
+      <created>1782958153848</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1782958153848</updated>
+    </task>
+    <task id="LOCAL-00017" summary="init 关注系统&amp;关注流服务">
+      <option name="closed" value="true" />
+      <created>1782964334642</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1782964334642</updated>
+    </task>
+    <task id="LOCAL-00018" summary="init 消息通知系统">
+      <option name="closed" value="true" />
+      <created>1782969260028</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1782969260028</updated>
+    </task>
+    <task id="LOCAL-00019" summary="init 扩展分享裂变&amp;分享后续数据分析功能">
+      <option name="closed" value="true" />
+      <created>1782970084959</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1782970084959</updated>
+    </task>
+    <task id="LOCAL-00020" summary="init 多图上传、版本历史、编辑/草稿模式">
+      <option name="closed" value="true" />
+      <created>1782975952930</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1782975952930</updated>
+    </task>
+    <task id="LOCAL-00021" summary="性能优化：N+1查询消除优化，数据库索引，ES分页，图片缩略图">
+      <option name="closed" value="true" />
+      <created>1783042246009</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1783042246009</updated>
+    </task>
+    <task id="LOCAL-00022" summary="init 首页推荐卡片左滑右滑&amp;首页简化">
+      <option name="closed" value="true" />
+      <created>1783050297554</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1783050297554</updated>
+    </task>
+    <task id="LOCAL-00023" summary="init 收藏夹&amp;私信系统服务开发">
+      <option name="closed" value="true" />
+      <created>1783063410902</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1783063410902</updated>
+    </task>
+    <task id="LOCAL-00024" summary="init AI配图引入UnsplashAPI&amp;推荐卡片滑动优化&amp;性能优化">
+      <option name="closed" value="true" />
+      <created>1783390381296</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1783390381296</updated>
+    </task>
+    <task id="LOCAL-00025" summary="init githubPage">
+      <option name="closed" value="true" />
+      <created>1783394553670</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1783394553670</updated>
+    </task>
+    <task id="LOCAL-00026" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783396860119</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1783396860119</updated>
+    </task>
+    <task id="LOCAL-00027" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783397786704</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1783397786704</updated>
+    </task>
+    <task id="LOCAL-00028" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783397909708</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1783397909708</updated>
+    </task>
+    <task id="LOCAL-00029" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783398303032</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1783398303032</updated>
+    </task>
+    <task id="LOCAL-00030" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783399152857</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1783399152857</updated>
+    </task>
+    <task id="LOCAL-00031" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783399762948</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1783399762948</updated>
+    </task>
+    <task id="LOCAL-00032" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783400003284</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1783400003284</updated>
+    </task>
+    <task id="LOCAL-00033" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783400831854</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1783400831854</updated>
+    </task>
+    <task id="LOCAL-00034" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783402181541</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1783402181541</updated>
+    </task>
+    <task id="LOCAL-00035" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
+      <option name="closed" value="true" />
+      <created>1783402738799</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1783402738799</updated>
+    </task>
+    <option name="localTasksCounter" value="36" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="init frontend" />
+    <MESSAGE value="init auth" />
+    <MESSAGE value="init 用户认证开发&amp;引入swaggger" />
+    <MESSAGE value="init 灵感创作服务开发" />
+    <MESSAGE value="init 灵感核心服务开发，收藏&amp;点赞功能实现" />
+    <MESSAGE value="init 灵感搜索服务&amp;引入ES&amp;ES和mysql数据同步" />
+    <MESSAGE value="init 前端联调。引入Email重置密码。前端功能实现用户注册，登陆，重置密码。灵感收藏、点赞、查询" />
+    <MESSAGE value="init 引入rocketMq，实现注册、发送灵感通过mq服务" />
+    <MESSAGE value="init 管理员后台开发，监控大屏，灵感管理，推送配置" />
+    <MESSAGE value="init 引入Flink接入RocketMQ" />
+    <MESSAGE value="init 前端页面动画&amp;用户体验优化" />
+    <MESSAGE value="init 灵感创建引入deepseek&amp;引入redis缓存" />
+    <MESSAGE value="init 评论系统 &amp; 用户中心功能" />
+    <MESSAGE value="init 内容审核服务&amp;数据看板服务" />
+    <MESSAGE value="init 热门榜单&amp;推荐灵感服务（15min）" />
+    <MESSAGE value="init 关注系统&amp;关注流服务" />
+    <MESSAGE value="init 消息通知系统" />
+    <MESSAGE value="init 扩展分享裂变&amp;分享后续数据分析功能" />
+    <MESSAGE value="init 多图上传、版本历史、编辑/草稿模式" />
+    <MESSAGE value="性能优化：N+1查询消除优化，数据库索引，ES分页，图片缩略图" />
+    <MESSAGE value="init 首页推荐卡片左滑右滑&amp;首页简化" />
+    <MESSAGE value="init 收藏夹&amp;私信系统服务开发" />
+    <MESSAGE value="init AI配图引入UnsplashAPI&amp;推荐卡片滑动优化&amp;性能优化" />
+    <MESSAGE value="init githubPage" />
+    <MESSAGE value="init GitHub Pages 部署 &amp; 生产环境穿透配置" />
+    <option name="LAST_COMMIT_MESSAGE" value="init GitHub Pages 部署 &amp; 生产环境穿透配置" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
