@@ -71,7 +71,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminInspireList, adminBlockInspire, adminUnblockInspire,
-         adminPendingList, adminApproveInspire, adminRejectInspire } from '@/api/inspire'
+         adminPendingList, adminApproveInspire, adminRejectInspire } from '@/api/inspire.js'
 
 const activeTab = ref('all')
 const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']

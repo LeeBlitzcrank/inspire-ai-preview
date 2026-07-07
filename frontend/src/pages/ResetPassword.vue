@@ -22,7 +22,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { resetPassword } from '@/api/inspire'
+import { resetPassword } from '@/api/inspire.js'
 const route = useRoute()
 const form = ref({ token: '', password: '', confirm: '' })
 const loading = ref(false)

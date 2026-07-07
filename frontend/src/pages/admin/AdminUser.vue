@@ -39,7 +39,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { adminSearchUser, adminUserDetail } from '@/api/inspire'
+import { adminSearchUser, adminUserDetail } from '@/api/inspire.js'
 const list = ref([]); const total = ref(0); const loading = ref(false)
 const keyword = ref(''); const page = ref(1); const size = ref(20)
 const load = async () => {

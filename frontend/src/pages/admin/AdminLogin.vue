@@ -13,7 +13,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { adminLogin } from '@/api/inspire'
+import { adminLogin } from '@/api/inspire.js'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 const username = ref(''); const password = ref(''); const loading = ref(false)

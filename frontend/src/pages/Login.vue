@@ -23,7 +23,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login } from '@/api/inspire'
+import { login } from '@/api/inspire.js'
 const router = useRouter()
 const goForgot = () => { router.push('/forgot-password') }
 const loading = ref(false)

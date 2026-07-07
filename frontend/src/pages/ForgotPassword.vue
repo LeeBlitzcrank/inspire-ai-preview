@@ -20,7 +20,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { forgotPassword } from '@/api/inspire'
+import { forgotPassword } from '@/api/inspire.js'
 const email = ref(''); const loading = ref(false); const sent = ref(false)
 const handleSubmit = async () => {
   if (!email.value) return ElMessage.warning('请输入邮箱')

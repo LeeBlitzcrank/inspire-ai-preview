@@ -42,7 +42,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getNotifications, markNotificationRead, markAllRead } from '@/api/inspire'
+import { getNotifications, markNotificationRead, markAllRead } from '@/api/inspire.js'
 
 const router = useRouter()
 const list = ref([])

@@ -147,8 +147,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
-import { startConversation } from '@/api/message'
+import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
+import { startConversation } from '@/api/message.js'
 const router = useRouter()
 const unreadCount = ref(0)
 const isLogin = computed(() => !!localStorage.getItem('isLogin'))

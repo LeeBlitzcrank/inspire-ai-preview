@@ -23,8 +23,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { register } from '@/api/inspire'
-import { randomNickname } from '@/utils/nickname'
+import { register } from '@/api/inspire.js'
+import { randomNickname } from '@/utils/nickname.js'
 const router = useRouter()
 const loading = ref(false)
 const form = ref({ account: '', email: '', pwd: '', rePwd: '' })

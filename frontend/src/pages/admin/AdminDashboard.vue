@@ -40,7 +40,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getAdminDashboard } from '@/api/inspire'
+import { getAdminDashboard } from '@/api/inspire.js'
 const d = ref({})
 onMounted(async () => {
   try { const res = await getAdminDashboard(); d.value = res.data || {} } catch (e) {}

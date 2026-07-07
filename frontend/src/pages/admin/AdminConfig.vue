@@ -18,7 +18,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { adminConfigList, adminUpdateConfig, adminManualPush } from '@/api/inspire'
+import { adminConfigList, adminUpdateConfig, adminManualPush } from '@/api/inspire.js'
 const configs = ref([]); const pushing = ref(false)
 const push = ref({ title: '', content: '', city: '' })
 onMounted(async () => {

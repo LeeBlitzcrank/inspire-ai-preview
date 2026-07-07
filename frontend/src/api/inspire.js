@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/utils/request.js'
 
 // ===== 用户认证 =====
 export const login = (data) => request.post('/auth/login', data)

@@ -147,9 +147,9 @@ import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserInfo, getMyInspires, getMyCollects, getMyDrafts,
-         uncollectInspire, updateUserInfo, changePassword } from '@/api/inspire'
-import { cityOptions, findCityPath } from '@/utils/cityData'
-import { randomNickname } from '@/utils/nickname'
+         uncollectInspire, updateUserInfo, changePassword } from '@/api/inspire.js'
+import { cityOptions, findCityPath } from '@/utils/cityData.js'
+import { randomNickname } from '@/utils/nickname.js'
 
 const router = useRouter()
 const userInfo = ref({})

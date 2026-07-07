@@ -179,8 +179,8 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing, getInspireVersions, getInspireVersionDetail, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
-import { startConversation } from '@/api/message'
+import { getInspireDetail, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, deleteComment, followUser, unfollowUser, getFollowing, getInspireVersions, getInspireVersionDetail, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
+import { startConversation } from '@/api/message.js'
 const route = useRoute(); const router = useRouter()
 const detail = ref({}); const liked = ref(false); const collected = ref(false); const loadErr = ref('')
 

@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/utils/request.js'
 
 export const sendMessage = (toUserId, content) => request.post('/message/send', { toUserId: String(toUserId), content })
 export const getConversations = () => request.get('/message/conversations')

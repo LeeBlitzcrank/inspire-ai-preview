@@ -73,7 +73,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import InspireCard from '@/components/InspireCard.vue'
-import { getCollectFolders, createCollectFolder, deleteCollectFolder, renameCollectFolder, getCollectListByFolder, collectInspire, moveCollectToFolder } from '@/api/inspire'
+import { getCollectFolders, createCollectFolder, deleteCollectFolder, renameCollectFolder, getCollectListByFolder, collectInspire, moveCollectToFolder } from '@/api/inspire.js'
 const router = useRouter()
 const folders = ref([])
 const activeFolder = ref(null)

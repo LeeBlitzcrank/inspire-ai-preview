@@ -83,7 +83,7 @@ import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getConversations, getMessages, sendMessage, markMessageRead, sendByUsername, deleteConversation, startConversation, deleteAllConversations } from '@/api/message'
+import { getConversations, getMessages, sendMessage, markMessageRead, sendByUsername, deleteConversation, startConversation, deleteAllConversations } from '@/api/message.js'
 
 const route = useRoute()
 const router = useRouter()

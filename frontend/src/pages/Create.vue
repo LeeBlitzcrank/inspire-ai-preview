@@ -120,7 +120,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl } from '@/api/inspire'
+import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl } from '@/api/inspire.js'
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)

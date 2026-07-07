@@ -88,7 +88,7 @@ import { ref, onMounted } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { searchInspires, getInspireList, collectInspire, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire'
+import { searchInspires, getInspireList, collectInspire, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
 const router = useRouter()
 const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
 const goCreate = () => {
