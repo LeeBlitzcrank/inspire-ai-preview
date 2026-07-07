@@ -48,6 +48,10 @@
       <InspireCard v-for="item in publishedList" :key="item.id" :item="item" />
       <div v-if="publishedList.length === 0 && !loading" class="empty-sub">✍️ 还没有发布过灵感</div>
     </div>
+    <div v-if="activeTab==='published' && pubTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
+      <el-pagination v-model:current-page="pubPage" background layout="prev, pager, next"
+        :total="pubTotal" :page-size="pageSize" @current-change="loadPublished" />
+    </div>
 
     <!-- 草稿列表 -->
     <div class="list-wrap" v-if="activeTab==='drafts'">
@@ -57,11 +61,19 @@
       </div>
       <div v-if="draftList.length === 0 && !loading" class="empty-sub">📝 还没有草稿</div>
     </div>
+    <div v-if="activeTab==='drafts' && draftTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
+      <el-pagination v-model:current-page="draftPage" background layout="prev, pager, next"
+        :total="draftTotal" :page-size="pageSize" @current-change="loadDrafts" />
+    </div>
 
     <!-- 收藏列表 -->
     <div class="list-wrap" v-if="activeTab==='collects'">
       <InspireCard v-for="item in collectList" :key="item.id" :item="item" @collect="handleUncollect" />
       <div v-if="collectList.length === 0 && !loading" class="empty-sub">⭐ 还没有收藏过灵感</div>
+    </div>
+    <div v-if="activeTab==='collects' && collTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
+      <el-pagination v-model:current-page="collPage" background layout="prev, pager, next"
+        :total="collTotal" :page-size="pageSize" @current-change="loadCollects" />
     </div>
 
     <div class="logout-wrap">
@@ -147,6 +159,57 @@ const collectList = ref([])
 const loading = ref(false)
 const activeTab = ref('published')
 const followingList = ref([])
+
+// 分页状态
+const pageSize = ref(5)
+const pubPage = ref(1); const pubTotal = ref(0)
+const draftPage = ref(1); const draftTotal = ref(0)
+const collPage = ref(1); const collTotal = ref(0)
+
+const loadPublished = async (page) => {
+  console.log("[PAGECLK] loadPublished page=", page, "pubPage=", pubPage.value)
+  if (page !== undefined) pubPage.value = page
+  try {
+    const token = localStorage.getItem('token') || ''
+    const resp = await fetch('/api/inspire/my?page=' + page + '&size=5', {
+      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
+    })
+    const json = await resp.json()
+    console.log("[PAGECLK] fetch response:", json)
+    publishedList.value = json.data?.records || []
+    pubTotal.value = json.data?.total || 0
+  } catch (e) { console.error("[PAGEERR]", e) }
+}
+
+const loadDrafts = async (page) => {
+  console.log("[PAGECLK] loadDrafts page=", page, "draftPage=", draftPage.value)
+  if (page !== undefined) draftPage.value = page
+  try {
+    const token = localStorage.getItem('token') || ''
+    const resp = await fetch('/api/inspire/my/drafts?page=' + page + '&size=5', {
+      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
+    })
+    const json = await resp.json()
+    console.log("[PAGECLK] fetch drafts response:", json)
+    draftList.value = json.data?.records || []
+    draftTotal.value = json.data?.total || 0
+  } catch (e) { console.error("[PAGEERR]", e) }
+}
+
+const loadCollects = async (page) => {
+  console.log("[PAGECLK] loadCollects page=", page, "collPage=", collPage.value, "pageSize=", pageSize.value)
+  if (page !== undefined) collPage.value = page
+  try {
+    const token = localStorage.getItem('token') || ''
+    const resp = await fetch('/api/inspire/my/collects?page=' + page + '&size=5', {
+      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
+    })
+    const json = await resp.json()
+    console.log("[PAGECLK] fetch collects response:", json)
+    collectList.value = json.data?.records || []
+    collTotal.value = json.data?.total || 0
+  } catch (e) { console.error("[PAGEERR]", e) }
+}
 
 const statList = ref([
   { id: 1, num: 0, label: '总发布' },
@@ -262,14 +325,16 @@ onMounted(async () => {
   loading.value = true
   try {
     const [userRes, pubRes, colRes] = await Promise.all([
-      getUserInfo(), getMyInspires(), getMyCollects()
+      getUserInfo(), getMyInspires(1, pageSize.value), getMyCollects(1, pageSize.value)
     ])
     userInfo.value = userRes.data || {}
     if (userRes.data?.avatar) localStorage.setItem('userAvatar', userRes.data.avatar)
-    publishedList.value = pubRes.data || []
-    collectList.value = colRes.data || []
-    statList.value[0].num = publishedList.value.length
-    statList.value[1].num = collectList.value.length
+    publishedList.value = pubRes.data?.records || []
+    pubTotal.value = pubRes.data?.total || 0
+    collectList.value = colRes.data?.records || []
+    collTotal.value = colRes.data?.total || 0
+    statList.value[0].num = pubTotal.value
+    statList.value[1].num = collTotal.value
     statList.value[2].num = publishedList.value.reduce((s, i) => s + (i.viewCount || 0), 0)
   } catch (e) {}
   finally { loading.value = false }
@@ -277,19 +342,15 @@ onMounted(async () => {
 
 const switchTab = async (tab) => {
   activeTab.value = tab
-  if (tab === 'collects' && collectList.value.length === 0) {
-    try {
-      const res = await getMyCollects()
-      collectList.value = res.data || []
-      statList.value[1].num = collectList.value.length
-    } catch (e) {}
-  }
-  if (tab === 'drafts') {
-    try {
-      const res = await getMyDrafts()
-      draftList.value = res.data || []
-      console.log('[DRAFTS] 加载完成, 数量:', draftList.value.length)
-    } catch (e) {}
+  if (tab === 'published') {
+    pubPage.value = 1
+    await loadPublished(1)
+  } else if (tab === 'collects') {
+    collPage.value = 1
+    await loadCollects(1)
+  } else if (tab === 'drafts') {
+    draftPage.value = 1
+    await loadDrafts(1)
   }
 }
 

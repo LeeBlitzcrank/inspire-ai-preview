@@ -8,7 +8,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.*;
 import java.io.File;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.Map;
 import java.util.UUID;
 import javax.imageio.ImageIO;
@@ -24,6 +30,26 @@ public class FileController {
 
     @Value("${inspire.upload.dir:/tmp/inspire-uploads}")
     private String uploadDir;
+
+    /** 创建信任所有证书的 SSL 上下文（用于开发环境外部 HTTPS 图片下载） */
+    private static SSLSocketFactory trustAllSslFactory;
+
+    private static synchronized SSLSocketFactory getTrustAllSslFactory() {
+        if (trustAllSslFactory != null) return trustAllSslFactory;
+        try {
+            TrustManager[] trustAll = new TrustManager[]{ new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+            }};
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, trustAll, new SecureRandom());
+            trustAllSslFactory = ctx.getSocketFactory();
+        } catch (Exception e) {
+            log.warn("创建信任所有证书的 SSL 上下文失败", e);
+        }
+        return trustAllSslFactory;
+    }
 
     @Operation(summary = "上传文件", description = "支持 jpg/png/gif/webp，最大 10MB")
     @PostMapping("/upload")
@@ -52,6 +78,67 @@ public class FileController {
             return Result.success(Map.of("url", url, "thumbUrl", "/uploads/thumb_" + filename, "name", name));
         } catch (Exception e) {
             return Result.error("上传失败: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "从URL上传图片", description = "传入外部图片URL，服务端下载后存储，避免CORS")
+    @PostMapping("/upload-from-url")
+    public Result<Map<String, String>> uploadFromUrl(@RequestBody Map<String, String> body) {
+        String urlStr = body.get("url");
+        if (urlStr == null || urlStr.isBlank()) return Result.error("url 参数为空");
+        String ext = ".jpg";
+        if (urlStr.contains(".")) {
+            String rawExt = urlStr.substring(urlStr.lastIndexOf("."));
+            if (rawExt.contains("?")) rawExt = rawExt.substring(0, rawExt.indexOf("?"));
+            if (rawExt.matches("\\.(png|jpg|jpeg|gif|webp|bmp)")) ext = rawExt;
+        }
+        String filename = UUID.randomUUID().toString().replace("-", "") + ext;
+        try {
+            File dir = new File(uploadDir);
+            if (!dir.exists()) dir.mkdirs();
+
+            URL url = new URL(urlStr);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            // 如果是 HTTPS 且外部证书不受信任，使用信任所有证书的 SSLSocketFactory
+            if ("https".equalsIgnoreCase(url.getProtocol())) {
+                SSLSocketFactory ssf = getTrustAllSslFactory();
+                if (ssf != null && conn instanceof HttpsURLConnection) {
+                    HttpsURLConnection hconn = (HttpsURLConnection) conn;
+                    hconn.setSSLSocketFactory(ssf);
+                    hconn.setHostnameVerifier((hostname, session) -> true);
+                }
+            }
+
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(30000);
+            conn.connect();
+            if (conn.getResponseCode() != 200) {
+                return Result.error("下载图片失败，HTTP " + conn.getResponseCode());
+            }
+            try (InputStream in = conn.getInputStream()) {
+                File target = new File(dir, filename);
+                java.nio.file.Files.copy(in, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            conn.disconnect();
+            String urlPath = "/uploads/" + filename;
+            // 生成缩略图
+            try {
+                BufferedImage original = ImageIO.read(new File(dir, filename));
+                int tw = 400;
+                int th = (int)(tw * (double)original.getHeight() / original.getWidth());
+                BufferedImage thumb = new BufferedImage(tw, Math.max(th, 1), BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = thumb.createGraphics();
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2d.drawImage(original, 0, 0, tw, th, null);
+                g2d.dispose();
+                ImageIO.write(thumb, "jpg", new File(dir, "thumb_" + filename));
+            } catch (Exception e) { log.warn("缩略图生成失败: {}", e.getMessage()); }
+            return Result.success(Map.of("url", urlPath, "thumbUrl", "/uploads/thumb_" + filename, "name", filename));
+        } catch (Exception e) {
+            log.error("从URL上传图片失败: {}", e.getMessage(), e);
+            return Result.error("从URL上传失败: " + e.getMessage());
         }
     }
 }

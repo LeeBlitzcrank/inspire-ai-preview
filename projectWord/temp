@@ -312,3 +312,73 @@ curl "http://localhost:8080/api/inspire/follow/following" \
 ----------------------
 1、会话聊天框点击返回不生效
 2、所有收藏都需要加入选择收藏夹
+
+------------------------
+看了整个项目，我梳理了几个维度的问题：
+
+---
+
+**1. N+1 查询——toVO 每次循环都挨个查数据库**
+
+`InspireServiceImpl.java:269` 的 `toVO()` 里，每条 `InspireMain` 都要：
+
+```java
+jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", …)
+collectMapper.selectOne(…collect…)
+likeMapper.selectOne(…like…)
+```
+
+列表 20 条、用户已登录时 → **60 次额外查询**。应该改成 `IN (...)` 批量查询 nickname，以及用 `WHERE inspire_id IN (...)` 批量查 collect/like 状态。
+
+**2. 分页缺失——用户自己的列表没有分页**
+
+`listMyPublished`、`listMyDrafts`、`listMyCollects` 全部是全表 `selectList`，没有 `LIMIT/OFFSET`。用户灵感多了以后接口会越来越慢。
+
+**3. 硬编码 URL——localhost:8083 写死在 Create.vue 里**
+
+普通上传和 AI 配图上传后用 `"http://localhost:8083" + data.data.url` 拼完整 URL。部署到其他环境就要改，应该抽成配置或者直接用相对路径。
+
+**4. SQL 拼接——LIMIT 的值不是参数化查询**
+
+```java
+w.last("LIMIT " + size + " OFFSET " + off);
+```
+
+Spring Boot JPA/MyBatis-Plus 里 `last()` 不能参数化，有 SQL 注入风险。应该用 `Page` 对象的分页。
+
+**5. 缓存策略——publicList 的 @Cacheable 没包含 size**
+
+```java
+@Cacheable(key = "#query.page + ':' + #query.tag + ':' + #query.sort", …)
+```
+
+没加上 `#query.size`，不同 size 的请求可能读到彼此的缓存。同时缓存缺少失效策略，新发布的灵感不会刷新缓存。
+
+**6. 重复代码——TextFilter.java 在两个模块里**
+
+`inspire-common` 和 `inspire-core` 各有一个完全相同的 `TextFilter.java`。同样，每个微服务模块都有一份几乎一样的 `SwaggerConfig.java`，应该统一放 `inspire-common`。
+
+**7. Pinia 没在用**
+
+`package.json` 里有 `pinia` 依赖，但实际代码里没有创建 store，页面之间状态传递仍然靠 `localStorage`。`adminToken` 在 `request.js` 里甚至被 `removeItem` 了两次。
+
+**8. 微服务拆分粒度偏细**
+
+6 个服务（gateway, auth, ai, core, admin, search）+ Flink，每个都要单独部署维护。对于预览/个人项目来说，启动和调试的复杂度较高。可以考虑合并或拆成 docker-compose。
+
+**9. 无测试**
+
+`src/test` 目录下没有看到单元测试或集成测试，核心的 `InspireService`、`AiService` 都没有覆盖。
+
+**10. 缺少容错**
+
+Gateway 配了 `RequestRateLimiter`，但没有 circuit breaker（resilience4j 或 Sentinel）。某个服务不可用时会直接暴露给前端。
+
+---
+
+其中最影响体验的我觉得是 **N+1 查询**（列表页每页要多查几十次数据库）和 **分页缺失**。其他如硬编码 URL、缓存策略、测试覆盖是跟项目规模相关的优化。你想先修哪个方向？
+
+/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/frontend/shili.html
+这个是新的首页-灵感推荐左滑右滑的demo；
+我们现有的左滑右滑可以按照这个么？
+图片按照如果有上传图片就以上传的封面图显示。

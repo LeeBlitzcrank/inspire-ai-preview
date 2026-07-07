@@ -16,7 +16,8 @@
       <div v-if="!editId" class="ai-section">
         <div class="ai-row">
           <el-input v-model="aiKeyword" placeholder="输入关键词，AI探索灵感" size="large" @keyup.enter="handleExplore">
-            <template #append><el-button type="warning" :loading="exploring" @click="handleExplore">✨ 探索</el-button></template>
+            <template #append><el-button type="warning" :loading="exploring" @click="handleExplore">✨ 探索</el-button>
+        </template>
           </el-input>
         </div>
 
@@ -55,7 +56,19 @@
           <el-option v-for="t in tags" :key="t" :label="t" :value="t" />
         </el-select>
       </div>
-      <div class="row"><label>灵感详情</label><el-input v-model="form.content" type="textarea" :rows="5" placeholder="详细描述你的创意"></el-input></div>
+          <!-- Markdown 工具栏 -->
+    <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="md-btn" @click="insertMd('**','**')" title="加粗"><b>B</b></button>
+      <button type="button" class="md-btn" @click="insertMd('*','*')" title="斜体"><i>I</i></button>
+      <button type="button" class="md-btn" @click="insertMd('# ','')" title="标题1">H1</button>
+      <button type="button" class="md-btn" @click="insertMd('## ','')" title="标题2">H2</button>
+      <button type="button" class="md-btn" @click="insertMd('- ','')" title="列表">•</button>
+      <button type="button" class="md-btn" @click="insertMd('[','](url)')" title="链接">🔗</button>
+      <button type="button" class="md-btn" @click="insertMd('```\n','\n```')" title="代码块">&lt;/&gt;</button>
+      <span style="flex:1;"></span>
+      <button type="button" class="md-btn" @click="suggestImages" style="color:#6366f1;" title="AI 配图">🤖 AI 配图</button>
+    </div>
+<div class="row"><label>灵感详情</label><el-input v-model="form.content" type="textarea" :rows="5" placeholder="详细描述你的创意"></el-input></div>
       <div class="row voice-row">
         <label>语音输入</label>
         <div class="voice-bar">
@@ -81,6 +94,25 @@
       </div>
       <el-button v-else class="submit-btn" type="primary" :loading="loading" @click="submit(1)">保存灵感</el-button>
     </div>
+
+  <!-- AI 配图建议 -->
+  <el-dialog v-model="imageSuggestDialog" title="AI 配图建议" width="380px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div v-for="(url, i) in imageSuggestions" :key="i" class="suggest-img"
+           :class="{selected: selectedSuggest === url}"
+           @click="selectedSuggest = url"
+           style="border:2px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;">
+        <img :src="url" style="width:100%;height:120px;object-fit:cover;display:block;" />
+        <div v-if="selectedSuggest === url" style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:#409eff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:2;">✓</div>      </div>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <el-button @click="imageSuggestDialog = false">取消</el-button>
+      <el-button type="primary" @click="useSuggestedImage">使用此图</el-button>
+    </div>
+  </el-dialog>
+
+
+
   </div>
 </template>
 
@@ -88,7 +120,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile } from '@/api/inspire'
+import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl } from '@/api/inspire'
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)
@@ -234,7 +266,7 @@ const handleFile = async (e) => {
   const fd = new FormData(); fd.append('file', file)
   try {
     const res = await uploadFile(fd)
-    if (res.code === 200 && res.data?.url) form.value.images.push('http://localhost:8083' + res.data.url)
+    if (res.code === 200 && res.data?.url) form.value.images.push(res.data.url)
     else ElMessage.error('上传失败')
   } catch (e) { ElMessage.error('上传失败') }
   e.target.value = ''
@@ -279,6 +311,53 @@ const submit = async (status) => {
     router.push('/')
   } catch (e) {} finally { loading.value = false }
 }
+
+const imageSuggestDialog = ref(false)
+const imageSuggestions = ref([])
+const selectedSuggest = ref('')
+const imageKeywords = ref('')
+
+const insertMd = (before, after) => {
+  const ta = document.querySelector('textarea')
+  if (!ta) return
+  const start = ta.selectionStart, end = ta.selectionEnd
+  const text = form.value.content
+  form.value.content = text.slice(0, start) + before + text.slice(start, end) + after + text.slice(end)
+  ta.focus()
+  ta.selectionStart = ta.selectionEnd = start + before.length + (end - start)
+}
+
+const suggestImages = async () => {
+  const keyword = form.value.title || form.value.content?.slice(0, 50) || 'inspiration'
+  try {
+    imageKeywords.value = keyword
+    const res = await fetch('/api/inspire/public/suggest-images', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+      body: JSON.stringify({ keyword })
+    })
+    const d = await res.json()
+    imageSuggestions.value = d.data || []
+    if (imageSuggestions.value.length > 0) {
+      selectedSuggest.value = imageSuggestions.value[0]
+      imageSuggestDialog.value = true
+    }
+  } catch (e) { ElMessage.error('获取配图失败') }
+}
+
+const useSuggestedImage = async () => {
+  if (!selectedSuggest.value) return
+  try {
+    const data = await uploadFromUrl(selectedSuggest.value)
+    if (data.code === 200 && data.data?.url) {
+      form.value.images.push(data.data.url)
+      imageSuggestDialog.value = false
+      ElMessage.success("配图已添加")
+    } else {
+      ElMessage.error(data.msg || "上传失败")
+    }
+  } catch (e) { ElMessage.error("配图失败: " + (e.message || "网络错误")) }
+}
 </script>
 <style scoped>
 .create-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
@@ -322,4 +401,9 @@ const submit = async (status) => {
 .publish-btn { flex:1; }
 .draft-btn { flex:1; background:#f5f5f7; color:#1d1d1f; border:none; }
 .draft-btn:hover { background:#e8e8ed; }
+
+.md-btn{padding:4px 10px;border:1px solid #e4e7ed;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;color:#333;}
+.md-btn:hover{border-color:#409eff;color:#409eff;}
+.suggest-img.selected{border-color:#409eff;}
+.suggest-img:hover{border-color:#409eff44;}
 </style>

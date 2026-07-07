@@ -92,24 +92,30 @@
       <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
     </div>
   </div>
-  <!-- 推荐卡片滑动 -->
+  <!-- 推荐卡片滑动（完全对照demo） -->
   <div v-if="activeTab === 'recommend'" class="swipe-section" style="padding:10px 0 40px;">
     <div style="text-align:center;margin-bottom:28px;">
-      <h1 style="font-size:28px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">灵感推荐</h1>
-      <p style="color:#999;font-size:13px;">拖动卡片左右滑动，左滑跳过，右滑收藏</p>
+      <h1 style="font-size:28px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;color:transparent;margin-bottom:8px;">灵感推荐</h1>
+      <p class="tip" style="color:#999;font-size:14px;">拖动卡片左右滑动，左滑跳过，右滑收藏</p>
     </div>
-    <div class="swipe-container" style="width:100%;max-width:360px;height:420px;margin:0 auto;position:relative;overflow:hidden;">
-      <div v-if="currentCard" class="card" :class="currentCard.type"
-           style="width:100%;height:100%;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:500;position:absolute;top:0;left:0;cursor:grab;touch-action:none;user-select:none;box-shadow:0 4px 20px rgba(0,0,0,0.08);z-index:1;"
-           @mousedown="onSwipeStart" @touchstart.passive="onSwipeStart" @mousemove="onSwipeMove" @touchmove="onSwipeMove" @mouseup="onSwipeEnd" @touchend="onSwipeEnd">
-        <div class="like-mark" :style="{position:'absolute',top:'40px',right:'80px',fontSize:'32px',fontWeight:'bold',opacity:likeOpacity,transform:'rotate(-20deg)',pointerEvents:'none',zIndex:2,color:'#52c41a'}">收藏</div>
-        <div class="pass-mark" :style="{position:'absolute',top:'40px',left:'80px',fontSize:'32px',fontWeight:'bold',opacity:passOpacity,transform:'rotate(-20deg)',pointerEvents:'none',zIndex:2,color:'#ff4d4f'}">跳过</div>
-        <span class="card-word" @click.stop="goToCardDetail" style="padding:20px;text-align:center;line-height:1.5;">{{ currentCard.word }}</span>
+    <div class="swipe-container" style="width:100%;max-width:360px;height:460px;margin:0 auto;position:relative;">
+      <div v-if="currentCard" :key="currentIndex" class="card" :class="currentCard.type" :style="cardStyle"
+           @mousedown="onSwipeStart" @touchstart.passive="onSwipeStart"
+           @mousemove="onSwipeMove" @touchmove="onSwipeMove"
+           @mouseup="onSwipeEnd" @touchend="onSwipeEnd">
+        <img v-if="currentCard && currentCard.img" :src="currentCard.img" class="card-bg">
+        <div v-else class="card-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div>
+        <div class="card-mask">
+          <span class="tag-label" :class="currentCard.type">{{ currentCard.tag }}</span>
+          <div class="word-text">{{ currentCard.word }}</div>
+        </div>
+        <div class="mark like-mark" :style="{opacity:likeOpacity}">收藏</div>
+        <div class="mark pass-mark" :style="{opacity:passOpacity}">跳过</div>
       </div>
     </div>
-    <div style="display:flex;gap:30px;margin-top:30px;justify-content:center;">
-      <button class="btn-left" style="width:56px;height:56px;border-radius:50%;border:none;font-size:22px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.1);background:#fff;color:#ff4d4f;display:flex;align-items:center;justify-content:center;" @click="swipeLeft">✕</button>
-      <button class="btn-right" style="width:56px;height:56px;border-radius:50%;border:none;font-size:22px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.1);background:#fff;color:#52c41a;display:flex;align-items:center;justify-content:center;" @click="swipeRight">♥</button>
+    <div class="btns" style="display:flex;gap:30px;margin-top:40px;justify-content:center;">
+      <button class="btn btn-left" @click="swipeLeft">✕</button>
+      <button class="btn btn-right" @click="swipeRight">♥</button>
     </div>
   </div>
   </div>
@@ -137,7 +143,7 @@
 
 </template>
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -149,6 +155,7 @@ const isLogin = computed(() => !!localStorage.getItem('isLogin'))
 	const activeTab = ref('recommend')
 
 const switchTab = async (tab) => {
+  if (tab === 'recommend') await loadSwipeCards()
   activeTab.value = tab
   inspireList.value = []
   currentPage.value = 1
@@ -242,6 +249,7 @@ const loadInspireList = async () => {
       if (!res.data || res.data.length < 10) hasMore.value = false
     } else if (activeTab.value === 'recommend') {
       const res = await getRecommendList({ page: currentPage.value, size: 10 })
+            console.log("[SWIPE] recommend API response:", JSON.stringify(res.data ? res.data.slice(0,2) : null))
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
       if (!res.data || res.data.length < 10) hasMore.value = false
     } else if (activeTab.value === 'following') {
@@ -301,13 +309,29 @@ const handleCollect = async (targetId) => {
   const currentCard = computed(() => swipeCards.value[currentIndex.value] || null)
   const likeOpacity = ref(0)
   const passOpacity = ref(0)
-  const isDragging = ref(false)
   const startX = ref(0)
 const collectFolders = ref([])
 const selectedFolder = ref(null)
 const folderDialogVisible = ref(false)
 const newFolderName = ref('')
   const offsetX = ref(0)
+  const cardTransition = ref('')
+  const isDragging = ref(false)
+  
+  const cardStyle = computed(() => ({
+    transform: 'translateX(' + offsetX.value + 'px) rotate(' + (offsetX.value / 12) + 'deg)',
+    transition: cardTransition.value
+  }))
+  const bgStyle = computed(() => {
+    var c = currentCard.value
+    if (c && c.img) return { backgroundImage: 'url(' + c.img + ')' }
+    return { background: 'linear-gradient(135deg,#667eea,#764ba2)' }
+  })
+
+  watch(swipeCards, (val) => {
+    if (val && val.length > 0) console.log("[SWIPE] swipeCards[0]:", JSON.stringify(val[0]))
+  }, { deep: true })
+  
   
   function typeFromTag(tag) {
     if (tag === '美食' || tag === '饮食') return 'food'
@@ -323,16 +347,17 @@ const newFolderName = ref('')
       const res = await getRecommendList({ page: 1, size: 20 })
       if (res.data && res.data.length > 0) {
         swipeCards.value = res.data.map(function(i) {
-          return { word: i.title, type: typeFromTag(i.tag), inspireId: i.id }
+          return { word: i.title, type: typeFromTag(i.tag), tag: i.tag, inspireId: i.id, img: i.img || "" }
         })
         currentIndex.value = 0
-      }
+        if (res.data && res.data.length > 0) console.log('[SWIPE] raw keys:', Object.keys(res.data[0]), 'img:', res.data[0].img)      }
     } catch (e) {}
   }
   
   const onSwipeStart = (e) => {
     isDragging.value = true
     startX.value = e.clientX || (e.touches && e.touches[0].clientX)
+    cardTransition.value = ''
   }
   const onSwipeMove = (e) => {
     if (!isDragging.value) return
@@ -382,10 +407,8 @@ const newFolderName = ref('')
     }
   }
   const swipeLeft = () => {
-    const card = document.querySelector('.card')
-    if (!card) return
-    card.style.transition = 'transform 0.3s ease'
-    card.style.transform = 'translateX(-450px) rotate(-25deg)'
+    cardTransition.value = 'transform 0.3s ease'
+    offsetX.value = -450
     setTimeout(nextCard, 300)
   }
   const swipeRight = async () => {
@@ -404,11 +427,6 @@ const newFolderName = ref('')
         }
       } catch (e) { ElMessage.error('收藏失败') }
     }
-    const card = document.querySelector('.card')
-    if (!card) return
-    card.style.transition = 'transform 0.3s ease'
-    card.style.transform = 'translateX(450px) rotate(25deg)'
-    setTimeout(nextCard, 300)
   }
 
 const handleMsgFromFollow = async (u) => {
@@ -479,4 +497,65 @@ const handleMsgFromFollow = async (u) => {
 
 .folder-option.selected { border-color: #409eff; background: #f0f8ff; }
 .folder-option:hover { border-color: #409eff44; }
+/* 推荐卡片 - 完全对照 demo 样式 */
+.swipe-container{overflow:hidden}
+.card{
+  width:100%; height:100%; border-radius:20px; position:absolute; top:0; left:0;
+  touch-action:none; user-select:none; overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,0.12); z-index:1;
+}
+.card-bg{width:100%;height:100%;object-fit:cover;display:block}
+.card-mask{
+  position:absolute; left:0; bottom:0; width:100%; height:50%;
+  background:linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+  padding:30px 20px; display:flex; flex-direction:column; justify-content:flex-end;
+}
+.word-text{font-size:28px;font-weight:500;color:#fff;margin-bottom:8px}
+.tag-label{font-size:14px;padding:4px 12px;border-radius:99px;display:inline-block;width:fit-content;color:#fff}
+.food{background:#ff6b35}
+.sport{background:#28c76f}
+.movie{background:#0097e6}
+.wear{background:#eb4d9c}
+.text{background:#8b5cf6}
+.mark{
+  position:absolute; top:40px; font-size:36px; font-weight:bold; opacity:0;
+  transform:rotate(-20deg); z-index:2;
+}
+.like-mark{right:30px;color:#52c41a;border:3px solid #52c41a;padding:6px 12px;border-radius:8px}
+.pass-mark{left:30px;color:#ff4d4f;border:3px solid #ff4d4f;padding:6px 12px;border-radius:8px}
+.btns{margin-top:40px}
+.btn{width:60px;height:60px;border-radius:50%;border:none;font-size:24px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.1);transition:all 0.2s}
+.btn-left{background:#fff;color:#ff4d4f}
+.btn-right{background:#fff;color:#52c41a}
+.btn:hover{transform:scale(1.1)}
+
+.card-bg {
+  width:100%; height:100%; background-size:cover; background-position:center;
+}
+.card-mask {
+  position:absolute; left:0; bottom:0; width:100%; height:50%;
+  background:linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+}
+.card-texts {
+  position:absolute; left:0; bottom:0; width:100%; padding:30px 20px;
+  display:flex; flex-direction:column; justify-content:flex-end;
+}
+.card-word {
+  font-size:28px; font-weight:500; color:#fff; margin-bottom:4px; line-height:1.3;
+}
+.card-tag {
+  display:inline-block; width:fit-content; padding:4px 14px; border-radius:99px;
+  font-size:13px; color:#fff; margin-bottom:8px;
+}
+.tag-food { background:#ff6b35; }
+.tag-sport { background:#28c76f; }
+.tag-movie { background:#0097e6; }
+.tag-wear { background:#eb4d9c; }
+.tag-text { background:#8b5cf6; }
+.swipe-mark {
+  position:absolute; top:40px; font-size:32px; font-weight:bold; z-index:2;
+  pointer-events:none; transform:rotate(-20deg);
+}
+.like-mark { right:30px; color:#52c41a; border:3px solid #52c41a; padding:6px 12px; border-radius:8px; }
+.pass-mark { left:30px; color:#ff4d4f; border:3px solid #ff4d4f; padding:6px 12px; border-radius:8px; }
 </style>

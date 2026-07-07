@@ -2,6 +2,7 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.*;
@@ -19,12 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -46,16 +42,15 @@ public class InspireServiceImpl implements InspireService {
     private final ObjectMapper objectMapper;
 
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "publicList", key = "#query.page + ':' + #query.tag + ':' + #query.sort", unless = "#loginUserId != null")
+    @org.springframework.cache.annotation.Cacheable(value = "publicList", key = "#query.page + ':' + #query.size + ':' + #query.tag + ':' + #query.sort", unless = "#loginUserId != null")
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
         LambdaQueryWrapper<InspireMain> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
         if (query.getTag() != null && !query.getTag().isEmpty()) wrapper.eq(InspireMain::getTag, query.getTag());
         if ("heat".equals(query.getSort())) wrapper.orderByDesc(InspireMain::getHeat);
         else wrapper.orderByDesc(InspireMain::getCreateTime);
-        int off = (query.getPage() - 1) * query.getSize();
-        wrapper.last("LIMIT " + query.getSize() + " OFFSET " + off);
-        return mainMapper.selectList(wrapper).stream().map(m -> toVO(m, loginUserId, null)).collect(Collectors.toList());
+        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(query.getPage(), query.getSize()), wrapper);
+        return toVOList(mpPage.getRecords(), loginUserId);
     }
 
     @Override
@@ -69,14 +64,23 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
-    public List<InspireVO> listMyPublished(Long userId) { return queryByUser(userId, 1); }
-    @Override public List<InspireVO> listMyDrafts(Long userId) { return queryByUser(userId, 0); }
+    public PageResult<InspireVO> listMyPublished(Long userId, int page, int size) {
+        return queryByUser(userId, 1, page, size);
+    }
 
-    private List<InspireVO> queryByUser(Long userId, int status) {
+    @Override
+    public PageResult<InspireVO> listMyDrafts(Long userId, int page, int size) {
+        return queryByUser(userId, 0, page, size);
+    }
+
+    private PageResult<InspireVO> queryByUser(Long userId, int status, int page, int size) {
         LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
         w.eq(InspireMain::getUserId, userId).eq(InspireMain::getStatus, status).eq(InspireMain::getDeleted, 0)
          .orderByDesc(InspireMain::getCreateTime);
-        return mainMapper.selectList(w).stream().map(m -> toVO(m, userId, null)).collect(Collectors.toList());
+        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, size), w);
+        List<InspireVO> list = toVOList(mpPage.getRecords(), userId);
+        log.info("[PAGEDBG] queryByUser userId={} status={} page={} size={} records={} total={}", userId, status, page, size, list.size(), mpPage.getTotal());
+        return new PageResult<>(list, mpPage.getTotal());
     }
 
     @Override @Transactional
@@ -251,49 +255,33 @@ public class InspireServiceImpl implements InspireService {
             "userId", userId, "inspireId", inspireId, "type", "share"));
         log.info("分享: userId={}, inspireId={}", userId, inspireId);
     }
+
     @Override
-    public List<InspireVO> listMyCollects(Long userId) {
+    public PageResult<InspireVO> listMyCollects(Long userId, int page, int size) {
         List<Long> ids;
+        long total = 0;
         ShardContext.setByUserId(userId);
         try {
             List<CollectAction> collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, userId).orderByDesc(CollectAction::getCreateTime));
-            if (collects.isEmpty()) return new ArrayList<>();
+            total = collects.size();
+            log.info("[PAGEDBG] listMyCollects userId={} page={} size={} totalCollects={}", userId, page, size, total);
+            int start = (page - 1) * size;
+            if (start >= collects.size()) {
+                log.info("[PAGEDBG] start={} >= collects.size={} -> empty", start, collects.size());
+                return new PageResult<>(new ArrayList<>(), total);
+            }
+            int end = Math.min(start + size, collects.size());
+            log.info("[PAGEDBG] start={} end={} records={}", start, end, end - start);
+            collects = collects.subList(start, end);
+            if (collects.isEmpty()) return new PageResult<>(new ArrayList<>(), total);
             ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
         } finally { ShardContext.clear(); }
         List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
                 .in(InspireMain::getId, ids).eq(InspireMain::getDeleted, 0));
-        return mains.stream().map(m -> toVO(m, userId, null)).collect(Collectors.toList());
+        log.info("[PAGEDBG] found mains={} total={}", mains.size(), total);
+        return new PageResult<>(toVOList(mains, userId), total);
     }
-
-    private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
-        InspireVO vo = new InspireVO();
-        vo.setUserId(m.getUserId()); vo.setId(m.getId());
-        try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId())); } catch(Exception e) { vo.setNickname(""); }
-        vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
-        if (m.getImages() != null && !m.getImages().isEmpty()) {
-            try { vo.setImages(objectMapper.readValue(m.getImages(), new TypeReference<java.util.List<String>>() {})); }
-            catch (Exception e) { log.warn("解析多图失败", e); }
-        }
-        vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
-        vo.setShareCount(m.getShareCount());
-        vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
-        vo.setPublishCity(m.getPublishCity()); vo.setCreateTime(m.getCreateTime());
-        vo.setContent(content);
-        if (loginUserId != null) {
-            ShardContext.setByUserId(loginUserId);
-            try { vo.setCollected(collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
-                    .eq(CollectAction::getUserId, loginUserId).eq(CollectAction::getInspireId, m.getId())) != null);
-            } finally { ShardContext.clear(); }
-            ShardContext.setByInspireId(m.getId());
-            try { vo.setLiked(likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
-                    .eq(LikeAction::getInspireId, m.getId()).eq(LikeAction::getUserId, loginUserId)) != null);
-            } finally { ShardContext.clear(); }
-        }
-        return vo;
-    }
-
-    private static long seq = 0L, lastTs = -1L;
 
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "recommend", key = "#page + ':' + #size", unless = "#userId != null")
@@ -301,9 +289,8 @@ public class InspireServiceImpl implements InspireService {
         LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
         w.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
         w.orderByDesc(InspireMain::getHeat, InspireMain::getCreateTime);
-        int off = (page - 1) * size;
-        w.last("LIMIT " + size + " OFFSET " + off);
-        return mainMapper.selectList(w).stream().map(m -> toVO(m, userId, null)).collect(Collectors.toList());
+        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, size), w);
+        return toVOList(mpPage.getRecords(), userId);
     }
 
     @Override
@@ -417,13 +404,16 @@ public class InspireServiceImpl implements InspireService {
                     .in(InspireMain::getId, ids));
             Map<Long, InspireMain> map = mains.stream().collect(Collectors.toMap(InspireMain::getId, m -> m));
             List<InspireVO> result = new ArrayList<>();
+            // Build nickname map + collect/like status in batch
+            Map<Long, String> nicknameMap = buildNicknameMap(mains);
+            Set<Long> collectedIds = buildCollectedIds(userId, ids);
+            Set<Long> likedIds = buildLikedIds(ids, userId);
             for (CollectAction c : collects) {
                 InspireMain m = map.get(c.getInspireId());
                 if (m != null) {
-                    // toVO 内部需要分片查询（collect/like），所以恢复 userId 分片
-                    ShardContext.setByUserId(userId);
-                    InspireVO vo = toVO(m, userId, null);
+                    InspireVO vo = singleToVO(m, nicknameMap.get(m.getUserId()), null);
                     vo.setCollected(true);
+                    vo.setLiked(likedIds.contains(m.getId()));
                     result.add(vo);
                 }
             }
@@ -445,5 +435,102 @@ public class InspireServiceImpl implements InspireService {
             }
         } finally { ShardContext.clear(); }
     }
+
+
+    @Override
+    public java.util.List<java.util.Map<String, Object>> getHotTags() {
+        return jdbcTemplate.queryForList(
+            "SELECT tag, COUNT(*) as count FROM inspire_main WHERE deleted=0 AND status=1 GROUP BY tag ORDER BY count DESC LIMIT 20");
+    }
+
+    // ========================
+    // 批量转换：解决 N+1 查询
+    // ========================
+
+    /**
+     * 批量将 InspireMain 列表转为 InspireVO，将 N+1 次 nickname/collect/like 查询
+     * 合并为至多 12 次批量查询（nickname × 1 + collect × 1 + like × ≤10）。
+     */
+    private List<InspireVO> toVOList(List<InspireMain> mains, Long loginUserId) {
+        if (mains.isEmpty()) return Collections.emptyList();
+
+        // 1. Batch query nicknames
+        Map<Long, String> nicknameMap = buildNicknameMap(mains);
+
+        // 2. Batch query collect/like status
+        Set<Long> collectedIds = new HashSet<>();
+        Set<Long> likedIds = new HashSet<>();
+        if (loginUserId != null) {
+            List<Long> inspireIds = mains.stream().map(InspireMain::getId).collect(Collectors.toList());
+            collectedIds = buildCollectedIds(loginUserId, inspireIds);
+            likedIds = buildLikedIds(inspireIds, loginUserId);
+        }
+
+        // 3. Build VOs
+        List<InspireVO> result = new ArrayList<>(mains.size());
+        for (InspireMain m : mains) {
+            InspireVO vo = singleToVO(m, nicknameMap.get(m.getUserId()), null);
+            if (loginUserId != null) {
+                vo.setCollected(collectedIds.contains(m.getId()));
+                vo.setLiked(likedIds.contains(m.getId()));
+            }
+            result.add(vo);
+        }
+        return result;
+    }
+
+    /** 批量查 nickname */
+    private Map<Long, String> buildNicknameMap(List<InspireMain> mains) {
+        Map<Long, String> map = new HashMap<>();
+        Set<Long> userIds = mains.stream().map(InspireMain::getUserId).collect(Collectors.toSet());
+        if (userIds.isEmpty()) return map;
+        String placeholders = userIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        try {
+            jdbcTemplate.query("SELECT id, nickname FROM user WHERE id IN (" + placeholders + ")",
+                (rs) -> { map.put(rs.getLong("id"), rs.getString("nickname")); },
+                userIds.toArray());
+        } catch (Exception e) {
+            log.warn("批量查询昵称失败", e);
+        }
+        return map;
+    }
+
+    /** 批量查当前用户是否收藏了这些灵感（单分片查询，1次） */
+    private Set<Long> buildCollectedIds(Long userId, List<Long> inspireIds) {        if (inspireIds.isEmpty()) return Collections.emptySet();        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIds(List<Long> inspireIds, Long userId) {        if (inspireIds.isEmpty()) return Collections.emptySet();        Set<Long> liked = new HashSet<>();        Map<Integer, List<Long>> grouped = inspireIds.stream()                .collect(Collectors.groupingBy(id -> (int)(Math.abs(id) % 10)));        for (Map.Entry<Integer, List<Long>> entry : grouped.entrySet()) {            int shard = entry.getKey();            List<Long> ids = entry.getValue();            String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));            try {                List<Object> params = new ArrayList<>();                params.add(userId);                params.addAll(ids);                List<Long> found = jdbcTemplate.queryForList(                    "SELECT inspire_id FROM inspire_like_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                    Long.class, params.toArray());                liked.addAll(found);            } catch (Exception e) {                log.warn("批量查询点赞状态失败: shard={}", shard, e);            }        }        return liked;    }    private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
+        String nickname = "";
+        try { nickname = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId()); } catch(Exception e) {}
+        InspireVO vo = singleToVO(m, nickname, content);
+        if (loginUserId != null) {
+            ShardContext.setByUserId(loginUserId);
+            try { vo.setCollected(collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
+                    .eq(CollectAction::getUserId, loginUserId).eq(CollectAction::getInspireId, m.getId())) != null);
+            } finally { ShardContext.clear(); }
+            ShardContext.setByInspireId(m.getId());
+            try { vo.setLiked(likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
+                    .eq(LikeAction::getInspireId, m.getId()).eq(LikeAction::getUserId, loginUserId)) != null);
+            } finally { ShardContext.clear(); }
+        }
+        return vo;
+    }
+
+    /** 基础字段填充（不含 collect/like 状态） */
+    private InspireVO singleToVO(InspireMain m, String nickname, String content) {
+        InspireVO vo = new InspireVO();
+        vo.setUserId(m.getUserId()); vo.setId(m.getId());
+        vo.setNickname(nickname != null ? nickname : "");
+        vo.setTitle(m.getTitle()); vo.setImg(m.getImg());
+        if (m.getImages() != null && !m.getImages().isEmpty()) {
+            try { vo.setImages(objectMapper.readValue(m.getImages(), new TypeReference<java.util.List<String>>() {})); }
+            catch (Exception e) { log.warn("解析多图失败", e); }
+        }
+        vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
+        vo.setShareCount(m.getShareCount());
+        vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
+        vo.setPublishCity(m.getPublishCity()); vo.setCreateTime(m.getCreateTime());
+        vo.setContent(content);
+        return vo;
+    }
+
+    private static long seq = 0L, lastTs = -1L;
 
 }

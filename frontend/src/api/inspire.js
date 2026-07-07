@@ -94,3 +94,4 @@ export const collectToFolder = (inspireId, folderId) => request.post(`/inspire/c
 export const getCollectListByFolder = (folderId) => request.get('/inspire/collect/list', { params: { folderId } })
 
 export const moveCollectToFolder = (inspireId, folderId) => request.put(`/inspire/collect/${inspireId}/move`, { folderId })
+export const uploadFromUrl = (url) => request.post('/file/upload-from-url', { url })

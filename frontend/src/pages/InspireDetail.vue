@@ -21,9 +21,7 @@
         <span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-follow" @click="handleToggleFollow">{{ isFollowing ? '✅ 已关注' : '➕ 关注' }}</span><span v-if="isLogin && detail.userId && String(detail.userId) !== currentUserId" class="meta-msg" @click="goChat(detail.userId)" style="font-size:12px;color:#6366f1;cursor:pointer;padding:2px 10px;border:1px solid #6366f1;border-radius:12px;margin-left:6px;">💬 私信</span>
       </div>
       <h1 class="title">{{ detail.title }}</h1>
-      <div v-if="detail.content" class="desc-wrap">
-        <p v-for="(p, i) in paragraphs" :key="i" class="desc-p">{{ p }}</p>
-      </div>
+      <div v-if="detail.content" class="desc-wrap md-content" v-html="renderedContent"></div>
       <p v-else class="desc-p">{{ detail.title }}</p>
       <div class="stat-row">
         <span>👁 浏览 {{ detail.viewCount || 0 }}</span>
@@ -153,7 +151,6 @@
     <div v-else-if="!isLogin" class="comment-login-hint">
       <el-link type="primary" @click="$router.push('/login')">登录后发表评论</el-link>
     </div>
-  </div>
 
     <!-- 收藏文件夹选择器 -->
     <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
@@ -176,6 +173,7 @@
       </div>
     </el-dialog>
 
+  </div>
 </template>
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
@@ -305,7 +303,7 @@ const currentUserId = computed(() => {
   catch (e) { return '' }
 })
 const isFollowing = ref(false)
-const paragraphs = computed(() => {
+const _unused_paragraphs = computed(() => {
   const text = detail.value.content
   if (!text) return []
   return text.split('\n').filter(p => p.trim())
@@ -613,4 +611,17 @@ const goChat = async (userId) => {
 
 .folder-option.selected { border-color: #409eff; background: #f0f8ff; }
 .folder-option:hover { border-color: #409eff44; }
+
+.md-content { line-height:1.8; font-size:15px; color:#333; }
+.md-content .md-h1 { font-size:22px; margin:20px 0 10px; font-weight:600; }
+.md-content .md-h2 { font-size:18px; margin:16px 0 8px; font-weight:600; }
+.md-content .md-h3 { font-size:16px; margin:14px 0 6px; font-weight:600; }
+.md-content .md-p { margin:10px 0; }
+.md-content .md-code { background:#f4f7fd; border-radius:8px; padding:12px 16px; overflow-x:auto; font-size:13px; }
+.md-content .md-inline { background:#f4f7fd; padding:2px 6px; border-radius:4px; font-size:13px; }
+.md-content .md-ul { padding-left:20px; margin:8px 0; }
+.md-content .md-ul li { margin:4px 0; }
+.md-content strong { font-weight:600; }
+.md-content em { font-style:italic; }
+.md-content a { color:#409eff; text-decoration:underline; }
 </style>

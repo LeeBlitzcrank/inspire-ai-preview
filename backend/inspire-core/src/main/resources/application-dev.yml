@@ -17,3 +17,11 @@ logging:
 inspire:
   es:
     hosts: localhost:9200
+
+# Unsplash API 配置（注册获取 Access Key: https://unsplash.com/developers）
+  unsplash:
+    access-key: 7nR53_pCZwNAYTd3-rglfNylc25oClSXZO3GSJaAw9o
+
+
+#  curl "https://api.unsplash.com/search/photos?query=香煎海%20苔豆腐配柚子酱&per_page=6" \
+#-H "Authorization: Client-ID 7nR53_pCZwNAYTd3-rglfNylc25oClSXZO3GSJaAw9o"

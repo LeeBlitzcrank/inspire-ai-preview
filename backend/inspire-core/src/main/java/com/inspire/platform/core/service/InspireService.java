@@ -14,11 +14,11 @@ public interface InspireService {
     /** 公开详情 */
     InspireVO getDetail(Long id, Long loginUserId);
 
-    /** 我的发布 */
-    List<InspireVO> listMyPublished(Long userId);
+    /** 我的发布（分页） */
+    PageResult<InspireVO> listMyPublished(Long userId, int page, int size);
 
-    /** 我的草稿 */
-    List<InspireVO> listMyDrafts(Long userId);
+    /** 我的草稿（分页） */
+    PageResult<InspireVO> listMyDrafts(Long userId, int page, int size);
 
     /** 创建 */
     InspireMain create(InspireCreateRequest req, Long userId);
@@ -39,7 +39,9 @@ public interface InspireService {
 
     /** 分享 */
     void share(Long userId, Long inspireId);
-    List<InspireVO> listMyCollects(Long userId);
+
+    /** 我的收藏（分页） */
+    PageResult<InspireVO> listMyCollects(Long userId, int page, int size);
 
     /** 版本历史列表 */
     java.util.List<java.util.Map<String, Object>> listVersions(Long inspireId);
@@ -55,4 +57,5 @@ public interface InspireService {
     void collectToFolder(Long userId, Long inspireId, Long folderId);
     void moveCollectToFolder(Long userId, Long inspireId, Long folderId);
     List<com.inspire.platform.core.dto.InspireVO> listCollectsByFolder(Long userId, Long folderId);
+    java.util.List<java.util.Map<String, Object>> getHotTags();
 }

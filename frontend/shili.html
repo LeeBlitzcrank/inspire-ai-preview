@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>带背景图 左右滑动灵感卡片</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, sans-serif;
+        }
+        body{
+            background:#f7f8fa;
+            min-height:100vh;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+        }
+        .header-text{
+            text-align:center;
+            margin-bottom:40px;
+        }
+        h1{
+            font-size:30px;
+            background:linear-gradient(90deg,#409eff,#a855f7);
+            -webkit-background-clip:text;
+            color:transparent;
+            margin-bottom:8px;
+        }
+        .tip{
+            color:#999;
+            font-size:14px;
+        }
+        /* 滑动容器 */
+        .swipe-container{
+            width:360px;
+            height:460px;
+            position:relative;
+        }
+        /* 卡片主体：背景图容器 */
+        .card{
+            width:100%;
+            height:100%;
+            border-radius:20px;
+            position:absolute;
+            top:0;
+            left:0;
+            touch-action:none;
+            user-select:none;
+            overflow:hidden;
+            box-shadow:0 4px 20px rgba(0,0,0,0.12);
+            transition:transform 0.1s ease;
+        }
+        /* 卡片背景大图 */
+        .card-bg{
+            width:100%;
+            height:100%;
+            background-size:cover;
+            background-position:center;
+        }
+        /* 底部渐变遮罩，文字不被图片盖住 */
+        .card-mask{
+            position:absolute;
+            left:0;
+            bottom:0;
+            width:100%;
+            height:50%;
+            background:linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+            padding:30px 20px;
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-end;
+        }
+        /* 灵感文字 */
+        .word-text{
+            font-size:28px;
+            font-weight:500;
+            color:#fff;
+            margin-bottom:8px;
+        }
+        .tag-label{
+            font-size:14px;
+            padding:4px 12px;
+            border-radius:99px;
+            display:inline-block;
+            width:fit-content;
+        }
+        .food{background:#ff6b35; color:#fff;}
+        .sport{background:#28c76f; color:#fff;}
+        .movie{background:#0097e6; color:#fff;}
+        .wear{background:#eb4d9c; color:#fff;}
+        .text{background:#8b5cf6; color:#fff;}
+        /* 滑动标记文字 */
+        .mark{
+            position:absolute;
+            top:40px;
+            font-size:36px;
+            font-weight:bold;
+            opacity:0;
+            transform:rotate(-20deg);
+            z-index:2;
+        }
+        .like-mark{
+            right:30px;
+            color:#52c41a;
+            border:3px solid #52c41a;
+            padding:6px 12px;
+            border-radius:8px;
+        }
+        .pass-mark{
+            left:30px;
+            color:#ff4d4f;
+            border:3px solid #ff4d4f;
+            padding:6px 12px;
+            border-radius:8px;
+        }
+        /* 底部操作按钮 */
+        .btns{
+            display:flex;
+            gap:30px;
+            margin-top:40px;
+        }
+        .btn{
+            width:60px;
+            height:60px;
+            border-radius:50%;
+            border:none;
+            font-size:24px;
+            cursor:pointer;
+            box-shadow:0 3px 12px rgba(0,0,0,0.1);
+            transition:all 0.2s;
+        }
+        .btn-left{
+            background:#fff;
+            color:#ff4d4f;
+        }
+        .btn-right{
+            background:#fff;
+            color:#52c41a;
+        }
+        .btn:hover{
+            transform:scale(1.1);
+        }
+    </style>
+</head>
+<body>
+<div class="header-text">
+    <h1>灵感推荐</h1>
+    <p class="tip">拖动卡片左右滑动，左滑跳过，右滑收藏</p>
+</div>
+
+<div class="swipe-container" id="container"></div>
+
+<div class="btns">
+    <button class="btn btn-left" id="passBtn">✕</button>
+    <button class="btn btn-right" id="likeBtn">♥</button>
+</div>
+
+<script>
+    // 灵感关键词库：新增bg背景图字段
+    const wordList = [
+        {
+            word:"夜市小吃摆摊方案",
+            type:"food",
+            bg:"https://picsum.photos/id/1080/400/460"
+        },
+        {
+            word:"自制夏日冰粉",
+            type:"food",
+            bg:"https://picsum.photos/id/1026/400/460"
+        },
+        {
+            word:"城市滨江慢跑路线",
+            type:"sport",
+            bg:"https://picsum.photos/id/1039/400/460"
+        },
+        {
+            word:"治愈小众文艺电影",
+            type:"movie",
+            bg:"https://picsum.photos/id/1068/400/460"
+        },
+        {
+            word:"通勤温柔简约穿搭",
+            type:"wear",
+            bg:"https://picsum.photos/id/1060/400/460"
+        },
+        {
+            word:"日落高级感朋友圈文案",
+            type:"text",
+            bg:"https://picsum.photos/id/1048/400/460"
+        }
+    ];
+
+    const container = document.getElementById('container');
+    const passBtn = document.getElementById('passBtn');
+    const likeBtn = document.getElementById('likeBtn');
+
+    let currentIndex = 0;
+    let startX = 0;
+    let offsetX = 0;
+    let isDrag = false;
+    let cardDom = null;
+    let likeMark = null;
+    let passMark = null;
+
+    // 创建带背景图的单张卡片
+    function createCard(){
+        container.innerHTML = '';
+        const item = wordList[currentIndex];
+        // 卡片主体
+        cardDom = document.createElement('div');
+        cardDom.className = `card`;
+        cardDom.innerHTML = `
+    <div class="card-bg" style="background-image:url(${item.bg})"></div>
+    <div class="card-mask">
+      <span class="tag-label ${item.type}">${item.type === 'food'?'美食':item.type === 'sport'?'运动':item.type === 'movie'?'电影':item.type === 'wear'?'穿搭':'文案'}</span>
+      <div class="word-text">${item.word}</div>
+    </div>
+    <div class="mark like-mark">收藏</div>
+    <div class="mark pass-mark">跳过</div>
+  `;
+        likeMark = cardDom.querySelector('.like-mark');
+        passMark = cardDom.querySelector('.pass-mark');
+        container.appendChild(cardDom);
+        bindTouchEvent();
+    }
+
+    // 拖拽/触摸事件
+    function bindTouchEvent(){
+        // 鼠标按下
+        cardDom.addEventListener('mousedown', e=>{
+            isDrag = true;
+            startX = e.clientX;
+            cardDom.style.transition = 'none';
+        })
+        // 鼠标移动
+        document.addEventListener('mousemove', e=>{
+            if(!isDrag) return;
+            offsetX = e.clientX - startX;
+            cardDom.style.transform = `translateX(${offsetX}px) rotate(${offsetX / 12}deg)`;
+            // 滑动标记透明度
+            if(offsetX > 0){
+                likeMark.style.opacity = Math.min(offsetX / 120, 1);
+                passMark.style.opacity = 0;
+            }else{
+                passMark.style.opacity = Math.min(Math.abs(offsetX) / 120, 1);
+                likeMark.style.opacity = 0;
+            }
+        })
+        // 鼠标松开
+        document.addEventListener('mouseup', ()=>{
+            if(!isDrag) return;
+            isDrag = false;
+            judgeSwipe();
+        })
+
+        // 手机触屏
+        cardDom.addEventListener('touchstart', e=>{
+            isDrag = true;
+            startX = e.touches[0].clientX;
+            cardDom.style.transition = 'none';
+        })
+        document.addEventListener('touchmove', e=>{
+            if(!isDrag) return;
+            offsetX = e.touches[0].clientX - startX;
+            cardDom.style.transform = `translateX(${offsetX}px) rotate(${offsetX / 12}deg)`;
+            if(offsetX > 0){
+                likeMark.style.opacity = Math.min(offsetX / 120, 1);
+                passMark.style.opacity = 0;
+            }else{
+                passMark.style.opacity = Math.min(Math.abs(offsetX) / 120, 1);
+                likeMark.style.opacity = 0;
+            }
+        })
+        document.addEventListener('touchend', ()=>{
+            if(!isDrag) return;
+            isDrag = false;
+            judgeSwipe();
+        })
+    }
+
+    // 判断滑动动作
+    function judgeSwipe(){
+        cardDom.style.transition = 'transform 0.3s ease';
+        // 右滑收藏
+        if(offsetX > 100){
+            cardDom.style.transform = 'translateX(450px) rotate(25deg)';
+            setTimeout(nextWord,300);
+        }
+        // 左滑跳过
+        else if(offsetX < -100){
+            cardDom.style.transform = 'translateX(-450px) rotate(-25deg)';
+            setTimeout(nextWord,300);
+        }
+        // 滑动距离不足回弹
+        else{
+            cardDom.style.transform = 'translateX(0) rotate(0)';
+            likeMark.style.opacity = 0;
+            passMark.style.opacity = 0;
+        }
+        offsetX = 0;
+    }
+
+    // 切换下一条
+    function nextWord(){
+        currentIndex++;
+        if(currentIndex >= wordList.length) currentIndex = 0;
+        createCard();
+    }
+
+    // 底部按钮点击
+    passBtn.addEventListener('click',()=>{
+        cardDom.style.transition = 'transform 0.3s ease';
+        cardDom.style.transform = 'translateX(-450px) rotate(-25deg)';
+        setTimeout(nextWord,300);
+    })
+    likeBtn.addEventListener('click',()=>{
+        cardDom.style.transition = 'transform 0.3s ease';
+        cardDom.style.transform = 'translateX(450px) rotate(25deg)';
+        setTimeout(nextWord,300);
+    })
+
+    // 初始化
+    createCard();
+</script>
+</body>
+</html>
