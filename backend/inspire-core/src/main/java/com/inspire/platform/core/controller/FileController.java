@@ -63,6 +63,22 @@ public class FileController {
             if (!dir.exists()) dir.mkdirs();
             file.transferTo(new File(dir, filename));
             String url = "/uploads/" + filename;
+            // 图片压缩：限制最大宽度 1920px
+            try {
+                BufferedImage img = ImageIO.read(new File(dir, filename));
+                int maxW = 1920;
+                if (img.getWidth() > maxW) {
+                    int newW = maxW;
+                    int newH = (int)(maxW * (double)img.getHeight() / img.getWidth());
+                    BufferedImage resized = new BufferedImage(newW, Math.max(newH, 1), BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g2d = resized.createGraphics();
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.drawImage(img, 0, 0, newW, newH, null);
+                    g2d.dispose();
+                    ImageIO.write(resized, "jpg", new File(dir, filename));
+                    log.info("图片已压缩: {}x{} -> {}x{}", img.getWidth(), img.getHeight(), newW, newH);
+                }
+            } catch (Exception e) { log.warn("图片压缩失败(非致命): {}", e.getMessage()); }
             // 生成缩略图（400px宽）
             try {
                 BufferedImage original = ImageIO.read(new File(dir, filename));

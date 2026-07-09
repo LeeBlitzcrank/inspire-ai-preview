@@ -220,7 +220,7 @@ const handleDelete = async (c) => {
       activeConversation.value = null
     }
     loadConversations()
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 
@@ -239,7 +239,7 @@ onMounted(async () => {
       await markMessageRead(route.query.convId)
       await nextTick()
       if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-    } catch (e) {}
+    } catch (e) { console.error(e) }
   } else {
     loadConversations()
   }
@@ -251,7 +251,7 @@ onMounted(async () => {
           messages.value = newMsgs
           if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
         }
-      }).catch(() => {})
+      }).catch(e => console.error(e))
     }
     loadConversations()
   }, 3000)
@@ -282,7 +282,7 @@ const clearAllConversations = async () => {
     conversations.value = []
     activeConversation.value = null
     messages.value = []
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 </script>

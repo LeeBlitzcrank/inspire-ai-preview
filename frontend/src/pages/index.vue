@@ -199,7 +199,7 @@ const fetchUnreadCount = async () => {
   try {
     const res = await getUnreadCount()
     unreadCount.value = res.data?.count || 0
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 const categoryList = ref([
@@ -265,7 +265,7 @@ const loadInspireList = async () => {
     } else {
       hasMore.value = false
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
 
@@ -277,7 +277,7 @@ const loadMore = async () => {
     const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
     if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
     if (!res.data || res.data.length < 10) hasMore.value = false
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
 
@@ -347,11 +347,11 @@ const newFolderName = ref('')
       const res = await getRecommendList({ page: 1, size: 20 })
       if (res.data && res.data.length > 0) {
         swipeCards.value = res.data.map(function(i) {
-          return { word: i.title, type: typeFromTag(i.tag), tag: i.tag, inspireId: i.id, img: i.img || "" }
+          return { word: i.title, type: typeFromTag(i.tag), tag: i.tag, inspireId: i.id, img: i.img || (i.images && i.images.length > 0 ? (typeof i.images[0] === "string" && !i.images[0].startsWith("http") && import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + i.images[0] : i.images[0]) : "") || "" }
         })
         currentIndex.value = 0
         if (res.data && res.data.length > 0) console.log('[SWIPE] raw keys:', Object.keys(res.data[0]), 'img:', res.data[0].img)      }
-    } catch (e) {}
+    } catch (e) { console.error(e) }
   }
   
   const onSwipeStart = (e) => {
@@ -380,7 +380,7 @@ const newFolderName = ref('')
       if (currentCard.value && currentCard.value.inspireId) {
         collectInspire(currentCard.value.inspireId).then(function(r) {
           if (r.code === 200) ElMessage.success('收藏成功')
-        }).catch(function() {})
+        }).catch(function(e) { console.error(e) })
       }
       card.style.transform = 'translateX(450px) rotate(25deg)'
       setTimeout(nextCard, 300)
@@ -416,7 +416,7 @@ const newFolderName = ref('')
       try {
         await loadCollectFolders()
         if (collectFolders.value.length === 0) {
-          try { await createCollectFolder('默认收藏'); await loadCollectFolders() } catch (e) {}
+          try { await createCollectFolder('默认收藏'); await loadCollectFolders() } catch (e) { console.error(e) }
         }
         if (collectFolders.value.length > 0) {
           await collectToFolder(currentCard.value.inspireId, collectFolders.value[0].id)
@@ -437,7 +437,7 @@ const handleMsgFromFollow = async (u) => {
     if (res.data && res.data.id) {
       router.push('/messages?convId=' + res.data.id + '&direct=1')
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 </script>

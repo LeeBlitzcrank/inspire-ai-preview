@@ -400,8 +400,55 @@ git add .
 git commit -m "fix: 环境变量化敏感配置，清理 .env 跟踪"
 git push
 
-
+——————————————————————————————————————————————————————
 cd "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview"
-git add .
-git commit -m "fix: 全部敏感配置环境变量化 + .gitignore"
-git push
+
+# 完全清理旧数据
+docker compose down --remove-orphans -v
+
+# 重建并启动（顺序：mysql → es+redis+rocketmq → auth/ai/core/admin/search → gateway）
+docker compose up -d --build
+
+# 等待约 60 秒后检查
+docker compose ps
+
+# 1. 所有 11 个容器都是 "running" 或 "healthy"
+docker compose ps | grep -c "Up"
+
+# 2. 数据库表数
+docker compose exec mysql mysql -u root -p123456 inspire_ai_preview -e "SHOW TABLES;" | wc -l
+
+# 3. RocketMQ 消费者启动成功
+docker compose logs --tail=10 inspire-auth | grep "MQ消费者"
+
+# 60 秒后验证
+docker compose logs --tail=10 core | grep -E "ES同步|es.hosts"
+# 应该看到 ES 同步成功，或者至少不报 Connection refused
+
+# 4. 日志文件出现
+ls -la log/inspire-core/*.log
+ls -la log/inspire-ai/*.log
+ls -la log/inspire-gateway/*.log
+
+# 5. 无 Redis 报错（调 AI 接口时不报 "Connection refused"）
+
+
+1、当前docker启动的话 不方便看日志。在/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview 这个路径下新增
+一个log文件夹。各个子服务启动时将日志生成在这个文件夹中，同时docker的一些mysql、redis、es、rocketmq的日志是否也可以放在这里面。
+2、基于会出现mysql、es、rocketmq等中间件还没有启动就报错的情况。
+是否可以优先启动这些中间件，并校验后再启动项目？
+3、关于建表语句。是否可以合并成一个文件？并且说明好各个表之间的关联关系。
+
+1、这几个子服务的日志并没有全部在log里，比如ai、auth、core、getway。而且多了.gitkeep文件是做什么用的？
+2、2026-07-09T11:35:28.358Z  INFO 1 --- [inspire-auth] [main] c.i.platform.mq.producer.MqProducer      : RocketMQ生产者启动成功: namesrv=localhost:9876
+  2026-07-09T11:35:28.756Z  WARN 1 --- [inspire-auth] [main] c.i.platform.mq.consumer.MqConsumer      : MQ消费者[consumer_register]启动失败: null
+  2026-07-09T11:35:28.794Z  WARN 1 --- [inspire-auth] [main] c.i.platform.mq.consumer.MqConsumer      : MQ消费者[consumer_behavior]启动失败: null
+  2026-07-09T11:35:28.811Z  WARN 1 --- [inspire-auth] [main] c.i.platform.mq.consumer.MqConsumer      : MQ消费者[consumer_publish]启动失败: null
+  这个启动失败的原因，是否是因为在项目启动时，rocketmq尚未启动成功？
+
+
+
+
+1、当灵感上传时要查询当前用户是否存在，如果不存在则不能上传灵感；包括点赞、收藏、等需要关联用户的操作；
+2、当出现500的页面，刷新的指向应该是到首页，而非还是在500页面。同时禁止用户点击重新加载。不管是刷新还是点击页面，500的最终指向都是让用户回到首页；
+

@@ -85,6 +85,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public InspireMain create(InspireCreateRequest req, Long userId) {
+        checkUserExists(userId);
         InspireMain m = new InspireMain();
         m.setId(nextId()); m.setTitle(req.getTitle());
         m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
@@ -111,6 +112,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public InspireMain update(Long id, InspireUpdateRequest req, Long userId) {
+        checkUserExists(userId);
         InspireMain m = mainMapper.selectById(id);
         if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
         if (!m.getUserId().equals(userId)) throw new BusinessException("只能修改自己的灵感");
@@ -152,6 +154,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override
     public void deleteById(Long id, Long userId) {
+        checkUserExists(userId);
         InspireMain m = mainMapper.selectById(id);
         if (m == null || m.getDeleted() == 1) return;
         if (!m.getUserId().equals(userId)) throw new BusinessException("只能删除自己的灵感");
@@ -161,11 +164,13 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void collect(Long userId, Long inspireId) {
+        checkUserExists(userId);
         collectToFolder(userId, inspireId, null);
     }
 
     @Override @Transactional
     public void collectToFolder(Long userId, Long inspireId, Long folderId) {
+        checkUserExists(userId);
         ShardContext.setByUserId(userId);
         try {
             if (collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
@@ -197,6 +202,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void uncollect(Long userId, Long inspireId) {
+        checkUserExists(userId);
         ShardContext.setByUserId(userId);
         try { collectMapper.delete(Wrappers.lambdaQuery(CollectAction.class)
                 .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId));
@@ -207,6 +213,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void like(Long userId, Long inspireId) {
+        checkUserExists(userId);
         ShardContext.setByInspireId(inspireId);
         try {
             if (likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
@@ -237,7 +244,9 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void unlike(Long userId, Long inspireId) {
+        checkUserExists(userId);
 
+        ShardContext.setByInspireId(inspireId);
         try { likeMapper.delete(Wrappers.lambdaQuery(LikeAction.class)
                 .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId));
         } finally { ShardContext.clear(); }
@@ -249,6 +258,7 @@ public class InspireServiceImpl implements InspireService {
     @Override
     @Transactional
     public void share(Long userId, Long inspireId) {
+        checkUserExists(userId);
         mainMapper.update(null, com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaUpdate(InspireMain.class)
             .setSql("share_count = COALESCE(share_count, 0) + 1").eq(InspireMain::getId, inspireId));
         mqProducer.send(com.inspire.platform.mq.constant.MqTopicConstants.TOPIC_USER_BEHAVIOR, java.util.Map.of(
@@ -352,6 +362,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public CollectFolder createCollectFolder(Long userId, String name, String icon) {
+        checkUserExists(userId);
         CollectFolder f = new CollectFolder();
         f.setId(nextId()); f.setUserId(userId); f.setName(name);
         f.setIcon(icon != null ? icon : "📁"); f.setSortOrder(0);
@@ -361,6 +372,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void deleteCollectFolder(Long userId, Long folderId) {
+        checkUserExists(userId);
         CollectFolder f = collectFolderMapper.selectById(folderId);
         if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
         collectFolderMapper.deleteById(folderId);
@@ -374,6 +386,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void renameCollectFolder(Long userId, Long folderId, String name) {
+        checkUserExists(userId);
         CollectFolder f = collectFolderMapper.selectById(folderId);
         if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
         f.setName(name);
@@ -424,6 +437,7 @@ public class InspireServiceImpl implements InspireService {
 
     @Override @Transactional
     public void moveCollectToFolder(Long userId, Long inspireId, Long folderId) {
+        checkUserExists(userId);
         ShardContext.setByUserId(userId);
         try {
             CollectAction a = collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
@@ -532,5 +546,19 @@ public class InspireServiceImpl implements InspireService {
     }
 
     private static long seq = 0L, lastTs = -1L;
+
+
+    /** 校验用户是否存在（未注册/已注销则抛出 403） */
+    private void checkUserExists(Long userId) {
+        if (userId == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM `user` WHERE id = ? AND deleted = 0",
+            Integer.class, userId);
+        if (count == null || count == 0) {
+            throw new BusinessException(403, "用户不存在或已被注销");
+        }
+    }
 
 }

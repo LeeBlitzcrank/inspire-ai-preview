@@ -164,7 +164,7 @@ const selectOption = async (opt) => {
       summary.value = res.data?.summary || ''
       if (res.data?.content) applyContent(res.data.content)
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { exploring.value = false }
 }
 
@@ -182,7 +182,7 @@ const reshuffle = async () => {
     const p = path.value.join(',')
     const res = await exploreInspiration({ keyword: aiKeyword.value, path: p, refresh: true })
     if (res.code === 200) { options.value = res.data?.options || []; summary.value = res.data?.summary || '' }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { exploring.value = false }
 }
 
@@ -289,7 +289,7 @@ onMounted(async () => {
           form.value.images = [res.data.img]
         }
       }
-    } catch (e) {}
+    } catch (e) { console.error(e) }
   }
 })
 
@@ -309,7 +309,7 @@ const submit = async (status) => {
     }
     ElMessage.success(res.msg || (editId.value ? '修改成功' : '发布成功'))
     router.push('/')
-  } catch (e) {} finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 
 const imageSuggestDialog = ref(false)

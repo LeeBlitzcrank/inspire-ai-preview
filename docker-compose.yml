@@ -1,0 +1,210 @@
+# ==================== 共享配置 ====================
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: dev
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/inspire_ai_preview?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: 123456
+  INSPIRE_DB_PASSWORD: 123456
+  INSPIRE_AUTH_DB_PASSWORD: 123456
+  INSPIRE_ADMIN_DB_PASSWORD: 123456
+  INSPIRE_GATEWAY_DB_PASSWORD: 123456
+  INSPIRE_SEARCH_DB_PASSWORD: 123456
+  INSPIRE_JWT_SECRET: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
+  INSPIRE_REDIS_PASSWORD: 123456
+  INSPIRE_ES_HOSTS: elasticsearch:9200
+  # 日志文件路径（每个容器的 /logs 挂载到不同的宿主机目录）
+  LOGGING_FILE_NAME: /logs/app.log
+  ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+  INSPIRE_REDIS_HOST: redis
+  INSPIRE_REDIS_PORT: 6379
+
+x-service-build: &service-build
+  context: ./backend
+  dockerfile: docker/Dockerfile.local
+
+# ==================== 服务定义 ====================
+services:
+  # -------- 基础设施 --------
+  mysql:
+    image: mysql:8.0
+    container_name: inspire-mysql
+    ports: ["3307:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: inspire_ai_preview
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./log/mysql:/var/log/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  elasticsearch:
+    image: elasticsearch:7.17.22
+    container_name: inspire-es
+    ports: ["9200:9200", "9300:9300"]
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+      - ./log/elasticsearch:/usr/share/elasticsearch/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.2.0
+    container_name: inspire-mq-namesrv
+    ports: ["9876:9876"]
+    command: sh mqnamesrv
+    environment: { JAVA_OPT_EXT: -Xms512m -Xmx512m }
+    volumes:
+      - ./log/rocketmq:/home/rocketmq/logs/rocketmqlogs
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q ':9876' || ps aux | grep -v grep | grep -q namesrv"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.2.0
+    container_name: inspire-mq-broker
+    ports: ["10911:10911", "10909:10909"]
+    depends_on:
+      rocketmq-namesrv: { condition: service_healthy }
+    command: sh mqbroker -n ${ROCKETMQ_NAMESRV_ADDR:-rocketmq-namesrv:9876}
+    environment: { JAVA_OPT_EXT: -Xms512m -Xmx512m }
+    volumes:
+      - ./log/rocketmq:/home/rocketmq/logs/rocketmqlogs
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q ':10911' || ps aux | grep -v grep | grep -q broker"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass 123456
+    container_name: inspire-redis
+    ports: ["6379:6379"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # -------- 后端服务 --------
+  inspire-auth:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-auth
+    container_name: inspire-auth
+    ports: ["8081:8081"]
+    depends_on:
+      mysql: { condition: service_healthy }
+      rocketmq-broker: { condition: service_healthy }
+    restart: unless-stopped
+    environment: *common-env
+    volumes: [./log/inspire-auth:/logs]
+
+  inspire-ai:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-ai
+    container_name: inspire-ai
+    ports: ["8082:8082"]
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rocketmq-broker: { condition: service_healthy }
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
+      INSPIRE_UNSPLASH_ACCESS_KEY: ${INSPIRE_UNSPLASH_ACCESS_KEY:-}
+      SPRING_APPLICATION_JSON: '{"redis":{"host":"redis","port":6379}}'
+    volumes: [./log/inspire-ai:/logs]
+
+  inspire-core:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-core
+    container_name: inspire-core
+    ports: ["8083:8083"]
+    depends_on:
+      mysql: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      rocketmq-broker: { condition: service_healthy }
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      INSPIRE_UNSPLASH_ACCESS_KEY: ${INSPIRE_UNSPLASH_ACCESS_KEY:-}
+    volumes:
+      - ./log/inspire-core:/logs
+      - /tmp/inspire-uploads:/tmp/inspire-uploads
+
+  inspire-admin:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-admin
+    container_name: inspire-admin
+    ports: ["8085:8085"]
+    depends_on:
+      mysql: { condition: service_healthy }
+    restart: unless-stopped
+    environment: *common-env
+    volumes: [./log/inspire-admin:/logs]
+
+  inspire-search:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-search
+    container_name: inspire-search
+    ports: ["8086:8086"]
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    restart: unless-stopped
+    environment: *common-env
+    volumes: [./log/inspire-search:/logs]
+
+  inspire-gateway:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-gateway
+    container_name: inspire-gateway
+    ports: ["8080:8080"]
+    depends_on:
+      inspire-auth: { condition: service_started }
+      inspire-ai: { condition: service_started }
+      inspire-core: { condition: service_started }
+      inspire-admin: { condition: service_started }
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      routes_auth_service: http://inspire-auth:8081
+      routes_ai_service: http://inspire-ai:8082
+      routes_core_service: http://inspire-core:8083
+      routes_admin_service: http://inspire-admin:8085
+    volumes: [./log/inspire-gateway:/logs]
+
+volumes:
+  mysql-data:
+  es-data:

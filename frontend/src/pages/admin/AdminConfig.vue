@@ -22,15 +22,15 @@ import { adminConfigList, adminUpdateConfig, adminManualPush } from '@/api/inspi
 const configs = ref([]); const pushing = ref(false)
 const push = ref({ title: '', content: '', city: '' })
 onMounted(async () => {
-  try { const res = await adminConfigList(); configs.value = res.data || [] } catch (e) {}
+  try { const res = await adminConfigList(); configs.value = res.data || [] } catch (e) { console.error(e) }
 })
 const doUpdate = async (cfg) => {
-  try { await adminUpdateConfig({ id: cfg.id, value: cfg.configValue }); ElMessage.success('更新成功') } catch (e) {}
+  try { await adminUpdateConfig({ id: cfg.id, value: cfg.configValue }); ElMessage.success('更新成功') } catch (e) { console.error(e) }
 }
 const doPush = async () => {
   if (!push.value.title) return ElMessage.warning('请输入标题')
   pushing.value = true
-  try { await adminManualPush(push.value); ElMessage.success('推送已发送'); push.value = { title: '', content: '', city: '' } } catch (e) {}
+  try { await adminManualPush(push.value); ElMessage.success('推送已发送'); push.value = { title: '', content: '', city: '' } } catch (e) { console.error(e) }
   finally { pushing.value = false }
 }
 </script>

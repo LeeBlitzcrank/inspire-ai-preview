@@ -206,7 +206,7 @@ const handleLike = async () => {
       const res = await likeInspire(detail.value.id)
       if (res.code === 200) { liked.value = true; detail.value.likeCount++ }
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 const handleCollect = async () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); window.location.href = '/login'; return }
@@ -218,7 +218,7 @@ const handleCollect = async () => {
       const res = await collectInspire(detail.value.id)
       if (res.code === 200) { collected.value = true; detail.value.collectCount++ }
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 watch(() => route.params.id, (id) => { if (id) loadData(id) }, { immediate: true })
 
@@ -230,7 +230,7 @@ const handleShare = async () => {
     try {
       await shareInspire(detail.value.id)
       detail.value.shareCount = (detail.value.shareCount || 0) + 1
-    } catch (e) {}
+    } catch (e) { console.error(e) }
   }
 }
 const copyShareLink = () => {
@@ -250,7 +250,7 @@ const copyShareLink = () => {
 const nativeShare = () => {
   const url = window.location.href
   if (navigator.share) {
-    navigator.share({ title: document.title, url: url }).catch(() => {})
+    navigator.share({ title: document.title, url: url }).catch(e => console.error(e))
   } else {
     copyShareLink()
   }
@@ -278,7 +278,7 @@ const handleToggleFollow = async () => {
     }
     if (res.code === 200) isFollowing.value = !isFollowing.value
     else ElMessage.error(res.msg || '操作失败')
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 const goBack = () => {
@@ -331,7 +331,7 @@ const loadComments = async (reset = false) => {
       totalComments.value = data.total || 0
       hasMoreComments.value = commentPage.value * 10 < (data.total || 0)
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { 
     commentsLoading.value = false 
     console.log('[COMMENTS] 加载完成, 数量:', comments.value.length)
@@ -361,7 +361,7 @@ const handleSubmitComment = async () => {
       totalComments.value++
       loadComments(true)
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { submitting.value = false }
 }
 
@@ -494,7 +494,7 @@ const toggleCollect = async () => {
       try {
         await createCollectFolder('默认收藏')
         await loadCollectFolders()
-      } catch (e) {}
+      } catch (e) { console.error(e) }
     }
     if (collectFolders.value.length > 0) {
       selectedFolder.value = collectFolders.value[0].id
@@ -513,7 +513,7 @@ const goChat = async (userId) => {
     if (res.data && res.data.id) {
       router.push('/messages?convId=' + res.data.id)
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 </script>

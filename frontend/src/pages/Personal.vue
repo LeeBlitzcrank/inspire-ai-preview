@@ -305,7 +305,7 @@ const detectLocation = async () => {
         }
       }
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { autoDetecting.value = false }
 }
 
@@ -336,7 +336,7 @@ onMounted(async () => {
     statList.value[0].num = pubTotal.value
     statList.value[1].num = collTotal.value
     statList.value[2].num = publishedList.value.reduce((s, i) => s + (i.viewCount || 0), 0)
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { loading.value = false }
 })
 
@@ -360,7 +360,7 @@ const handleUncollect = async (id) => {
     collectList.value = collectList.value.filter(i => i.id !== id)
     statList.value[1].num = collectList.value.length
     ElMessage.success('已取消收藏')
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 const handleSaveProfile = async () => {
@@ -376,7 +376,7 @@ const handleSaveProfile = async () => {
       ElMessage.success('资料已更新')
       showProfileDialog.value = false
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { savingProfile.value = false }
 }
 
@@ -392,7 +392,7 @@ const handleChangePassword = async () => {
       pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
       showPwdDialog.value = false
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
   finally { savingPwd.value = false }
 }
 
@@ -415,7 +415,7 @@ const goChat = async (u) => {
     if (res.data && res.data.id) {
       router.push('/messages?convId=' + res.data.id)
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 

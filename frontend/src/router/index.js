@@ -49,7 +49,7 @@ const routes = [
     ]
   },
   { path: "/403", name: "Forbidden", component: Forbidden },
-  { path: "/500", name: "ServerError", component: ServerError },
+  { path: "/500", redirect: "/" },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound }
 ]
 const router = createRouter({

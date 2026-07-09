@@ -29,7 +29,7 @@ const handleSubmit = async () => {
     const res = await forgotPassword({ email: email.value })
     if (res.code === 200) sent.value = true
     else ElMessage.error(res.msg || '发送失败')
-  } catch (e) {} finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 </script>
 <style scoped>

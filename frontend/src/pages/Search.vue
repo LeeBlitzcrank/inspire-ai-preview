@@ -120,7 +120,7 @@ const doSearch = async (loadMore) => {
     } else {
       hasMore.value = false
     }
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 const handleCollect = async (id) => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }

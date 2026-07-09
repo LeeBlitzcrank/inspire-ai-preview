@@ -128,10 +128,10 @@ public class AiServiceImpl implements AiService {
         String redisKey = CACHE_PREFIX + cacheKey;
         if (refresh) {
             log.info("换一批: keyword={}", keyword);
-            try (Jedis jedis = jedisPool.getResource()) { jedis.del(redisKey); }
+            if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) { jedis.del(redisKey); }
         }
         String cached;
-        try (Jedis jedis = jedisPool.getResource()) { cached = jedis.get(redisKey); }
+        if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) { cached = jedis.get(redisKey); }
         if (cached != null) return cached;
 
         String prompt = buildPrompt(keyword, path);
@@ -156,7 +156,7 @@ public class AiServiceImpl implements AiService {
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(apiUrl, HttpMethod.POST, entity, Map.class);
             String msg = (String) ((Map) ((List<Map>) resp.getBody().get("choices")).get(0).get("message")).get("content");
-            try (Jedis jedis = jedisPool.getResource()) {
+            if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) {
                 jedis.setex(redisKey, CACHE_TTL, msg);
                 log.info("Redis缓存已写入: {}, TTL={}s", cacheKey, CACHE_TTL);
             }

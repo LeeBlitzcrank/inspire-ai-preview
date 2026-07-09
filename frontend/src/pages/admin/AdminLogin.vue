@@ -29,7 +29,7 @@ const doLogin = async () => {
       ElMessage.success('登录成功')
       router.push('/admin/dashboard')
     } else ElMessage.error(res.msg || '登录失败')
-  } catch (e) {} finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 </script>
 <style scoped>

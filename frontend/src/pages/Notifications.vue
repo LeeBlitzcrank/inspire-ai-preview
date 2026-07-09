@@ -105,7 +105,7 @@ const markAll = async () => {
   try {
     await markAllRead()
     list.value.forEach(item => item.isRead = 1)
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 onMounted(() => loadMore())

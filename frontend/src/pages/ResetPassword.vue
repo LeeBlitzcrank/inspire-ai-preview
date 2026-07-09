@@ -47,7 +47,7 @@ const handleSubmit = async () => {
     const res = await resetPassword({ token: form.value.token, newPassword: password })
     if (res.code === 200) success.value = true
     else ElMessage.error(res.msg || '重置失败')
-  } catch (e) {} finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 </script>
 <style scoped>

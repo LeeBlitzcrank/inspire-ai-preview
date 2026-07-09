@@ -59,7 +59,7 @@ const showDetail = async (row) => {
   try {
     const res = await adminUserDetail(row.id)
     if (res.code === 200 && res.data) detailUser.value = res.data
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 </script>
 

@@ -52,7 +52,7 @@ const handleRegister = async () => {
     } else {
       ElMessage.error(res.msg || '注册失败')
     }
-  } catch (e) {} finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 </script>
 <style scoped>

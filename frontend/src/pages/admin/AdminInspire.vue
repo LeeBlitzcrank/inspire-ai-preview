@@ -101,10 +101,10 @@ const loadPending = async () => {
 }
 
 // 操作
-const doBlock = async (id) => { try { await adminBlockInspire(id); ElMessage.success('已下架'); loadAll() } catch (e) {} }
-const doUnblock = async (id) => { try { await adminUnblockInspire(id); ElMessage.success('已上架'); loadAll() } catch (e) {} }
-const doApprove = async (id) => { try { await adminApproveInspire(id); ElMessage.success('审核通过'); loadAll(); loadPending() } catch (e) {} }
-const doReject = async (id) => { try { await adminRejectInspire(id); ElMessage.success('已拒绝'); loadAll(); loadPending() } catch (e) {} }
+const doBlock = async (id) => { try { await adminBlockInspire(id); ElMessage.success('已下架'); loadAll() } catch (e) { console.error(e) } }
+const doUnblock = async (id) => { try { await adminUnblockInspire(id); ElMessage.success('已上架'); loadAll() } catch (e) { console.error(e) } }
+const doApprove = async (id) => { try { await adminApproveInspire(id); ElMessage.success('审核通过'); loadAll(); loadPending() } catch (e) { console.error(e) } }
+const doReject = async (id) => { try { await adminRejectInspire(id); ElMessage.success('已拒绝'); loadAll(); loadPending() } catch (e) { console.error(e) } }
 
 const switchTab = (tab) => { if (tab === 'pending') loadPending() }
 

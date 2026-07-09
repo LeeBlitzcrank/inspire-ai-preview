@@ -1,0 +1,14 @@
+# 本地构建版：从本地 target 目录直接 COPY JAR，无需 Maven 下载
+# 使用前先在 backend 目录执行:
+#   for m in inspire-auth inspire-ai inspire-core inspire-admin inspire-search inspire-gateway; do
+#     mvn package -DskipTests -pl $m -am -s settings.xml
+#   done
+
+ARG BUILD_MODULE
+
+FROM eclipse-temurin:21-jre
+ARG BUILD_MODULE
+WORKDIR /app
+COPY ${BUILD_MODULE}/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "rm -f ${LOGGING_FILE_NAME:-/logs/app.log} 2>/dev/null && exec java -jar app.jar"]

@@ -108,7 +108,7 @@ const handleRename = async () => {
 const removeFolder = async (f) => {
   try { await ElMessageBox.confirm('确定删除收藏夹「' + f.name + '」？'); await deleteCollectFolder(f.id); ElMessage.success('已删除')
     if (activeFolder.value === f.id) { activeFolder.value = null; collectedInspires.value = [] }; loadFolders()
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 const handleRemoveFromFolder = async (id) => {
   try { await collectInspire(id); ElMessage.success('已取消收藏'); loadCollects() }

@@ -14,6 +14,12 @@ public class RedisConfig {
         JedisPoolConfig cfg = new JedisPoolConfig();
         cfg.setMaxTotal(10);
         cfg.setMaxIdle(5);
-        return new JedisPool(cfg, host, port, 3000, password);
+        try {
+            JedisPool pool = new JedisPool(cfg, host, port, 3000, password);
+            pool.getResource().close(); // 验证连接
+            return pool;
+        } catch (Exception e) {
+            return null; // Redis 不可用，走直连
+        }
     }
 }
