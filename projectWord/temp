@@ -468,4 +468,18 @@ strict-origin-when-cross-origin
 2、灵感详情页并没有展示灵感详细描述。后端是有返回到前端的，应该是渲染的问题；
 
 1、灵感录入采用上传封面图。
+2、
+Request URL
+https://e4e2-185-36-194-34.ngrok-free.app/uploads/20698880565e4982aae7b089235ec6d4.jpg
+Request Method
+GET
+Status Code
+401 Unauthorized
+Referrer Policy
+strict-origin-when-cross-origin
+这个问题还是没有解决。本地访问http://localhost:5173/ 是可以渲染的，但是 ai.20sherry.com访问就是返回401
 
+灵感详情的图片，我自己上传的图片没有渲染生效。后端是有返回到前端的。
+1、现在图片上传的路径是在哪里？
+2、关于灵感录入，是否可以采用上传封面图+内容的形式？同时针对灵感录入，
+灵感详情可以再多一些。

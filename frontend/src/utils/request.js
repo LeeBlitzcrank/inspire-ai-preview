@@ -18,8 +18,14 @@ function fixImageUrls(obj) {
     const val = obj[key]
     if (typeof val === 'string' && val.startsWith('http://localhost:8083/')) {
       obj[key] = val.replace('http://localhost:8083', replacer)
+    } else if (typeof val === 'string' && val.startsWith('/') && !val.startsWith('//')) {
+      obj[key] = replacer + val
     } else if (Array.isArray(val)) {
-      val.forEach(fixImageUrls)
+      for (let i = 0; i < val.length; i++) {
+        if (typeof val[i] === 'string' && val[i].startsWith('/') && !val[i].startsWith('//')) {
+          val[i] = replacer + val[i]
+        }
+      }
     } else if (val && typeof val === 'object') {
       fixImageUrls(val)
     }
