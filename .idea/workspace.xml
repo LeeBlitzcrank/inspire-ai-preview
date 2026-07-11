@@ -105,7 +105,7 @@
       <workItem from="1782787225051" duration="102308000" />
       <workItem from="1783390721698" duration="21692000" />
       <workItem from="1783573131713" duration="16669000" />
-      <workItem from="1783689226858" duration="3506000" />
+      <workItem from="1783689226858" duration="3937000" />
     </task>
     <task id="LOCAL-00001" summary="init frontend">
       <option name="closed" value="true" />
@@ -411,7 +411,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783739721790</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="init docker部署">
+      <option name="closed" value="true" />
+      <created>1783742248228</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1783742248228</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

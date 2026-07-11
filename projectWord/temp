@@ -480,6 +480,18 @@ strict-origin-when-cross-origin
 这个问题还是没有解决。本地访问http://localhost:5173/ 是可以渲染的，但是 ai.20sherry.com访问就是返回401
 
 灵感详情的图片，我自己上传的图片没有渲染生效。后端是有返回到前端的。
+
+关于github page，我在https://ai.20sherry.com/detail/200994476196368385页面本来是正常的，
+但是我点击刷新后页面就变成了这样子。
+404
+File not found
+The site configured at this address does not contain the requested file.
+If this is your site, make sure that the filename case matches the URL as well as any file permissions.
+For root URLs (like http://example.com/) you must provide an index.html file.
+Read the full documentation for more information about using GitHub Pages.
+GitHub Status — @githubstatus
+请问下是什么原因呢？
+
 1、现在图片上传的路径是在哪里？
 2、关于灵感录入，是否可以采用上传封面图+内容的形式？同时针对灵感录入，
 灵感详情可以再多一些。
