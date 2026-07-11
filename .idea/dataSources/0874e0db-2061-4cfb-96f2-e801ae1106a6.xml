@@ -1065,33 +1065,33 @@ sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
     <schema id="288" parent="1" name="information_schema">
       <AutoIntrospectionLevel>2</AutoIntrospectionLevel>
       <LastIntrospectionLevel>2</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-07-09.13:28:30</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-07-10.13:14:00</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb3_general_ci</CollationName>
     </schema>
     <schema id="289" parent="1" name="inspire_ai_preview">
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-07-09.13:28:30</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-07-10.13:14:00</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <schema id="290" parent="1" name="mysql">
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <Grants>user|||mysql.session|localhost|SELECT|G</Grants>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-07-09.13:28:30</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-07-10.13:14:00</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <schema id="291" parent="1" name="performance_schema">
       <AutoIntrospectionLevel>1</AutoIntrospectionLevel>
       <LastIntrospectionLevel>1</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-07-09.13:28:29</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-07-10.13:14:00</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <schema id="292" parent="1" name="sys">
       <AutoIntrospectionLevel>2</AutoIntrospectionLevel>
       <Grants>sys_config|||mysql.sys|localhost|SELECT|G</Grants>
       <LastIntrospectionLevel>2</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-07-09.13:28:30</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-07-10.13:14:00</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <user id="293" parent="1" name="mysql.infoschema">

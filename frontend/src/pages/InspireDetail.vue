@@ -196,6 +196,8 @@ const loadData = async (id) => {
     }
   } catch (e) { loadErr.value = '灵感不存在或已删除' }
 }
+const renderedContent = computed(() => detail.value.content || '')
+
 const handleLike = async () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); window.location.href = '/login'; return }
   try {
@@ -624,4 +626,5 @@ const goChat = async (userId) => {
 .md-content strong { font-weight:600; }
 .md-content em { font-style:italic; }
 .md-content a { color:#409eff; text-decoration:underline; }
+.md-content { white-space: pre-wrap; word-break: break-word; line-height: 1.7; }
 </style>

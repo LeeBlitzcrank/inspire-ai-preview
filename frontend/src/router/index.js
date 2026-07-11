@@ -24,7 +24,7 @@ const Forbidden = () => import('@/pages/Forbidden.vue')
 const routes = [
   { path: '/', name: 'Index', component: Index },
   { path: '/search', name: 'Search', component: Search },
-  { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail, meta: { needLogin: true } },
+  { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail },
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
   { path: '/notifications', name: 'Notifications', component: Notifications, meta: { needLogin: true } },
   { path: '/collections', name: 'Collections', component: Collections, meta: { needLogin: true } },

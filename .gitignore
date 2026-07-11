@@ -26,3 +26,12 @@ target/
 
 # Flink
 checkpoints/
+/log/inspire-admin/app.log.2026-07-09.0.gz
+/log/inspire-ai/app.log.2026-07-09.0.gz
+/log/inspire-auth/app.log.2026-07-09.0.gz
+/log/inspire-core/app.log.2026-07-09.0.gz
+/log/inspire-gateway/app.log.2026-07-09.0.gz
+/log/inspire-admin/app.log.2026-07-10.0.gz
+/log/inspire-auth/app.log.2026-07-10.0.gz
+/log/inspire-core/app.log.2026-07-10.0.gz
+/log/inspire-gateway/app.log.2026-07-10.0.gz

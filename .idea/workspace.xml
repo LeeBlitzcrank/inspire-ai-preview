@@ -4,91 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="init GitHub Pages 部署 &amp; 生产环境穿透配置">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="init docker部署">
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/0874e0db-2061-4cfb-96f2-e801ae1106a6.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/0874e0db-2061-4cfb-96f2-e801ae1106a6.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/0874e0db-2061-4cfb-96f2-e801ae1106a6/storage_v2/_src_/schema/information_schema.FNRwLQ.zip" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/0874e0db-2061-4cfb-96f2-e801ae1106a6/storage_v2/_src_/schema/information_schema.FNRwLQ.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspire-ai-preview.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspire-ai-preview.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/sqldialects.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/sqldialects.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/src/main/resources/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/src/main/resources/schema.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/config/RedisConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/config/RedisConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/impl/AiServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/impl/AiServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FileController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/InspireServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/InspireServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/schema.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminConfig-BTWoeSvB.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminConfig-fpu4APEH.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminDashboard-D5JcXb-B.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminDashboard-Ddvr5Dat.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminInspire-0puk2IHP.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminInspire-vz4QhW_S.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminLayout-hlXvrs7_.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminLogin-DWszZkO9.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminLogin-QgFp_1JG.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminUser-BMhkenVP.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/AdminUser-CJ84h_fe.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Collections-BCDo1iln.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Collections-C6WHQBtD.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Create-Bf0PL2cE.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Create-DX9fgU4p.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Forbidden-DR79ZOHu.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/ForgotPassword-C5k9gGzr.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/ForgotPassword-CleqtzH9.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/InspireDetail-BCc9rDCJ.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/InspireDetail-C74XTFmm.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Login-Jz5alV6I.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Messages-DCfEUudD.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Messages-Da53Jquj.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/NotFound-Cq8EusAu.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Notifications-C-MAiMcm.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Notifications-CHd031hj.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Personal-Ccjr2feL.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Personal-tNokxFcP.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Register-BtJuAXVO.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Register-CgeGt7Nk.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/ResetPassword-BE7Gzw3g.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/ResetPassword-DVkISWRc.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Search-Bf6WOLjU.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/Search-C80sagWa.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/ServerError-D16AB9IW.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/index-COA-8FTL.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/assets/index-zttCRlNz.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/_metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/_metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/chunk-AP6IRE66.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/chunk-AP6IRE66.js.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/element-plus.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/element-plus.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/element-plus.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/element-plus.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue-router.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue-router.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue-router.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue-router.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.vite/deps/vue.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ForgotPassword.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ForgotPassword.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Register.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ResetPassword.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ResetPassword.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Search.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Search.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ServerError.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ServerError.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminConfig.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminConfig.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminDashboard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminDashboard.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminInspire.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminInspire.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminLogin.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminLogin.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminUser.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminUser.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/index.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/vite.config.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -123,39 +45,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "database.data.extractors.current.export.id": "JSON-Groovy.json.groovy",
-    "git-widget-placeholder": "main",
-    "javascript.preferred.runtime.type.id": "node",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/frontend",
-    "nodejs_interpreter_path": "node",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "模块",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.28965518",
-    "settings.editor.selected.configurable": "settings.javascript.runtime",
-    "ts.external.directory.path": "/Applications/IntelliJ IDEA.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;database.data.extractors.current.export.id&quot;: &quot;JSON-Groovy.json.groovy&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/lee/Desktop/Project/Study Project/Codex/inspire-ai-preview/frontend&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;模块&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.28965518&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.javascript.runtime&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Applications/IntelliJ IDEA.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "redis",
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;redis&quot;,
+      &quot;mysql&quot;
     ],
-    "vue.recent.templates": [
-      "Vue Composition API Component"
+    &quot;vue.recent.templates&quot;: [
+      &quot;Vue Composition API Component&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/frontend" />
@@ -187,7 +109,8 @@
       <workItem from="1782721492113" duration="5955000" />
       <workItem from="1782787225051" duration="102308000" />
       <workItem from="1783390721698" duration="21692000" />
-      <workItem from="1783573131713" duration="14836000" />
+      <workItem from="1783573131713" duration="16669000" />
+      <workItem from="1783689226858" duration="2040000" />
     </task>
     <task id="LOCAL-00001" summary="init frontend">
       <option name="closed" value="true" />
@@ -477,7 +400,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783403158664</updated>
     </task>
-    <option name="localTasksCounter" value="37" />
+    <task id="LOCAL-00037" summary="init docker部署">
+      <option name="closed" value="true" />
+      <created>1783610482646</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1783610482647</updated>
+    </task>
+    <option name="localTasksCounter" value="38" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -507,7 +438,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="init frontend" />
     <MESSAGE value="init auth" />
     <MESSAGE value="init 用户认证开发&amp;引入swaggger" />
     <MESSAGE value="init 灵感创作服务开发" />
@@ -532,7 +462,8 @@
     <MESSAGE value="init AI配图引入UnsplashAPI&amp;推荐卡片滑动优化&amp;性能优化" />
     <MESSAGE value="init githubPage" />
     <MESSAGE value="init GitHub Pages 部署 &amp; 生产环境穿透配置" />
-    <option name="LAST_COMMIT_MESSAGE" value="init GitHub Pages 部署 &amp; 生产环境穿透配置" />
+    <MESSAGE value="init docker部署" />
+    <option name="LAST_COMMIT_MESSAGE" value="init docker部署" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

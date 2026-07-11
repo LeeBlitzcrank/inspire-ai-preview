@@ -102,7 +102,8 @@
       <div v-if="currentCard" :key="currentIndex" class="card" :class="currentCard.type" :style="cardStyle"
            @mousedown="onSwipeStart" @touchstart.passive="onSwipeStart"
            @mousemove="onSwipeMove" @touchmove="onSwipeMove"
-           @mouseup="onSwipeEnd" @touchend="onSwipeEnd">
+           @mouseup="onSwipeEnd" @touchend="onSwipeEnd"
+           @click="goDetailSwipe">
         <img v-if="currentCard && currentCard.img" :src="currentCard.img" class="card-bg">
         <div v-else class="card-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div>
         <div class="card-mask">
@@ -306,6 +307,7 @@ const handleCollect = async (targetId) => {
 }
   const swipeCards = ref([])
   const currentIndex = ref(0)
+const wasSwiped = ref(false)
   const currentCard = computed(() => swipeCards.value[currentIndex.value] || null)
   const likeOpacity = ref(0)
   const passOpacity = ref(0)
@@ -391,9 +393,18 @@ const newFolderName = ref('')
       card.style.transform = 'translateX(0) rotate(0)'
       likeOpacity.value = 0; passOpacity.value = 0
     }
+    wasSwiped.value = Math.abs(offsetX.value) > 50
     offsetX.value = 0
   }
-  const nextCard = () => {
+  const goDetailSwipe = () => {
+  if (!wasSwiped.value && currentCard.value) {
+    router.push('/detail/' + currentCard.value.inspireId)
+  }
+  wasSwiped.value = false
+}
+
+const nextCard = () => {
+    wasSwiped.value = false
     currentIndex.value++
     if (currentIndex.value >= swipeCards.value.length) currentIndex.value = 0
     const c = document.querySelector('.card')
