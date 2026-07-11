@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>灵感空间AI - 笔记详情</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+}
+body {
+  background: #ffffff;
+  color: #222;
+  padding-bottom: 70px;
+}
+svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+.small-svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 顶部用户导航栏 */
+.top-user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 14px;
+  border-bottom: 1px solid #f4f4f4;
+}
+.close-icon {
+  font-size: 22;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.close-icon:active {
+  background: #f4f4f4;
+}
+.user-info-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  margin-left: 8px;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.username {
+  font-size: 16px;
+  font-weight: 500;
+}
+.follow-btn {
+  background: #ff2442;
+  color: #fff;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+/* 通栏大图 */
+.note-img {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: cover;
+  display: block;
+}
+
+/* 标题正文话题 */
+.text-wrap {
+  padding: 16px 14px;
+}
+.note-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.note-desc {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #333;
+  margin-bottom: 10px;
+}
+.tag-item {
+  color: #0066cc;
+  font-size: 15px;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+/* 猜你搜索 */
+.search-tip {
+  margin: 0 14px 16px;
+  padding: 8px 12px;
+  background: #f7f7f7;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #999;
+}
+.search-tip span {
+  color: #333;
+}
+
+/* 发布行 */
+.publish-row {
+  padding: 0 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #999;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
+}
+.more-operate {
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* 评论标题 */
+.comment-count-title {
+  padding: 16px 14px 10px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 评论容器 */
+.comment-list {
+  padding: 0 14px;
+}
+.comment-main {
+  padding: 14px 0;
+  border-bottom: 1px solid #f4f4f4;
+}
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.comment-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.comment-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+.comment-more {
+  margin-left: auto;
+  font-size: 16px;
+  color: #999;
+}
+.comment-text {
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+.comment-img-group {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.comment-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+/* 一级评论底部操作：时间+点赞+回复 */
+.comment-bottom-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: #999;
+}
+.comment-sub-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.like-red {
+  color: #ff2442;
+}
+
+/* 二级回复 缩进 + 支持点赞 */
+.reply-wrap {
+  margin-top: 10px;
+  padding-left: 44px;
+}
+.reply-item {
+  padding: 10px 0;
+  border-top: 1px solid #f4f4f4;
+}
+.reply-item:first-child {
+  border-top: none;
+}
+.reply-target {
+  color: #0066cc;
+}
+.reply-bottom {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #999;
+}
+.reply-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+/* 底部固定操作栏 */
+.bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 12px;
+}
+.comment-input-short {
+  flex: 1;
+  background: #f4f4f4;
+  border-radius: 20px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #999;
+}
+.action-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  gap: 3px;
+  cursor: pointer;
+}
+.action-item.like-active {
+  color: #ff2442;
+}
+</style>
+</head>
+<body>
+<!-- 顶部用户栏 -->
+<div class="top-user-bar">
+  <div class="close-icon">×</div>
+  <div class="user-info-wrap">
+    <img class="avatar" src="https://picsum.photos/id/237/40/40" alt="头像">
+    <div class="username">宁静小猫</div>
+  </div>
+  <button class="follow-btn">关注</div>
+</div>
+
+<!-- 大图 -->
+<img class="note-img" src="https://e4e2-185-36-194-34.ngrok-free.app/uploads/20698880565e4982aae7b089235ec6d4.jpg" alt="灵感配图">
+
+<!-- 标题+正文+话题 -->
+<div class="text-wrap">
+  <h2 class="note-title">古道尘烟：李白诗中的苍茫旅迹</h2>
+  <div class="note-desc">
+李白笔下的古道，常是“古道连绵走西京，紫阙落日浮云生”的壮阔，或是“长歌吟松风，曲尽星河稀”的孤寂。可结合其《蜀道难》的险峻与《丁都护歌》的苍凉，描绘一条连接历史与侠客梦的沙石路径。灵感可来自：古道旁残破的驿站、风中摇曳的野草、马蹄印痕与诗人醉卧的传说。尝试用“荒原”、“遗迹”、“落日”、“酒旗”等元素，营造一种时空交错的叙事感，让读者仿佛听见李白在古道上的吟诵与叹息。
+  </div>
+  <span class="tag-item">#古风灵感</span>
+  <span class="tag-item">#山水创作</span>
+</div>
+
+<!-- 猜你搜索 -->
+<div class="search-tip">
+  <span>Q</span>
+  猜你想搜 李白古道诗词创作素材
+</div>
+
+<!-- 发布信息 -->
+<div class="publish-row">
+  <span>07-11 湖南长沙</span>
+  <div class="more-operate">⋯</div>
+</div>
+
+<!-- 评论总数 -->
+<div class="comment-count-title">共 3 条评论</div>
+
+<!-- 评论列表 -->
+<div class="comment-list">
+  <!-- 一级主评论（带点赞） -->
+  <div class="comment-main">
+    <div class="comment-header">
+      <img class="comment-avatar" src="https://picsum.photos/id/1025/36/36">
+      <span class="comment-name">宁静小猫</span>
+      <div class="comment-more">⋯</div>
+    </div>
+    <div class="comment-text">写得太有画面感了，看完脑海里全是落日古道！</div>
+    <div class="comment-img-group">
+      <img class="comment-img" src="https://picsum.photos/id/1036/100/100">
+      <img class="comment-img" src="https://picsum.photos/id/1039/100/100">
+    </div>
+    <div class="comment-bottom-info">
+      <span>07-11 长沙</span>
+      <div class="comment-sub-btn like-red">
+        <svg class="small-svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        2
+      </div>
+      <div class="comment-sub-btn">回复</div>
+    </div>
+
+    <!-- 二级回复 全部新增点赞功能 -->
+    <div class="reply-wrap">
+      <div class="reply-item">
+        <div class="comment-header">
+          <img class="comment-avatar" src="https://picsum.photos/id/1025/36/36">
+          <span class="comment-name">宁静小猫</span>
+          <span class="reply-target">回复 @宁静小猫</span>
+          <div class="comment-more">⋯</div>
+        </div>
+        <div class="comment-text">谢谢喜欢！可以直接拿这个思路做插画</div>
+        <!-- 子评论点赞区域 -->
+        <div class="reply-bottom">
+          <span>07-11 长沙</span>
+          <div class="reply-like-btn">
+            <svg class="small-svg" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            1
+          </div>
+          <span>回复</span>
+        </div>
+      </div>
+      <div class="reply-item">
+        <div class="comment-header">
+          <img class="comment-avatar" src="https://picsum.photos/id/1025/36/36">
+          <span class="comment-name">宁静小猫</span>
+          <span class="reply-target">回复 @宁静小猫</span>
+          <div class="comment-more">⋯
+          </div>
+        </div>
+        <div class="comment-text">补充一点：酒旗搭配荒原氛围感会更强</div>
+        <div class="reply-bottom">
+          <span>07-11 长沙</span>
+          <div class="reply-like-btn like-red">
+            <svg class="small-svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            3
+          </div>
+          <span>回复</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部固定操作栏 SVG图标 -->
+<div class="bottom-action-bar">
+  <div class="comment-input-short">说点什么...</div>
+  <div class="action-icon-group">
+    <!-- 点赞 -->
+    <div class="action-item like-active">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+      </svg>
+      <span>28</span>
+    </div>
+    <!-- 收藏 -->
+    <div class="action-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-1z"/>
+      </svg>
+      <span>0</span>
+    </div>
+    <!-- 评论 -->
+    <div class="action-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.9-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 11.5 3a8.38 8.38 0 0 1 3.8.9 8.5 8.5 0 0 1 4.7 7.6z"/>
+      </svg>
+      <span>3</span>
+    </div>
+    <!-- 转发 -->
+    <div class="action-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="5" r="3"/>
+        <circle cx="6" cy="12" r="3"/>
+        <circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+    </div>
+  </div>
+</div>
+</body>
+</html>

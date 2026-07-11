@@ -1,5 +1,7 @@
 package com.inspire.platform.auth.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,6 +15,7 @@ public class TokenResponse {
     private String token;
 
     @Schema(description = "用户ID（雪花ID）", example = "196312085385187329")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
     @Schema(description = "用户名", example = "alice")

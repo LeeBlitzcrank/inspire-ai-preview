@@ -4,6 +4,7 @@ import request from '@/utils/request.js'
 export const login = (data) => request.post('/auth/login', data)
 export const register = (data) => request.post('/auth/register', data)
 export const getUserInfo = () => request.get('/auth/userinfo')
+export const getPublicUserInfo = (id) => request.get(`/auth/user/public/${id}`)
 export const updateUserInfo = (data) => request.put('/auth/userinfo', data)
 export const changePassword = (data) => request.put('/auth/password', data)
 export const doLogout = () => request.post('/auth/logout')

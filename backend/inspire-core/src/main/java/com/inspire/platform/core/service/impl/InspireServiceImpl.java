@@ -561,4 +561,10 @@ public class InspireServiceImpl implements InspireService {
         }
     }
 
+
+    private String loadAvatar(Long userId) {
+        try { return jdbcTemplate.queryForObject("SELECT avatar FROM user WHERE id=?", String.class, userId); }
+        catch (Exception e) { return ""; }
+    }
+
 }

@@ -17,6 +17,7 @@ public class InspireVO {
     @Schema(description = "发布人ID") private Long userId;
     @Schema(description = "发布人用户名") private String username;
     @Schema(description = "发布人昵称") private String nickname;
+    @Schema(description = "头像") private String avatar;
     @Schema(description = "浏览量") private Long viewCount;
     @Schema(description = "点赞数") private Integer likeCount;
     @Schema(description = "收藏数") private Integer collectCount;

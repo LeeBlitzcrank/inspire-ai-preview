@@ -120,14 +120,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl } from '@/api/inspire.js'
+import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo } from '@/api/inspire.js'
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)
 
 const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
 const loading = ref(false)
-const form = ref({ title: '', tag: '', content: '', images: [] })
+const form = ref({ title: '', tag: '', content: '', images: [], publishCity: '' })
 
 // AI 探索状态
 const aiKeyword = ref('')
@@ -283,6 +283,7 @@ onMounted(async () => {
         form.value.title = res.data.title || ''
         form.value.tag = res.data.tag || ''
         form.value.content = res.data.content || ''
+        form.value.publishCity = res.data.publishCity || ''
         if (res.data.images && res.data.images.length > 0) {
           form.value.images = res.data.images
         } else if (res.data.img) {
@@ -290,6 +291,14 @@ onMounted(async () => {
         }
       }
     } catch (e) { console.error(e) }
+  } else {
+    // 新创建时从用户信息自动填充发布城市
+    try {
+      const userRes = await getUserInfo()
+      if (userRes.code === 200 && userRes.data?.city) {
+        form.value.publishCity = userRes.data.city
+      }
+    } catch (e) {}
   }
 })
 

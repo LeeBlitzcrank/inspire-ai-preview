@@ -45,6 +45,15 @@ public class AuthController {
         return Result.success(user);
     }
 
+    @Operation(summary = "公开用户信息", description = "无需登录，按userId查询用户基本信息（头像、昵称）")
+    @GetMapping("/user/public/{id}")
+    public Result<User> publicUserInfo(@PathVariable Long id) {
+        User user = authService.getUserById(id);
+        if (user == null) return Result.error("用户不存在");
+        user.setPassword(null);
+        return Result.success(user);
+    }
+
     @Operation(summary = "修改个人信息", description = "修改昵称、头像、城市等个人信息，只传需要修改的字段即可")
     @PutMapping("/userinfo")
     public Result<User> updateUserinfo(

@@ -45,7 +45,7 @@ public class CommentServiceImpl implements CommentService {
         vo.setInspireId(c.getInspireId());
         vo.setUserId(c.getUserId());
         vo.setUsername(c.getUsername());
-        vo.setAvatar(c.getAvatar());
+        try { vo.setAvatar(jdbcTemplate.queryForObject("SELECT avatar FROM user WHERE id=?", String.class, c.getUserId())); } catch(Exception e) { vo.setAvatar(c.getAvatar()); }
         try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, c.getUserId())); } catch(Exception e) { vo.setNickname(c.getUsername()); }        vo.setContent(c.getContent());
         vo.setParentId(c.getParentId());
         vo.setReplyUserId(c.getReplyUserId());
