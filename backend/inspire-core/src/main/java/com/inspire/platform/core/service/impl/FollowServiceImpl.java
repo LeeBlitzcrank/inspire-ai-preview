@@ -29,12 +29,16 @@ public class FollowServiceImpl implements FollowService {
     @Override
     @Transactional
     public void follow(Long myId, Long userId) {
-        if (myId.equals(userId)) throw new BusinessException("不能关注自己");
+        if (myId.equals(userId)) {
+            throw new BusinessException("不能关注自己");
+        }
         // 检查是否已关注
         Integer count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM user_follow WHERE follower_id = ? AND followee_id = ?",
             Integer.class, myId, userId);
-        if (count != null && count > 0) throw new BusinessException("已关注该用户");
+        if (count != null && count > 0) {
+            throw new BusinessException("已关注该用户");
+        }
         jdbcTemplate.update("INSERT INTO user_follow(id, follower_id, followee_id) VALUES(?, ?, ?)",
             nextId(), myId, userId);
         log.info("关注: follower={}, followee={}", myId, userId);
@@ -49,7 +53,9 @@ public class FollowServiceImpl implements FollowService {
     public void unfollow(Long myId, Long userId) {
         int affected = jdbcTemplate.update(
             "DELETE FROM user_follow WHERE follower_id = ? AND followee_id = ?", myId, userId);
-        if (affected == 0) throw new BusinessException("未关注该用户");
+        if (affected == 0) {
+            throw new BusinessException("未关注该用户");
+        }
         log.info("取消关注: follower={}, followee={}", myId, userId);
     }
 
@@ -95,7 +101,9 @@ public class FollowServiceImpl implements FollowService {
                 "SELECT followee_id FROM user_follow WHERE follower_id = ?",
                 (rs, n) -> rs.getLong("followee_id"), myId);
         }
-        if (ids.isEmpty()) return new ArrayList<>();
+        if (ids.isEmpty()) {
+            return new ArrayList<>();
+        }
 
         String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));
         String sql = "SELECT id,title,img,tag,user_id,view_count,like_count,collect_count,heat,publish_city,create_time "

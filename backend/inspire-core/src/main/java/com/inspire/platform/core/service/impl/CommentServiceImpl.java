@@ -76,10 +76,14 @@ public class CommentServiceImpl implements CommentService {
         try {
             String myName = jdbcTemplate.queryForObject(
                 "SELECT nickname FROM user WHERE id=?", String.class, userId);
-            if (myName == null) myName = String.valueOf(userId);
+            if (myName == null) {
+                myName = String.valueOf(userId);
+            }
             String title = jdbcTemplate.queryForObject(
                 "SELECT title FROM inspire_main WHERE id=?", String.class, request.getInspireId());
-            if (title != null && title.length() > 20) title = title.substring(0, 20) + "...";
+            if (title != null && title.length() > 20) {
+                title = title.substring(0, 20) + "...";
+            }
 
             if (request.getParentId() != null && request.getParentId() > 0L) {
                 // 回复评论 → 通知被回复者
@@ -118,9 +122,16 @@ public class CommentServiceImpl implements CommentService {
 
     private static synchronized long nextId() {
         long ts = System.currentTimeMillis();
-        if (ts < lastTs) ts = lastTs;
-        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) ts++; }
-        else seq = 0;
+        if (ts < lastTs) {
+            ts = lastTs;
+        }
+        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) {
+            ts++;
+        }
+        }
+        else {
+            seq = 0;
+        }
         lastTs = ts;
         return ((ts - 1735689600000L) << 22) | (1L << 12) | 1L;
     }

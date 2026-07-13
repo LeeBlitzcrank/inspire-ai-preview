@@ -22,7 +22,9 @@ public class MyBatisPlusConfig implements MetaObjectHandler {
         DynamicTableNameInnerInterceptor dynamic = new DynamicTableNameInnerInterceptor();
         dynamic.setTableNameHandler((sql, tableName) -> {
             String suffix = ShardContext.get();
-            if (suffix != null) return tableName + "_" + suffix;
+            if (suffix != null) {
+                return tableName + "_" + suffix;
+            }
             return tableName;
         });
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());

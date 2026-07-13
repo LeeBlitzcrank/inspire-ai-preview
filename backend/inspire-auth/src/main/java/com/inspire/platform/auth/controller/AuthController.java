@@ -49,7 +49,9 @@ public class AuthController {
     @GetMapping("/user/public/{id}")
     public Result<User> publicUserInfo(@PathVariable Long id) {
         User user = authService.getUserById(id);
-        if (user == null) return Result.error("用户不存在");
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
         user.setPassword(null);
         return Result.success(user);
     }
@@ -80,7 +82,9 @@ public class AuthController {
     public Result<Void> logout(
             @Parameter(description = "用户ID（可空，未登录时调用无影响）")
             @RequestHeader(value = "X-Inspire-UserId", required = false) Long userId) {
-        if (userId != null) authService.logout(userId);
+        if (userId != null) {
+            authService.logout(userId);
+        }
         return Result.success("已退出登录", null);
     }
 
@@ -97,9 +101,15 @@ public class AuthController {
             HttpServletRequest request,
             @RequestParam(required = false) String ip) {
         // 优先级: ip查询参数 > X-Forwarded-For > RemoteAddr
-        if (ip == null || ip.isEmpty()) ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
-        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
+        if (ip == null || ip.isEmpty()) {
+            ip = request.getHeader("X-Forwarded-For");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
 
         Map<String, String> data = new HashMap<>();
         data.put("query_ip", ip != null ? ip : "");

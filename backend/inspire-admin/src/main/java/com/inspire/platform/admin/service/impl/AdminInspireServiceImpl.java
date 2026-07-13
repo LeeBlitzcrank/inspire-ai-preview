@@ -20,12 +20,15 @@ public class AdminInspireServiceImpl implements AdminInspireService {
     @Override
     public Map<String, Object> list(String keyword, String tag, Integer status, int page, int size) {
         LambdaQueryWrapper<InspireMainRow> w = Wrappers.lambdaQuery();
-        if (keyword != null && !keyword.isEmpty())
+        if (keyword != null && !keyword.isEmpty()) {
             w.like(InspireMainRow::getTitle, keyword);
-        if (tag != null && !tag.isEmpty())
+        }
+        if (tag != null && !tag.isEmpty()) {
             w.eq(InspireMainRow::getTag, tag);
-        if (status != null)
+        }
+        if (status != null) {
             w.eq(InspireMainRow::getStatus, status);
+        }
         w.orderByDesc(InspireMainRow::getCreateTime);
         long total = inspireMainMapper.selectCount(w);
         w.last("LIMIT " + size + " OFFSET " + (page - 1) * size);
@@ -46,14 +49,18 @@ public class AdminInspireServiceImpl implements AdminInspireService {
     @Override
     public void block(Long id) {
         InspireMainRow row = inspireMainMapper.selectById(id);
-        if (row == null) throw new BusinessException("灵感不存在，ID=" + id);
+        if (row == null) {
+            throw new BusinessException("灵感不存在，ID=" + id);
+        }
         inspireMainMapper.update(null, Wrappers.lambdaUpdate(InspireMainRow.class)
                 .set(InspireMainRow::getDeleted, 2).eq(InspireMainRow::getId, id));
     }
     @Override
     public void unblock(Long id) {
         InspireMainRow row = inspireMainMapper.selectById(id);
-        if (row == null) throw new BusinessException("灵感不存在，ID=" + id);
+        if (row == null) {
+            throw new BusinessException("灵感不存在，ID=" + id);
+        }
         inspireMainMapper.update(null, Wrappers.lambdaUpdate(InspireMainRow.class)
                 .set(InspireMainRow::getDeleted, 0).eq(InspireMainRow::getId, id));
     }
@@ -61,7 +68,9 @@ public class AdminInspireServiceImpl implements AdminInspireService {
     @Override @Transactional
     public void approve(Long id) {
         InspireMainRow m = inspireMainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
+        if (m == null || m.getDeleted() == 1) {
+            throw new BusinessException("灵感不存在");
+        }
         m.setStatus(1);
         inspireMainMapper.updateById(m);
         System.out.println("[审核] 通过: id=" + id);
@@ -70,7 +79,9 @@ public class AdminInspireServiceImpl implements AdminInspireService {
     @Override @Transactional
     public void reject(Long id) {
         InspireMainRow m = inspireMainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
+        if (m == null || m.getDeleted() == 1) {
+            throw new BusinessException("灵感不存在");
+        }
         m.setStatus(3);
         inspireMainMapper.updateById(m);
         System.out.println("[审核] 拒绝: id=" + id);

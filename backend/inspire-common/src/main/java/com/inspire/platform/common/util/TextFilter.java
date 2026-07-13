@@ -20,12 +20,20 @@ public class TextFilter {
     private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s]+");
 
     public static String check(String text) {
-        if (text == null || text.isEmpty()) return null;
-        for (String word : SENSITIVE_WORDS) {
-            if (text.contains(word)) return "包含敏感词: " + word;
+        if (text == null || text.isEmpty()) {
+            return null;
         }
-        if (PHONE_PATTERN.matcher(text).find()) return "包含手机号，需审核";
-        if (URL_PATTERN.matcher(text).find()) return "包含外部链接，需审核";
+        for (String word : SENSITIVE_WORDS) {
+            if (text.contains(word)) {
+                return "包含敏感词: " + word;
+            }
+        }
+        if (PHONE_PATTERN.matcher(text).find()) {
+            return "包含手机号，需审核";
+        }
+        if (URL_PATTERN.matcher(text).find()) {
+            return "包含外部链接，需审核";
+        }
         return null;
     }
 

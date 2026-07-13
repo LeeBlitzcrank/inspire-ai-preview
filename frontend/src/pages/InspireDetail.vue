@@ -11,7 +11,7 @@
       </div>
       <button v-if="isOwnInspire" class="follow-btn" @click="handleEdit">编辑</button>
       <button v-else-if="isLogin && !isOwnInspire" class="follow-btn" @click="handleToggleFollow">{{ isFollowing ? '已关注' : '关注' }}</button>
-      <button v-else-if="!isLogin" class="follow-btn" @click="$router.push('/login')">关注</button>
+      <button v-else-if="!isLogin" class="follow-btn" @click="requireLogin">关注</button>
     </div>
 
     <!-- 大图 -->
@@ -143,8 +143,19 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getInspireDetail, getPublicUserInfo, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, followUser, unfollowUser, getFollowing } from '@/api/inspire.js'
+
+const requireLogin = () => {
+  ElMessageBox.alert('请先登录后进行操作', '提示', {
+    confirmButtonText: '去登录',
+    type: 'warning',
+    closeOnClickModal: false
+  }).then(() => {
+    localStorage.setItem('redirectPath', window.location.pathname)
+    router.push('/login')
+  }).catch(() => {})
+}
 
 const route = useRoute(); const router = useRouter()
 const isLogin = computed(() => localStorage.getItem('isLogin'))
@@ -279,7 +290,7 @@ const formatRelativeTime = (d) => {
 }
 
 const openCommentInput = () => {
-  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (!isLogin.value) { requireLogin(); return }
   replyTarget.value = null
   commentText.value = ''
   showCommentInput.value = true
@@ -291,7 +302,7 @@ const closeCommentInput = () => {
 }
 
 const replyTo = (c, replyToUserInfo) => {
-  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (!isLogin.value) { requireLogin(); return }
   showCommentInput.value = false
   // 如果是回复二级评论，找到所属的顶层评论作为 parent
   let target = c
@@ -365,7 +376,7 @@ const likeComment = (c) => { c.liked = !c.liked; c.likeCount = (c.likeCount ?? 0
 const likeReply = (r) => { r.liked = !r.liked; r.likeCount = (r.likeCount ?? 0) + (r.liked ? 1 : -1) }
 
 const handleLike = async () => {
-  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (!isLogin.value) { requireLogin(); return }
   try {
     if (liked.value) {
       const res = await unlikeInspire(detail.value.id)
@@ -378,7 +389,7 @@ const handleLike = async () => {
 }
 
 const toggleCollect = async () => {
-  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (!isLogin.value) { requireLogin(); return }
   try {
     if (collected.value) {
       const res = await uncollectInspire(detail.value.id)
@@ -409,7 +420,7 @@ const nativeShare = () => {
 const handleEdit = () => { router.push({ name: 'Edit', params: { id: detail.value.id } }) }
 
 const handleToggleFollow = async () => {
-  if (!isLogin.value) { ElMessage.warning('请先登录'); return }
+  if (!isLogin.value) { requireLogin(); return }
   if (isOwnInspire.value) { ElMessage.warning('不能关注自己'); return }
   try {
     if (isFollowing.value) {

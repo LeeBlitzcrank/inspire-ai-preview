@@ -39,3 +39,5 @@ logging:
     com.inspire: debug
     org.springframework.cloud.gateway: info
     org.springframework.data.redis: debug
+  pattern:
+      dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai

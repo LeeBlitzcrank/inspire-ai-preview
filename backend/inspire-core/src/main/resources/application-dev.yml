@@ -12,6 +12,8 @@ spring:
 logging:
   level:
     com.inspire: debug
+  pattern:
+      dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai
 
 # ES 同步配置（留空则不启用，不影响核心功能）
 inspire:

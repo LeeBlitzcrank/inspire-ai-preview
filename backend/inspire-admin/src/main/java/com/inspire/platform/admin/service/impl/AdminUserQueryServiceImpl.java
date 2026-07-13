@@ -15,10 +15,11 @@ public class AdminUserQueryServiceImpl implements AdminUserQueryService {
     @Override
     public List<AdminUserRow> search(String keyword, int page, int size) {
         LambdaQueryWrapper<AdminUserRow> w = Wrappers.lambdaQuery();
-        if (keyword != null && !keyword.isEmpty())
+        if (keyword != null && !keyword.isEmpty()) {
             w.like(AdminUserRow::getUsername, keyword).or()
              .like(AdminUserRow::getEmail, keyword).or()
              .like(AdminUserRow::getNickname, keyword);
+        }
         w.eq(AdminUserRow::getDeleted, 0);
         w.orderByDesc(AdminUserRow::getCreateTime);
         w.last("LIMIT " + size + " OFFSET " + (page - 1) * size);
@@ -28,7 +29,9 @@ public class AdminUserQueryServiceImpl implements AdminUserQueryService {
     @Override
     public AdminUserRow detail(Long id) {
         AdminUserRow user = userRowMapper.selectById(id);
-        if (user == null) throw new BusinessException("用户不存在");
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
         return user;
     }
 

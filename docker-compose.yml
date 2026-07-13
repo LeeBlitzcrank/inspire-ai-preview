@@ -17,6 +17,8 @@ x-common-env: &common-env
   ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
   INSPIRE_REDIS_HOST: redis
   INSPIRE_REDIS_PORT: 6379
+  # 日志时间
+  TZ: Asia/Shanghai
 
 x-service-build: &service-build
   context: ./backend
@@ -28,7 +30,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: inspire-mysql
-    ports: ["3307:3306"]
+    ports: [ "3307:3306" ]
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: inspire_ai_preview
@@ -37,7 +39,7 @@ services:
       - ./docker/init/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./log/mysql:/var/log/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -46,7 +48,7 @@ services:
   elasticsearch:
     image: elasticsearch:7.17.22
     container_name: inspire-es
-    ports: ["9200:9200", "9300:9300"]
+    ports: [ "9200:9200", "9300:9300" ]
     environment:
       discovery.type: single-node
       ES_JAVA_OPTS: -Xms512m -Xmx512m
@@ -54,39 +56,40 @@ services:
       - es-data:/usr/share/elasticsearch/data
       - ./log/elasticsearch:/usr/share/elasticsearch/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9200" ]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 30s
 
   rocketmq-namesrv:
-    image: apache/rocketmq:5.2.0
+    image: apache/rocketmq:4.9.7
     container_name: inspire-mq-namesrv
-    ports: ["9876:9876"]
+    ports: [ "9876:9876" ]
     command: sh mqnamesrv
     environment: { JAVA_OPT_EXT: -Xms512m -Xmx512m }
     volumes:
       - ./log/rocketmq:/home/rocketmq/logs/rocketmqlogs
     healthcheck:
-      test: ["CMD-SHELL", "ss -tln | grep -q ':9876' || ps aux | grep -v grep | grep -q namesrv"]
+      test: [ "CMD-SHELL", "ss -tln | grep -q ':9876' || ps aux | grep -v grep | grep -q namesrv" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 15s
 
   rocketmq-broker:
-    image: apache/rocketmq:5.2.0
+    image: apache/rocketmq:4.9.7
     container_name: inspire-mq-broker
-    ports: ["10911:10911", "10909:10909"]
+    ports: [ "10911:10911", "10909:10909" ]
     depends_on:
       rocketmq-namesrv: { condition: service_healthy }
     command: sh mqbroker -n ${ROCKETMQ_NAMESRV_ADDR:-rocketmq-namesrv:9876}
-    environment: { JAVA_OPT_EXT: -Xms512m -Xmx512m }
+    environment:
+        JAVA_OPT_EXT: -Xms1g -Xmx1g -XX:+UseG1GC
     volumes:
       - ./log/rocketmq:/home/rocketmq/logs/rocketmqlogs
     healthcheck:
-      test: ["CMD-SHELL", "ss -tln | grep -q ':10911' || ps aux | grep -v grep | grep -q broker"]
+      test: [ "CMD-SHELL", "ss -tln | grep -q ':10911' || ps aux | grep -v grep | grep -q broker" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -96,10 +99,10 @@ services:
     image: redis:7-alpine
     command: redis-server --requirepass 123456
     container_name: inspire-redis
-    ports: ["6379:6379"]
+    ports: [ "6379:6379" ]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "123456", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -112,13 +115,13 @@ services:
       args:
         BUILD_MODULE: inspire-auth
     container_name: inspire-auth
-    ports: ["8081:8081"]
+    ports: [ "8081:8081" ]
     depends_on:
       mysql: { condition: service_healthy }
       rocketmq-broker: { condition: service_healthy }
     restart: unless-stopped
     environment: *common-env
-    volumes: [./log/inspire-auth:/logs]
+    volumes: [ ./log/inspire-auth:/logs ]
 
   inspire-ai:
     build:
@@ -126,7 +129,7 @@ services:
       args:
         BUILD_MODULE: inspire-ai
     container_name: inspire-ai
-    ports: ["8082:8082"]
+    ports: [ "8082:8082" ]
     depends_on:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -137,7 +140,7 @@ services:
       INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
       INSPIRE_UNSPLASH_ACCESS_KEY: ${INSPIRE_UNSPLASH_ACCESS_KEY:-}
       SPRING_APPLICATION_JSON: '{"redis":{"host":"redis","port":6379}}'
-    volumes: [./log/inspire-ai:/logs]
+    volumes: [ ./log/inspire-ai:/logs ]
 
   inspire-core:
     build:
@@ -145,7 +148,7 @@ services:
       args:
         BUILD_MODULE: inspire-core
     container_name: inspire-core
-    ports: ["8083:8083"]
+    ports: [ "8083:8083" ]
     depends_on:
       mysql: { condition: service_healthy }
       elasticsearch: { condition: service_healthy }
@@ -164,12 +167,12 @@ services:
       args:
         BUILD_MODULE: inspire-admin
     container_name: inspire-admin
-    ports: ["8085:8085"]
+    ports: [ "8085:8085" ]
     depends_on:
       mysql: { condition: service_healthy }
     restart: unless-stopped
     environment: *common-env
-    volumes: [./log/inspire-admin:/logs]
+    volumes: [ ./log/inspire-admin:/logs ]
 
   inspire-search:
     build:
@@ -177,12 +180,12 @@ services:
       args:
         BUILD_MODULE: inspire-search
     container_name: inspire-search
-    ports: ["8086:8086"]
+    ports: [ "8086:8086" ]
     depends_on:
       elasticsearch: { condition: service_healthy }
     restart: unless-stopped
     environment: *common-env
-    volumes: [./log/inspire-search:/logs]
+    volumes: [ ./log/inspire-search:/logs ]
 
   inspire-gateway:
     build:
@@ -190,7 +193,7 @@ services:
       args:
         BUILD_MODULE: inspire-gateway
     container_name: inspire-gateway
-    ports: ["8080:8080"]
+    ports: [ "8080:8080" ]
     depends_on:
       inspire-auth: { condition: service_started }
       inspire-ai: { condition: service_started }
@@ -203,7 +206,7 @@ services:
       routes_ai_service: http://inspire-ai:8082
       routes_core_service: http://inspire-core:8083
       routes_admin_service: http://inspire-admin:8085
-    volumes: [./log/inspire-gateway:/logs]
+    volumes: [ ./log/inspire-gateway:/logs ]
 
 volumes:
   mysql-data:

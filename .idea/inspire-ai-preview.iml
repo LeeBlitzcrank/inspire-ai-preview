@@ -2,29 +2,7 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/backend" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/docker" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/flink-jobs" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-admin" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-ai" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-auth" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-common" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-core" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-gateway" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-mq" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/backend/inspire-search" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/.idea/dataSources" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/flink-jobs/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-admin/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-ai/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-auth/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-common/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-core/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-gateway/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-mq/target" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/inspire-search/target" />
-    </content>
+    <content url="file://$MODULE_DIR$" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

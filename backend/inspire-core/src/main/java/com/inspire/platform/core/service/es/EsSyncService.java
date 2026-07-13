@@ -48,7 +48,9 @@ public class EsSyncService {
     }
 
     public void sync(InspireMain main) {
-        if (!isEnabled()) return;
+        if (!isEnabled()) {
+            return;
+        }
         try {
             Map<String, Object> doc = buildDoc(main);
             Request req = new Request("PUT", "/" + INDEX + "/_doc/" + main.getId());
@@ -61,7 +63,9 @@ public class EsSyncService {
     }
 
     public void delete(Long id) {
-        if (!isEnabled()) return;
+        if (!isEnabled()) {
+            return;
+        }
         try {
             Request req = new Request("DELETE", "/" + INDEX + "/_doc/" + id);
             getClient().performRequest(req);
@@ -73,12 +77,16 @@ public class EsSyncService {
 
     @Scheduled(fixedDelay = 300000)
     public void batchSync() {
-        if (!isEnabled() || mainMapper == null) return;
+        if (!isEnabled() || mainMapper == null) {
+            return;
+        }
         try {
             List<InspireMain> mains = mainMapper.selectList(
                 Wrappers.lambdaQuery(InspireMain.class)
                     .eq(InspireMain::getDeleted, 0));
-            if (mains.isEmpty()) return;
+            if (mains.isEmpty()) {
+                return;
+            }
 
             StringBuilder bulkBody = new StringBuilder();
             for (InspireMain main : mains) {

@@ -28,7 +28,9 @@ public class MessageServiceImpl implements MessageService {
 
     @Override @Transactional
     public Message sendMessage(Long fromUserId, Long toUserId, String content) {
-        if (fromUserId.equals(toUserId)) throw new RuntimeException("不能给自己发消息");
+        if (fromUserId.equals(toUserId)) {
+            throw new RuntimeException("不能给自己发消息");
+        }
         
         // 确保 user1_id < user2_id 用于唯一约束
         long uid1 = Math.min(fromUserId, toUserId);
@@ -102,7 +104,9 @@ public class MessageServiceImpl implements MessageService {
     @Override @Transactional
     public int markAsRead(Long userId, Long conversationId) {
         MessageConversation conv = conversationMapper.selectById(conversationId);
-        if (conv == null) return 0;
+        if (conv == null) {
+            return 0;
+        }
         if (conv.getUser1Id().equals(userId)) {
             conv.setUnreadUser1(0);
         } else {
@@ -119,8 +123,11 @@ public class MessageServiceImpl implements MessageService {
                         .or().eq(MessageConversation::getUser2Id, userId)));
         int count = 0;
         for (MessageConversation c : list) {
-            if (c.getUser1Id().equals(userId)) count += c.getUnreadUser1();
-            else count += c.getUnreadUser2();
+            if (c.getUser1Id().equals(userId)) {
+                count += c.getUnreadUser1();
+            } else {
+                count += c.getUnreadUser2();
+            }
         }
         return count;
     }
@@ -128,10 +135,13 @@ public class MessageServiceImpl implements MessageService {
     @Override @Transactional
     public void deleteConversation(Long userId, Long conversationId) {
         MessageConversation conv = conversationMapper.selectById(conversationId);
-        if (conv == null) return;
+        if (conv == null) {
+            return;
+        }
         // 允许会话中的任一方删除
-        if (!conv.getUser1Id().equals(userId) && !conv.getUser2Id().equals(userId))
+        if (!conv.getUser1Id().equals(userId) && !conv.getUser2Id().equals(userId)) {
             throw new RuntimeException("无权删除此会话");
+        }
         messageMapper.delete(Wrappers.lambdaQuery(Message.class)
                 .eq(Message::getConversationId, conversationId));
         conversationMapper.deleteById(conversationId);

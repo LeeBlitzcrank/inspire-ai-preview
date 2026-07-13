@@ -111,7 +111,9 @@ public class JwtUtil {
      */
     public boolean isTokenExpired(String token) {
         Claims claims = validateToken(token);
-        if (claims == null) return true;
+        if (claims == null) {
+            return true;
+        }
         return claims.getExpiration().before(new Date());
     }
 }

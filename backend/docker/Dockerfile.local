@@ -12,3 +12,8 @@ WORKDIR /app
 COPY ${BUILD_MODULE}/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "rm -f ${LOGGING_FILE_NAME:-/logs/app.log} 2>/dev/null && exec java -jar app.jar"]
+
+# 日志时区兜底
+# 设置东八时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

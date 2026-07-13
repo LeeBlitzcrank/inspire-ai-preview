@@ -31,11 +31,13 @@ public class MysqlSearchService implements SearchService {
 
         List<Object> params = new java.util.ArrayList<>();
         params.add(like); params.add(like);
-        if (tag != null && !tag.isEmpty()) params.add(tag);
+        if (tag != null && !tag.isEmpty()) {
+            params.add(tag);
+        }
         params.add(size); params.add(offset);
 
         log.info("MySQL搜索: keyword={}, tag={}, page={}", keyword, tag, page);
-        return jdbcTemplate.query(sql, params.toArray(), (rs, row) -> {
+        return jdbcTemplate.query(sql, (rs, row) -> {
             SearchResultVO vo = new SearchResultVO();
             vo.setId(rs.getLong("id"));
             vo.setTitle(rs.getString("title"));
@@ -49,6 +51,6 @@ public class MysqlSearchService implements SearchService {
             vo.setCreateTime(rs.getTimestamp("create_time") != null ? rs.getTimestamp("create_time").toLocalDateTime() : null);
             vo.setSource("mysql");
             return vo;
-        });
+        }, params.toArray());
     }
 }

@@ -31,4 +31,7 @@ public class RegisterRequest {
 
     @Schema(description = "随机昵称（可不传，后端自动生成）", example = "快乐小鱼")
     private String nickname;
+
+    @Schema(description = "头像emoji（可不传，后端自动生成）", example = "🌸")
+    private String avatar;
 }

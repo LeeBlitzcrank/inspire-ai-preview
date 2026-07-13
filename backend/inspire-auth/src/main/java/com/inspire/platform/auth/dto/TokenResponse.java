@@ -18,6 +18,12 @@ public class TokenResponse {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
-    @Schema(description = "用户名", example = "alice")
-    private String username;
+   @Schema(description = "用户名", example = "alice")
+   private String username;
+
+    @Schema(description = "用户昵称（注册时自动生成）", example = "快乐小鱼")
+    private String nickname;
+
+    @Schema(description = "头像（注册时自动生成随机emoji）", example = "🌸")
+    private String avatar;
 }

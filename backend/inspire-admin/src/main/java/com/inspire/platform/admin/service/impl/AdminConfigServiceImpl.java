@@ -20,7 +20,9 @@ public class AdminConfigServiceImpl implements AdminConfigService {
     @Override
     public void update(Integer id, String value) {
         AdminConfig cfg = configMapper.selectById(id);
-        if (cfg == null) throw new BusinessException("配置不存在");
+        if (cfg == null) {
+            throw new BusinessException("配置不存在");
+        }
         cfg.setConfigValue(value);
         configMapper.updateById(cfg);
         log.info("配置更新: key={}, value={}", cfg.getConfigKey(), value);

@@ -60,7 +60,9 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const login = localStorage.getItem('isLogin')
   const adminToken = localStorage.getItem('adminToken')
-  if (to.meta.needLogin && !login) next('/login')
+  if (to.meta.needLogin && !login) {
+    next('/login')
+  }
   else if (to.meta.needAdmin && !adminToken) next('/admin/login')
   else next()
 })

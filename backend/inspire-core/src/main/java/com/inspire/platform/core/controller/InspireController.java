@@ -175,7 +175,9 @@ public class InspireController {
     public Result<CollectFolder> createFolder(@RequestBody Map<String, String> body,
                                                HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         String name = body.get("name");
         String icon = body.get("icon");
         return Result.success(inspireService.createCollectFolder(userId, name, icon));
@@ -185,7 +187,9 @@ public class InspireController {
     @Operation(summary = "收藏文件夹列表")
     public Result<List<CollectFolder>> folders(HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         return Result.success(inspireService.getCollectFolders(userId));
     }
 
@@ -193,7 +197,9 @@ public class InspireController {
     @Operation(summary = "删除收藏文件夹")
     public Result<Void> deleteFolder(@PathVariable("id") Long id, HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         inspireService.deleteCollectFolder(userId, id);
         return Result.success();
     }
@@ -203,7 +209,9 @@ public class InspireController {
     public Result<Void> renameFolder(@PathVariable("id") Long id, @RequestBody Map<String, String> body,
                                       HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         String name = body.get("name");
         inspireService.renameCollectFolder(userId, id, name);
         return Result.success();
@@ -215,7 +223,9 @@ public class InspireController {
                                          @RequestBody Map<String, Object> body,
                                          HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
         inspireService.collectToFolder(userId, inspireId, folderId);
         return Result.success();
@@ -226,7 +236,9 @@ public class InspireController {
     public Result<List<InspireVO>> collectList(@RequestParam(required = false) Long folderId,
                                                 HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         return Result.success(inspireService.listCollectsByFolder(userId, folderId));
     }
 
@@ -244,7 +256,9 @@ public class InspireController {
                                      @RequestBody Map<String, Object> body,
                                      HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
         inspireService.moveCollectToFolder(userId, inspireId, folderId);
         return Result.success();
@@ -270,8 +284,12 @@ public class InspireController {
                 // 截短并清理关键词（去除全角标点等 Unsplash 不支持的字符）
                 String shortKw = keyword.length() > 50 ? keyword.substring(0, 50) : keyword;
                 String clean = shortKw.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim();
-                if (clean.isEmpty()) clean = shortKw.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", "").trim();
-                if (clean.isEmpty()) clean = "inspiration";
+                if (clean.isEmpty()) {
+                    clean = shortKw.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", "").trim();
+                }
+                if (clean.isEmpty()) {
+                    clean = "inspiration";
+                }
                 String encoded = java.net.URLEncoder.encode(clean, "UTF-8").replace("+", "%20");
                 log.info("Unsplash URL: https://api.unsplash.com/search/photos?query={}&per_page=6", encoded);
                 java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()

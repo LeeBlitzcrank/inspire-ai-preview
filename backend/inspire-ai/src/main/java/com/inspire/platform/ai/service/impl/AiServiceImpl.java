@@ -128,11 +128,17 @@ public class AiServiceImpl implements AiService {
         String redisKey = CACHE_PREFIX + cacheKey;
         if (refresh) {
             log.info("换一批: keyword={}", keyword);
-            if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) { jedis.del(redisKey); }
+            if (jedisPool != null) {
+                try (Jedis jedis = jedisPool.getResource()) { jedis.del(redisKey); }
+            }
         }
-        String cached;
-        if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) { cached = jedis.get(redisKey); }
-        if (cached != null) return cached;
+        String cached = "";
+        if (jedisPool != null) {
+            try (Jedis jedis = jedisPool.getResource()) { cached = jedis.get(redisKey); }
+        }
+        if (cached != null) {
+            return cached;
+        }
 
         String prompt = buildPrompt(keyword, path);
         log.info("DeepSeek请求: cacheKey={}", cacheKey);
@@ -156,13 +162,15 @@ public class AiServiceImpl implements AiService {
         try {
             ResponseEntity<Map> resp = restTemplate.exchange(apiUrl, HttpMethod.POST, entity, Map.class);
             String msg = (String) ((Map) ((List<Map>) resp.getBody().get("choices")).get(0).get("message")).get("content");
-            if (jedisPool != null) try (Jedis jedis = jedisPool.getResource()) {
-                jedis.setex(redisKey, CACHE_TTL, msg);
-                log.info("Redis缓存已写入: {}, TTL={}s", cacheKey, CACHE_TTL);
+            if (jedisPool != null) {
+                try (Jedis jedis = jedisPool.getResource()) {
+                    jedis.setex(redisKey, CACHE_TTL, msg);
+                    log.info("Redis缓存已写入: {}, TTL={}s", cacheKey, CACHE_TTL);
+                }
             }
             // 异步记录 AI 调用
             try {
-                java.util.Map<String, Object> callBody = new java.util.HashMap<>();
+                Map<String, Object> callBody = new HashMap<>();
                 callBody.put("keyword", keyword);
                 callBody.put("userId", 0);
                 new Thread(() -> {

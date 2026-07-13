@@ -63,7 +63,9 @@ public class EsSearchService implements SearchService {
                 vo.setCollectCount(src.path("collect_count").asInt());
                 vo.setPublishCity(src.path("publish_city").asText());
                 String ct = src.path("create_time").asText();
-                if (!ct.isEmpty()) vo.setCreateTime(LocalDateTime.parse(ct, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                if (!ct.isEmpty()) {
+                    vo.setCreateTime(LocalDateTime.parse(ct, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                }
                 vo.setSource("es");
                 results.add(vo);
             }

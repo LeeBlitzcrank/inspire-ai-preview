@@ -24,11 +24,41 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.Random;
 import java.util.UUID;
 
 @Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
+    // ==================== 随机生成工具 ====================
+    private static final String[] NICKNAME_ADJ = {
+        "快乐","聪明","勇敢","温柔","可爱","阳光","清风","明月","星辰","大海",
+        "梦幻","甜蜜","俏皮","灵动","清新","文艺","酷炫","温暖","淡雅","宁静",
+        "率真","纯良","元气","欢脱","悠然","逍遥","闲适","天真","浪漫","自在"
+    };
+    private static final String[] NICKNAME_NOUN = {
+        "小鱼","小猫","小鹿","蝴蝶","樱花","奶茶","豆浆","包子","饼干","糖果",
+        "花猫","松鼠","兔子","羊羔","熊猫","布丁","甜甜","冰淇淋","棉花糖","小幸福",
+        "星河","云朵","风铃","彩虹","萤火虫","向日葵","满天星","蒲公英","千纸鹤","小确幸"
+    };
+    private static final String[] AVATAR_LIST = {
+        "🌸","🍀","🦋","🌈","⭐","🌙","☀️",
+        "🍁","🌺","🐱","🐰","🦄","🐼","🦊",
+        "🐨","🎨","🎵","🎯","🎮","📚",
+        "🍃","🍌","🍥","🍪","🥜","🍭","🍮",
+        "🎁","🎉","✨"
+    };
+    private static final Random RANDOM = new Random();
+
+    private String generateRandomNickname() {
+        return NICKNAME_ADJ[RANDOM.nextInt(NICKNAME_ADJ.length)]
+             + NICKNAME_NOUN[RANDOM.nextInt(NICKNAME_NOUN.length)];
+    }
+
+    private String generateRandomAvatar() {
+        return AVATAR_LIST[RANDOM.nextInt(AVATAR_LIST.length)];
+    }
+
 
     private final UserMapper userMapper;
     private final PasswordResetMapper passwordResetMapper;
@@ -72,8 +102,8 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.getUsername());
         user.setPassword(PASSWORD_ENCODER.encode(request.getPassword()));
         user.setEmail(request.getEmail());
-        user.setNickname(request.getNickname() != null && !request.getNickname().isEmpty() ? request.getNickname() : request.getUsername());
-        user.setAvatar("");
+        user.setNickname(request.getNickname() != null && !request.getNickname().isEmpty() ? request.getNickname() : generateRandomNickname());
+        user.setAvatar(request.getAvatar() != null && !request.getAvatar().isEmpty() ? request.getAvatar() : generateRandomAvatar());
         user.setCity("");
         user.setDeleted(0);
 
@@ -113,9 +143,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User updateUserInfo(Long userId, UserUpdateRequest request) {
         User user = getUserById(userId);
-        if (request.getNickname() != null) user.setNickname(request.getNickname().isEmpty() ? user.getUsername() : request.getNickname());
-        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
-        if (request.getCity() != null) user.setCity(request.getCity());
+        if (request.getNickname() != null) {
+            user.setNickname(request.getNickname().isEmpty() ? user.getUsername() : request.getNickname());
+        }
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getCity() != null) {
+            user.setCity(request.getCity());
+        }
         userMapper.updateById(user);
         log.info("用户信息更新: userId={}", userId);
         return user;
@@ -226,7 +262,7 @@ public class AuthServiceImpl implements AuthService {
 
     private TokenResponse buildTokenResponse(User user) {
         String token = generateToken(user.getId(), user.getUsername());
-        return new TokenResponse(token, user.getId(), user.getUsername());
+        return new TokenResponse(token, user.getId(), user.getUsername(), user.getNickname(), user.getAvatar());
     }
 
     // ==================== 雪花ID ====================
@@ -241,10 +277,14 @@ public class AuthServiceImpl implements AuthService {
 
     private static synchronized long nextId() {
         long timestamp = System.currentTimeMillis();
-        if (timestamp < lastTimestamp) timestamp = lastTimestamp;
+        if (timestamp < lastTimestamp) {
+            timestamp = lastTimestamp;
+        }
         if (timestamp == lastTimestamp) {
             sequence = (sequence + 1) & SEQUENCE_MASK;
-            if (sequence == 0) timestamp++;
+            if (sequence == 0) {
+                timestamp++;
+            }
         } else {
             sequence = 0;
         }

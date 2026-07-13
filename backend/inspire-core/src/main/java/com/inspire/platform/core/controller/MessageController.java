@@ -34,10 +34,14 @@ public class MessageController {
     public Result<Message> send(@RequestBody Map<String, Object> body,
                                  HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         Long toUserId = body.get("toUserId") != null ? Long.valueOf(body.get("toUserId").toString()) : null;
         String content = (String) body.get("content");
-        if (toUserId == null || content == null) return Result.error(400, "参数缺失");
+        if (toUserId == null || content == null) {
+            return Result.error(400, "参数缺失");
+        }
         return Result.success(messageService.sendMessage(userId, toUserId, content));
     }
 
@@ -45,7 +49,9 @@ public class MessageController {
     @Operation(summary = "会话列表")
     public Result<List<MessageConversation>> conversations(HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         return Result.success(messageService.getConversations(userId));
     }
 
@@ -56,7 +62,9 @@ public class MessageController {
                                        @RequestParam(defaultValue = "20") int size,
                                        HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         return Result.success(messageService.getMessages(userId, conversationId, page, size));
     }
 
@@ -64,9 +72,13 @@ public class MessageController {
     @Operation(summary = "标记已读")
     public Result<Void> markRead(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         Long conversationId = body.get("conversationId") != null ? Long.valueOf(body.get("conversationId").toString()) : null;
-        if (conversationId == null) return Result.error(400, "参数缺失");
+        if (conversationId == null) {
+            return Result.error(400, "参数缺失");
+        }
         messageService.markAsRead(userId, conversationId);
         return Result.success();
     }
@@ -86,10 +98,14 @@ public class MessageController {
     public Result<Message> sendByUsername(@RequestBody Map<String, String> body,
                                           HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         String username = body.get("username");
         String content = body.get("content");
-        if (username == null || content == null) return Result.error(400, "参数缺失");
+        if (username == null || content == null) {
+            return Result.error(400, "参数缺失");
+        }
         try {
             Long toUserId = jdbcTemplate.queryForObject("SELECT id FROM user WHERE username=?", Long.class, username);
             return Result.success(messageService.sendMessage(userId, toUserId, content));
@@ -103,7 +119,9 @@ public class MessageController {
     public Result<Void> deleteConversation(@PathVariable("id") Long conversationId,
                                             HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         messageService.deleteConversation(userId, conversationId);
         return Result.success();
     }
@@ -114,9 +132,13 @@ public class MessageController {
     public Result<MessageConversation> startConversation(@RequestBody Map<String, Object> body,
                                                           HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         Long toUserId = body.get("toUserId") != null ? Long.valueOf(body.get("toUserId").toString()) : null;
-        if (toUserId == null || userId.equals(toUserId)) return Result.error(400, "无效的用户");
+        if (toUserId == null || userId.equals(toUserId)) {
+            return Result.error(400, "无效的用户");
+        }
         MessageConversation conv = messageService.startConversation(userId, toUserId);
         try {
             String nickname = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, toUserId);
@@ -130,7 +152,9 @@ public class MessageController {
     @Operation(summary = "清空所有会话")
     public Result<Void> deleteAllConversations(HttpServletRequest request) {
         Long userId = getUserId(request);
-        if (userId == null) return Result.error(401, "未登录");
+        if (userId == null) {
+            return Result.error(401, "未登录");
+        }
         messageService.deleteAllConversations(userId);
         return Result.success();
     }

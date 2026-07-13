@@ -12,6 +12,7 @@ import javax.net.ssl.*;
 import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -35,11 +36,16 @@ public class FileController {
     private static SSLSocketFactory trustAllSslFactory;
 
     private static synchronized SSLSocketFactory getTrustAllSslFactory() {
-        if (trustAllSslFactory != null) return trustAllSslFactory;
+        if (trustAllSslFactory != null) {
+            return trustAllSslFactory;
+        }
         try {
             TrustManager[] trustAll = new TrustManager[]{ new X509TrustManager() {
+                @Override
                 public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                @Override
                 public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                @Override
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {}
             }};
             SSLContext ctx = SSLContext.getInstance("TLS");
@@ -54,13 +60,17 @@ public class FileController {
     @Operation(summary = "上传文件", description = "支持 jpg/png/gif/webp，最大 10MB")
     @PostMapping("/upload")
     public Result<Map<String, String>> upload(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) return Result.error("文件为空");
+        if (file.isEmpty()) {
+            return Result.error("文件为空");
+        }
         String name = file.getOriginalFilename();
         String ext = name != null && name.contains(".") ? name.substring(name.lastIndexOf(".")) : ".jpg";
         String filename = UUID.randomUUID().toString().replace("-", "") + ext;
         try {
             File dir = new File(uploadDir);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
             file.transferTo(new File(dir, filename));
             String url = "/uploads/" + filename;
             // 图片压缩：限制最大宽度 1920px
@@ -101,19 +111,27 @@ public class FileController {
     @PostMapping("/upload-from-url")
     public Result<Map<String, String>> uploadFromUrl(@RequestBody Map<String, String> body) {
         String urlStr = body.get("url");
-        if (urlStr == null || urlStr.isBlank()) return Result.error("url 参数为空");
+        if (urlStr == null || urlStr.isBlank()) {
+            return Result.error("url 参数为空");
+        }
         String ext = ".jpg";
         if (urlStr.contains(".")) {
             String rawExt = urlStr.substring(urlStr.lastIndexOf("."));
-            if (rawExt.contains("?")) rawExt = rawExt.substring(0, rawExt.indexOf("?"));
-            if (rawExt.matches("\\.(png|jpg|jpeg|gif|webp|bmp)")) ext = rawExt;
+            if (rawExt.contains("?")) {
+                rawExt = rawExt.substring(0, rawExt.indexOf("?"));
+            }
+            if (rawExt.matches("\\.(png|jpg|jpeg|gif|webp|bmp)")) {
+                ext = rawExt;
+            }
         }
         String filename = UUID.randomUUID().toString().replace("-", "") + ext;
         try {
             File dir = new File(uploadDir);
-            if (!dir.exists()) dir.mkdirs();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
 
-            URL url = new URL(urlStr);
+            URL url = new URI(urlStr).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             // 如果是 HTTPS 且外部证书不受信任，使用信任所有证书的 SSLSocketFactory

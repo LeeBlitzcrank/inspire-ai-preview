@@ -34,7 +34,9 @@ public class InspireFlinkApp {
 
     private static String getArg(String[] args, String key, String def) {
         for (int i = 0; i < args.length - 1; i++) {
-            if (args[i].equals(key)) return args[i + 1];
+            if (args[i].equals(key)) {
+                return args[i + 1];
+            }
         }
         return def;
     }

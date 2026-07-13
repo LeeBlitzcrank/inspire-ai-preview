@@ -10,6 +10,14 @@
     <div class="form-box">
       <h2 class="title">注册灵感账号</h2>
       <p class="desc">注册后可录入、收藏全部创意灵感</p>
+      <div class="profile-preview">
+        <div class="preview-avatar">{{ previewAvatar }}</div>
+        <div class="preview-info">
+          <div class="preview-nickname">{{ previewNickname }}</div>
+          <div class="preview-label">系统自动分配 · 注册后可修改</div>
+        </div>
+        <div class="preview-refresh" @click="refreshPreview">🔄</div>
+      </div>
       <div class="input-group"><el-input v-model="form.account" placeholder="请设置账号"></el-input></div>
       <div class="input-group"><el-input v-model="form.email" placeholder="请填写邮箱（用于找回密码）"></el-input></div>
       <div class="input-group"><el-input v-model="form.pwd" placeholder="请设置密码" show-password></el-input></div>
@@ -25,6 +33,37 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register } from '@/api/inspire.js'
 import { randomNickname } from '@/utils/nickname.js'
+
+const avatarEmojis = [
+    '🌸',
+    '🍀',
+    '🦋',
+    '🌈',
+    '⭐',
+    '🌙',
+    '☀️',
+    '🍁',
+    '🌺',
+    '🐱',
+    '🐰',
+    '🦄',
+    '🐼',
+    '🦊',
+    '🐨',
+    '🎨',
+    '🎵',
+    '🎯',
+    '🎮',
+    '📚'
+  ]
+const previewNickname = ref(randomNickname())
+const previewAvatar = ref(avatarEmojis[Math.floor(Math.random() * avatarEmojis.length)])
+
+const refreshPreview = () => {
+  previewNickname.value = randomNickname()
+  previewAvatar.value = avatarEmojis[Math.floor(Math.random() * avatarEmojis.length)]
+}
+
 const router = useRouter()
 const loading = ref(false)
 const form = ref({ account: '', email: '', pwd: '', rePwd: '' })
@@ -37,7 +76,7 @@ const handleRegister = async () => {
   if (pwd.length < 6 || pwd.length > 16) return ElMessage.warning('密码长度6-16位')
   loading.value = true
   try {
-    const res = await register({ username: account, password: pwd, confirmPassword: rePwd, email })
+    const res = await register({ username: account, password: pwd, confirmPassword: rePwd, email, nickname: previewNickname.value, avatar: previewAvatar.value })
     if (res.code === 200) {
       // 清除可能残留的管理员 token
       localStorage.removeItem('adminToken')
@@ -45,6 +84,7 @@ const handleRegister = async () => {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
+      localStorage.setItem('userNickname', res.data.nickname)
       if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
       localStorage.setItem('userId', res.data.userId)
       ElMessage.success('注册成功，自动登录')
@@ -64,6 +104,13 @@ const handleRegister = async () => {
 .form-box { background:#fff; border-radius:20px; padding:36px 24px; margin-top:30px; }
 .title { font-size:24px; font-weight:500; text-align:center; margin:0 0 8px; color:#1d1d1f; }
 .desc { text-align:center; font-size:14px; color:#86868b; margin-bottom:32px; }
+.profile-preview { display:flex; align-items:center; gap:14px; background:#f0f5ff; border-radius:16px; padding:16px 18px; margin-bottom:24px; }
+.preview-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+.preview-info { flex:1; min-width:0; }
+.preview-nickname { font-size:18px; font-weight:600; color:#1d1d1f; }
+.preview-label { font-size:12px; color:#86868b; margin-top:2px; }
+.preview-refresh { width:36px; height:36px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.08); flex-shrink:0; transition:transform .2s; }
+.preview-refresh:active { transform:rotate(180deg); }
 .input-group { margin-bottom:16px; }
 .reg-btn { width:100%; height:46px; border-radius:14px; font-size:16px; background:#409eff; border:none; }
 .tip { text-align:center; margin-top:24px; font-size:14px; color:#86868b; }

@@ -21,8 +21,6 @@ public class MyBatisPlusConfig implements MetaObjectHandler {
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject, "deleted", Integer.class, 0);
-        this.strictInsertFill(metaObject, "avatar", String.class, "");
-        this.strictInsertFill(metaObject, "nickname", String.class, "");
     }
 
     @Override

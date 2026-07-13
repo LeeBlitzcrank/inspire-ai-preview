@@ -12,3 +12,5 @@ inspire:
 logging:
   level:
     com.inspire: debug
+  pattern:
+    dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai

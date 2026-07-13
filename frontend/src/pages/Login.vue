@@ -44,11 +44,14 @@ const handleLogin = async () => {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
+      localStorage.setItem('userNickname', res.data.nickname)
       if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
       const _payload = JSON.parse(atob(res.data.token.split('.')[1]))
       localStorage.setItem('userId', _payload.sub)
       ElMessage.success('登录成功')
-      router.push('/')
+      const redirect = localStorage.getItem('redirectPath')
+      localStorage.removeItem('redirectPath')
+      router.push(redirect || '/')
     } else {
       ElMessage.error(res.msg || '登录失败')
     }

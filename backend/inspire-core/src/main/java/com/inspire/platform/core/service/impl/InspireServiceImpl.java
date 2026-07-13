@@ -46,9 +46,14 @@ public class InspireServiceImpl implements InspireService {
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
         LambdaQueryWrapper<InspireMain> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
-        if (query.getTag() != null && !query.getTag().isEmpty()) wrapper.eq(InspireMain::getTag, query.getTag());
-        if ("heat".equals(query.getSort())) wrapper.orderByDesc(InspireMain::getHeat);
-        else wrapper.orderByDesc(InspireMain::getCreateTime);
+        if (query.getTag() != null && !query.getTag().isEmpty()) {
+            wrapper.eq(InspireMain::getTag, query.getTag());
+        }
+        if ("heat".equals(query.getSort())) {
+            wrapper.orderByDesc(InspireMain::getHeat);
+        } else {
+            wrapper.orderByDesc(InspireMain::getCreateTime);
+        }
         Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(query.getPage(), query.getSize()), wrapper);
         return toVOList(mpPage.getRecords(), loginUserId);
     }
@@ -56,8 +61,12 @@ public class InspireServiceImpl implements InspireService {
     @Override
     public InspireVO getDetail(Long id, Long loginUserId) {
         InspireMain m = mainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
-        if (m.getStatus() != 1 && (loginUserId == null || !m.getUserId().equals(loginUserId))) throw new BusinessException("灵感不存在");
+        if (m == null || m.getDeleted() == 1) {
+            throw new BusinessException("灵感不存在");
+        }
+        if (m.getStatus() != 1 && (loginUserId == null || !m.getUserId().equals(loginUserId))) {
+            throw new BusinessException("灵感不存在");
+        }
         m.setViewCount(m.getViewCount() + 1); mainMapper.updateById(m);
         InspireContent c = contentMapper.selectById(id);
         return toVO(m, loginUserId, c != null ? c.getContent() : "");
@@ -91,7 +100,9 @@ public class InspireServiceImpl implements InspireService {
         m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
         // 内容审核：命中敏感词设为待审核（2），否则用请求的status
         String reason = TextFilter.check(req.getTitle());
-        if (reason == null) reason = TextFilter.check(req.getContent());
+        if (reason == null) {
+            reason = TextFilter.check(req.getContent());
+        }
         if (reason != null) {
             log.warn("内容触发审核: title={}, userId={}, reason={}", req.getTitle(), userId, reason);
             m.setStatus(2);
@@ -114,14 +125,30 @@ public class InspireServiceImpl implements InspireService {
     public InspireMain update(Long id, InspireUpdateRequest req, Long userId) {
         checkUserExists(userId);
         InspireMain m = mainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1) throw new BusinessException("灵感不存在");
-        if (!m.getUserId().equals(userId)) throw new BusinessException("只能修改自己的灵感");
-        if (req.getTitle() != null) m.setTitle(req.getTitle());
-        if (req.getTag() != null) m.setTag(req.getTag());
-        if (req.getImg() != null) m.setImg(req.getImg());
-        if (req.getImages() != null) m.setImages(req.getImages());
-        if (req.getStatus() != null) m.setStatus(req.getStatus());
-        if (req.getPublishCity() != null) m.setPublishCity(req.getPublishCity());
+        if (m == null || m.getDeleted() == 1) {
+            throw new BusinessException("灵感不存在");
+        }
+        if (!m.getUserId().equals(userId)) {
+            throw new BusinessException("只能修改自己的灵感");
+        }
+        if (req.getTitle() != null) {
+            m.setTitle(req.getTitle());
+        }
+        if (req.getTag() != null) {
+            m.setTag(req.getTag());
+        }
+        if (req.getImg() != null) {
+            m.setImg(req.getImg());
+        }
+        if (req.getImages() != null) {
+            m.setImages(req.getImages());
+        }
+        if (req.getStatus() != null) {
+            m.setStatus(req.getStatus());
+        }
+        if (req.getPublishCity() != null) {
+            m.setPublishCity(req.getPublishCity());
+        }
         
         // 保存当前版本到历史（仅已发布的灵感）
         if (m.getStatus() == 1) {
@@ -156,8 +183,12 @@ public class InspireServiceImpl implements InspireService {
     public void deleteById(Long id, Long userId) {
         checkUserExists(userId);
         InspireMain m = mainMapper.selectById(id);
-        if (m == null || m.getDeleted() == 1) return;
-        if (!m.getUserId().equals(userId)) throw new BusinessException("只能删除自己的灵感");
+        if (m == null || m.getDeleted() == 1) {
+            return;
+        }
+        if (!m.getUserId().equals(userId)) {
+            throw new BusinessException("只能删除自己的灵感");
+        }
         m.setDeleted(1); mainMapper.updateById(m);
         esSyncService.delete(m.getId());
     }
@@ -174,10 +205,13 @@ public class InspireServiceImpl implements InspireService {
         ShardContext.setByUserId(userId);
         try {
             if (collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
-                    .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId)) != null)
+                    .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId)) != null) {
                 throw new BusinessException("已收藏");
+            }
             CollectAction a = new CollectAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
-            if (folderId != null) a.setFolderId(folderId);
+            if (folderId != null) {
+                a.setFolderId(folderId);
+            }
             collectMapper.insert(a);
         } finally { ShardContext.clear(); }
         InspireMain inspireForMsg = mainMapper.selectById(inspireId);
@@ -190,9 +224,13 @@ public class InspireServiceImpl implements InspireService {
         // 通知灵感作者
         try {
             String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, userId);
-            if (myName == null) myName = String.valueOf(userId);
+            if (myName == null) {
+                myName = String.valueOf(userId);
+            }
             String title = inspireForMsg != null ? inspireForMsg.getTitle() : "";
-            if (title != null && title.length() > 20) title = title.substring(0, 20) + "...";
+            if (title != null && title.length() > 20) {
+                title = title.substring(0, 20) + "...";
+            }
             if (inspireForMsg != null) {
                 notificationService.notify(inspireForMsg.getUserId(), "collect", userId,
                     myName, "收藏了你的灵感", inspireId, title);
@@ -217,8 +255,9 @@ public class InspireServiceImpl implements InspireService {
         ShardContext.setByInspireId(inspireId);
         try {
             if (likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
-                    .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId)) != null)
+                    .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId)) != null) {
                 throw new BusinessException("已点赞");
+            }
             LikeAction a = new LikeAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
             likeMapper.insert(a);
         } finally { ShardContext.clear(); }
@@ -232,9 +271,13 @@ public class InspireServiceImpl implements InspireService {
         // 通知灵感作者
         try {
             String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, userId);
-            if (myName == null) myName = String.valueOf(userId);
+            if (myName == null) {
+                myName = String.valueOf(userId);
+            }
             String title = inspireForMsg != null ? inspireForMsg.getTitle() : "";
-            if (title != null && title.length() > 20) title = title.substring(0, 20) + "...";
+            if (title != null && title.length() > 20) {
+                title = title.substring(0, 20) + "...";
+            }
             if (inspireForMsg != null) {
                 notificationService.notify(inspireForMsg.getUserId(), "like", userId,
                     myName, "点赞了你的灵感", inspireId, title);
@@ -284,7 +327,9 @@ public class InspireServiceImpl implements InspireService {
             int end = Math.min(start + size, collects.size());
             log.info("[PAGEDBG] start={} end={} records={}", start, end, end - start);
             collects = collects.subList(start, end);
-            if (collects.isEmpty()) return new PageResult<>(new ArrayList<>(), total);
+            if (collects.isEmpty()) {
+                return new PageResult<>(new ArrayList<>(), total);
+            }
             ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
         } finally { ShardContext.clear(); }
         List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
@@ -347,9 +392,16 @@ public class InspireServiceImpl implements InspireService {
     /** 公开的静态ID生成器 */
     public static synchronized long nextId() {
         long ts = System.currentTimeMillis();
-        if (ts < lastTs) ts = lastTs;
-        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) ts++; }
-        else seq = 0;
+        if (ts < lastTs) {
+            ts = lastTs;
+        }
+        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) {
+            ts++;
+        }
+        }
+        else {
+            seq = 0;
+        }
         lastTs = ts;
         return ((ts - 1735689600000L) << 22) | (1L << 12) | 1L;
     }
@@ -374,7 +426,9 @@ public class InspireServiceImpl implements InspireService {
     public void deleteCollectFolder(Long userId, Long folderId) {
         checkUserExists(userId);
         CollectFolder f = collectFolderMapper.selectById(folderId);
-        if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
+        if (f == null || !f.getUserId().equals(userId)) {
+            throw new BusinessException("文件夹不存在");
+        }
         collectFolderMapper.deleteById(folderId);
         // 将该文件夹下的收藏记录 folder_id 置空
         for (int i = 0; i < 10; i++) {
@@ -388,7 +442,9 @@ public class InspireServiceImpl implements InspireService {
     public void renameCollectFolder(Long userId, Long folderId, String name) {
         checkUserExists(userId);
         CollectFolder f = collectFolderMapper.selectById(folderId);
-        if (f == null || !f.getUserId().equals(userId)) throw new BusinessException("文件夹不存在");
+        if (f == null || !f.getUserId().equals(userId)) {
+            throw new BusinessException("文件夹不存在");
+        }
         f.setName(name);
         collectFolderMapper.updateById(f);
     }
@@ -409,7 +465,9 @@ public class InspireServiceImpl implements InspireService {
                         .isNull(CollectAction::getFolderId)
                         .orderByDesc(CollectAction::getCreateTime));
             }
-            if (collects.isEmpty()) return List.of();
+            if (collects.isEmpty()) {
+                return List.of();
+            }
             List<Long> ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
             // 查 inspire_main 前清除分片（inspire_main 不分表）
             ShardContext.clear();
@@ -466,7 +524,9 @@ public class InspireServiceImpl implements InspireService {
      * 合并为至多 12 次批量查询（nickname × 1 + collect × 1 + like × ≤10）。
      */
     private List<InspireVO> toVOList(List<InspireMain> mains, Long loginUserId) {
-        if (mains.isEmpty()) return Collections.emptyList();
+        if (mains.isEmpty()) {
+            return Collections.emptyList();
+        }
 
         // 1. Batch query nicknames
         Map<Long, String> nicknameMap = buildNicknameMap(mains);
@@ -497,7 +557,9 @@ public class InspireServiceImpl implements InspireService {
     private Map<Long, String> buildNicknameMap(List<InspireMain> mains) {
         Map<Long, String> map = new HashMap<>();
         Set<Long> userIds = mains.stream().map(InspireMain::getUserId).collect(Collectors.toSet());
-        if (userIds.isEmpty()) return map;
+        if (userIds.isEmpty()) {
+            return map;
+        }
         String placeholders = userIds.stream().map(id -> "?").collect(Collectors.joining(","));
         try {
             jdbcTemplate.query("SELECT id, nickname FROM user WHERE id IN (" + placeholders + ")",
@@ -510,7 +572,13 @@ public class InspireServiceImpl implements InspireService {
     }
 
     /** 批量查当前用户是否收藏了这些灵感（单分片查询，1次） */
-    private Set<Long> buildCollectedIds(Long userId, List<Long> inspireIds) {        if (inspireIds.isEmpty()) return Collections.emptySet();        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIds(List<Long> inspireIds, Long userId) {        if (inspireIds.isEmpty()) return Collections.emptySet();        Set<Long> liked = new HashSet<>();        Map<Integer, List<Long>> grouped = inspireIds.stream()                .collect(Collectors.groupingBy(id -> (int)(Math.abs(id) % 10)));        for (Map.Entry<Integer, List<Long>> entry : grouped.entrySet()) {            int shard = entry.getKey();            List<Long> ids = entry.getValue();            String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));            try {                List<Object> params = new ArrayList<>();                params.add(userId);                params.addAll(ids);                List<Long> found = jdbcTemplate.queryForList(                    "SELECT inspire_id FROM inspire_like_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                    Long.class, params.toArray());                liked.addAll(found);            } catch (Exception e) {                log.warn("批量查询点赞状态失败: shard={}", shard, e);            }        }        return liked;    }    private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
+    private Set<Long> buildCollectedIds(Long userId, List<Long> inspireIds) {        if (inspireIds.isEmpty()) {
+        return Collections.emptySet();
+    }
+        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIds(List<Long> inspireIds, Long userId) {        if (inspireIds.isEmpty()) {
+        return Collections.emptySet();
+    }
+        Set<Long> liked = new HashSet<>();        Map<Integer, List<Long>> grouped = inspireIds.stream()                .collect(Collectors.groupingBy(id -> (int)(Math.abs(id) % 10)));        for (Map.Entry<Integer, List<Long>> entry : grouped.entrySet()) {            int shard = entry.getKey();            List<Long> ids = entry.getValue();            String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));            try {                List<Object> params = new ArrayList<>();                params.add(userId);                params.addAll(ids);                List<Long> found = jdbcTemplate.queryForList(                    "SELECT inspire_id FROM inspire_like_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                    Long.class, params.toArray());                liked.addAll(found);            } catch (Exception e) {                log.warn("批量查询点赞状态失败: shard={}", shard, e);            }        }        return liked;    }    private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
         String nickname = "";
         try { nickname = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId()); } catch(Exception e) {}
         InspireVO vo = singleToVO(m, nickname, content);

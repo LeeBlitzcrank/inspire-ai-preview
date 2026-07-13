@@ -21,7 +21,9 @@ public class NotificationServiceImpl implements NotificationService {
     public void notify(Long userId, String type, Long actorId, String actorName,
                        String content, Long targetId, String targetTitle) {
         // 自己触发的不通知
-        if (userId.equals(actorId)) return;
+        if (userId.equals(actorId)) {
+            return;
+        }
         long id = nextId();
         jdbcTemplate.update(
             "INSERT INTO user_notification(id, user_id, type, actor_id, actor_name, content, target_id, target_title) VALUES(?,?,?,?,?,?,?,?)",
@@ -79,9 +81,16 @@ public class NotificationServiceImpl implements NotificationService {
     private static long seq = 0L, lastTs = -1L;
     private static synchronized long nextId() {
         long ts = System.currentTimeMillis();
-        if (ts < lastTs) ts = lastTs;
-        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) ts++; }
-        else seq = 0;
+        if (ts < lastTs) {
+            ts = lastTs;
+        }
+        if (ts == lastTs) { seq = (seq + 1) & 0xFFF; if (seq == 0) {
+            ts++;
+        }
+        }
+        else {
+            seq = 0;
+        }
         lastTs = ts;
         return ((ts - 1735689600000L) << 22) | (1L << 12) | 1L;
     }
