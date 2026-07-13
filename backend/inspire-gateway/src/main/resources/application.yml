@@ -95,11 +95,33 @@ spring:
             - Path=/swagger-ui/**,/v3/api-docs/**
 inspire:
   jwt:
-    secret: ${INSPIRE_JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}
-    expiration: 604800000
-    white-list: /api/admin/login,/api/admin/public/**,/api/auth/user/public/**,/api/auth/login,/api/auth/register,/api/auth/forgot-password,/api/auth/reset-password,/api/inspire/public/**,/api/search/public/**,/uploads/**,/swagger-ui/**,/v3/api-docs/**
+    # ====================================================================
+    # JWT 密钥 —— 文档 4.1.2节 / 5.1节 安全规范
+    # 生产环境通过 Docker 环境变量 INSPIRE_JWT_SECRET 注入
+    # 开发环境可在 application-dev.yml 或 .env 中配置
+    # 密钥要求：Base64 编码，≥32字节（256位），大小写+数字+特殊字符
+    # ====================================================================
+    secret: ${INSPIRE_JWT_SECRET:}
+
+    # AccessToken 有效期（毫秒），文档规定 15分钟 = 900秒
+    access-token-expiration: 900000
+
+    # ====================================================================
+    # 白名单路径 —— 文档 4.2.1 节
+    # 无需登录即可访问，网关直接放行跳过所有鉴权
+    # --------------------------------------------------------------------
+    # 含以下分类：
+    # 1. 登录          /api/auth/login
+    # 2. 刷新令牌      /api/auth/refresh
+    # 3. 登出          /api/auth/logout
+    # 4. 静态资源      /uploads/**, /favicon.ico
+    # 5. 健康检测      /actuator/health/**, /actuator/info
+    # 6. 文档          /swagger-ui/**, /v3/api-docs/**
+    # 7. 匿名公开接口   /api/inspire/public/**, /api/search/public/**, /api/admin/public/**
+    # ====================================================================
+    white-list: /api/auth/login,/api/auth/register,/api/auth/refresh,/api/auth/logout,/uploads/**,/favicon.ico,/actuator/health/**,/actuator/info,/swagger-ui/**,/v3/api-docs/**,/api/inspire/public/**,/api/search/public/**,/api/admin/public/**
 
 logging:
   level:
-    com.inspire: info
+    com.inspire: debug
     org.springframework.cloud.gateway: warn

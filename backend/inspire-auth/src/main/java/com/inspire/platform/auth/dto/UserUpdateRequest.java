@@ -1,9 +1,7 @@
 package com.inspire.platform.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 
-@Data
 @Schema(description = "用户信息更新请求")
 public class UserUpdateRequest {
 
@@ -15,4 +13,11 @@ public class UserUpdateRequest {
 
     @Schema(description = "所在城市", example = "上海")
     private String city;
+
+    public String getNickname() { return nickname; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getAvatar() { return avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
 }

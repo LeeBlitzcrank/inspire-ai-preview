@@ -1,7 +1,8 @@
 package com.inspire.platform.auth.service.email;
 
 import jakarta.mail.internet.MimeMessage;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -13,9 +14,10 @@ import org.springframework.stereotype.Service;
  * - 若配置了 spring.mail.host，则使用 SMTP 真实发送
  * - 否则仅打印日志到控制台（方便本地开发调试）
  */
-@Slf4j
 @Service
 public class ConsoleEmailService implements EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(ConsoleEmailService.class);
 
     @Autowired(required = false)
     private JavaMailSender mailSender;

@@ -9,6 +9,18 @@ spring:
       minimum-idle: 5
       connection-timeout: 5000
 
+  data:
+    redis:
+      host: ${INSPIRE_REDIS_HOST:localhost}
+      port: ${INSPIRE_REDIS_PORT:6379}
+      password: ${INSPIRE_REDIS_PASSWORD:123456}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
 logging:
   level:
     com.inspire: debug

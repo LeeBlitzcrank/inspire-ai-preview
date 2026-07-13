@@ -5,9 +5,46 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="页面优化，修复灵感详情页">
+      <change afterPath="$PROJECT_DIR$/projectWord/project Progress/26、MinIO本地图片存储模块.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.19" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.19" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.20" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.20" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ChangePasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ChangePasswordRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ForgotPasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ForgotPasswordRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/LoginRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/RegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/RegisterRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ResetPasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/ResetPasswordRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/TokenResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/TokenResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/UserUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/dto/UserUpdateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/entity/PasswordReset.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/entity/PasswordReset.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/entity/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/email/ConsoleEmailService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/email/ConsoleEmailService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/impl/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/impl/AuthServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application-dev.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-common/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-common/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/result/Result.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/result/Result.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/filter/JwtAuthGlobalFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/filter/JwtAuthGlobalFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/util/JwtUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/util/JwtUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Register.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/request.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.00" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.00" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.01" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.01" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.02" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.02" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.21" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.21" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.22" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.22" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.23" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.23" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.24" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.24" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.25" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.25" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.26" beforeDir="false" afterPath="$PROJECT_DIR$/log/elasticsearch/gc.log.26" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -160,7 +197,7 @@
       <workItem from="1783914968999" duration="262000" />
       <workItem from="1783915305589" duration="598000" />
       <workItem from="1783916851119" duration="218000" />
-      <workItem from="1783917113963" duration="12530000" />
+      <workItem from="1783917113963" duration="22047000" />
     </task>
     <task id="LOCAL-00001" summary="init frontend">
       <option name="closed" value="true" />
@@ -498,7 +535,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783931780478</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="页面优化，修复灵感详情页">
+      <option name="closed" value="true" />
+      <created>1783932628986</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1783932628986</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

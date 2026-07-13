@@ -607,3 +607,180 @@ docker compose up -d inspire-core
 
 1、灵感录入
 2、灵感检索-热门灵感的缩略图显示有问题，并没有显示灵感的图片。
+
+3、
+依据JWT双Token设计文档，生成所有业务微服务通用工具代码：
+1. 用户上下文工具类 UserContext：从请求头获取X-User-Id、X-User-Role，提供静态获取方法
+2. Web拦截器：自动封装当前登录用户到上下文，MQ消费者/定时任务跳过鉴权
+3. 权限校验工具：基于role判断接口访问权限，抛出403异常
+4. 统一全局异常处理，复用文档定义错误码
+要求：下游服务不引入任何JWT解析相关代码，仅读取网关透传Header。
+
+4、
+基于JWT双Token设计文档，补充配套内容：
+1. 全局统一返回Result工具类，包含文档全部错误码常量
+2. Docker Compose环境变量配置示例，网关、auth统一配置JWT_SECRET
+3. Redis配置类，序列化方案优化
+4. Postman接口测试用例（登录、刷新、登出、踢人）
+5. 前端简易逻辑示例：存储token、捕获401自动刷新token、登出清空令牌
+
+
+你需要严格按照下面这份《MinIO本地图片存储模块设计文档》实现全套可运行代码，所有开发逻辑、约束、架构完全遵循文档，不新增文档以外的备份、定时任务、灾备逻辑。
+===【以下是完整设计文档】===
+# MinIO本地图片存储模块设计文档
+## 文档基础信息
+| 项目 | 内容 |
+| ---- | ---- |
+| 文档名称 | MinIO本地图片存储模块设计文档 |
+| 适用环境 | 本地Mac开发/演示，自有服务器存储，无云端OSS、无定时异地备份 |
+| 整体架构 | SpringCloud Gateway后端 + MinIO(Docker) + Nginx反向缓存 + Cloudflare Tunnel/CDN |
+| 对外域名 | 图片访问域名 `img.20sherry.com`，前端`ai.20sherry.com`(GitHub Pages)，后端接口`api.20sherry.com` |
+| 编写目的 | 规范图片上传、存储、访问、安全校验、私有资源权限全流程开发标准 |
+
+# 1 业务概述
+## 1.1 业务场景
+1. 前端站点 ai.20sherry.com（GitHub Pages静态页面）上传图片素材；
+2. 用户上传头像、AI灵感配图、内容封面等图片资源；
+3. 区分**公开图片**、**私有私密图片**两套访问权限；
+4. 图片本地持久化存储，依托Nginx实现缩略图、WebP压缩、本地磁盘缓存；
+5. Cloudflare免费CDN提供外网加速、防盗链、HTTPS，通过Cloudflare Tunnel穿透本地服务对外暴露。
+
+## 1.2 设计约束
+1. 不使用阿里云/腾讯云OSS，全部图片存储本地Mac硬盘MinIO；
+2. 不配置定时备份、异地灾备脚本，仅人工手动管理磁盘文件；
+3. 无付费CDN、无第三方图片审核API，安全校验、图片处理全部本地实现；
+4. 域名统一由Cloudflare托管DNS，`img.20sherry.com` 永久固定穿透地址，废弃ngrok。
+
+## 1.3 模块目标
+1. 安全：拦截图片马、恶意文件上传，防止盗图、私密素材泄露；
+2. 性能：多层缓存（Cloudflare CDN + Nginx本地磁盘缓存）、自动生成缩略图；
+3. 规范：统一存储目录、统一访问域名、统一接口出入参；
+4. 低成本：零云厂商存储/流量费用，仅消耗本地硬件资源。
+
+# 2 整体架构设计
+## 2.1 请求链路
+### 上传链路
+前端 ai.20sherry.com → Cloudflare CDN → Cloudflare Tunnel → Gateway鉴权 → SpringBoot业务服务 → 四层文件校验+图片清洗 → MinIO存储原图 → MySQL写入图片元数据
+### 图片访问链路
+前端请求 https://img.20sherry.com/xxx.jpg?w=400
+Cloudflare CDN(一级缓存) → Cloudflare Tunnel → 本地Nginx(二级磁盘缓存) → 反向代理MinIO读取原图 → Nginx动态缩略图/转WebP → 返回前端
+
+## 2.2 组件分工
+1. MinIO：Docker对象存储，管理原图、区分公私目录、生成15分钟临时签名URL
+2. Nginx：反向代理、本地磁盘缓存、动态缩略图、WebP压缩、本地Referer防盗链
+3. Cloudflare Tunnel：内网穿透，本地80端口映射外网img.20sherry.com
+4. Cloudflare CDN：全局缓存、HTTPS、云端防盗链、图片自动优化
+5. Spring Gateway：上传接口鉴权、限流、跨域拦截
+6. SpringBoot业务服务：文件校验、图片清洗、MinIO SDK交互、元数据入库、私有图签名接口
+7. MySQL：存储图片元数据，不存储二进制图片
+
+# 3 MinIO存储层设计
+## 3.1 部署规范
+1. Docker Compose编排，端口9000(API)、9001(可视化管理后台)
+2. 宿主机目录`./minio-data`持久化，容器重启图片不丢失
+3. 账号密钥通过.env环境变量注入，禁止硬编码
+4. 存储桶`inspire-img`开启版本控制，误删图片后台手动恢复
+5. 无自动备份策略，磁盘满后手动清理无用图片
+
+## 3.2 目录分层规范
+1. 公开图片：`upload/{userId}/{yyyyMMdd}/{UUID}.{后缀}`
+2. 私有图片：`upload/private/{userId}/{yyyyMMdd}/{UUID}.{后缀}`
+3. 仅允许后缀：jpg、jpeg、png、webp；全部使用UUID重命名，丢弃原始文件名
+
+## 3.3 权限规则
+1. 公开目录：Nginx放行，搭配双层防盗链；
+2. 私有目录：Nginx直接拦截所有直连访问，仅允许后端生成15分钟临时签名URL访问；
+
+# 4 Nginx代理缓存模块设计
+## 4.1 核心能力
+1. 反向代理MinIO 9000端口，隔离底层存储地址
+2. 本地磁盘缓存：最大占用50G硬盘，30天未访问文件自动清理
+3. 动态缩略图：URL传参`?w=宽度`自动缩放，自动转WebP，质量75
+4. 双层防盗链：Nginx本地拦截非法Referer，兜底Cloudflare WAF
+5. 长缓存响应头，提升CDN缓存命中率
+
+## 4.2 缓存逻辑
+1. 首次访问：Nginx回源MinIO，处理图片后写入本地缓存；
+2. 重复访问：直接读取本地缓存，不访问MinIO；
+3. 404图片缓存10分钟，减少无效回源。
+
+# 5 SpringBoot后端业务逻辑设计
+## 5.1 上传四层安全校验
+1. 接口鉴权：上传接口必须携带JWT Token，Gateway拦截匿名请求；
+2. 参数拦截：单文件最大5MB，仅放行jpg/png/webp；
+3. MIME类型校验；
+4. 二进制魔数校验 + 图片重绘清洗，清除图片内嵌恶意脚本、EXIF，防图片马。
+
+## 5.2 上传业务流程
+1. 接收前端MultipartFile；
+2. 四层校验，失败抛出异常；
+3. 重绘清洗图片二进制流；
+4. 根据用户ID、日期、UUID生成分层存储路径，区分公开/私有目录；
+5. 清洗后图片流上传MinIO；
+6. 拼接CDN域名生成完整访问地址；
+7. 图片元数据写入MySQL；
+8. 返回CDN地址、fileKey、图片ID给前端。
+
+## 5.3 私有图片访问流程
+1. 前端禁止直接拼接img.20sherry.com地址访问私有图；
+2. 前端调用鉴权接口携带fileKey与JWT；
+3. 后端校验当前登录用户是否为图片上传者，非本人返回403；
+4. 校验通过，生成15分钟有效期MinIO签名URL返回前端；
+5. 前端使用临时签名链接渲染图片，过期失效。
+
+## 5.4 图片删除逻辑
+1. 业务仅执行MySQL逻辑删除 del_flag=1；
+2. 本地演示环境不自动删除MinIO物理文件，清理文件需人工登录MinIO后台操作；
+3. MinIO开启版本控制，误删图片可手动恢复。
+
+# 6 数据库设计
+表名：sys_upload_image，完整建表SQL，包含全部字段注释，仅存储元数据，不存图片二进制。
+
+# 7 接口设计规范
+## 7.1 图片上传接口
+请求方式：POST
+地址：/api/upload/image
+请求头：Authorization: Bearer {JWT_TOKEN}
+Content-Type：multipart/form-data
+入参：file(图片文件)、isPrivate(0公开/1私有)
+返回JSON：包含id、cdnUrl、fileKey
+
+## 7.2 私有图片临时签名接口
+请求方式：GET
+地址：/api/image/private
+请求头：Authorization: Bearer {JWT_TOKEN}
+入参：fileKey（MinIO文件路径）
+返回JSON：包含privateUrl（15分钟临时签名链接）
+
+# 8 安全设计规范
+1. 上传防护：四层校验、图片重绘清洗、UUID文件名防路径穿越、Gateway上传接口IP限流；
+2. 访问权限：私有图禁止直连、双层Referer防盗链；
+3. 传输安全：全站HTTPS、Tunnel加密隧道、隐藏本地真实端口。
+
+# 9 性能优化设计
+1. 双层缓存：Cloudflare CDN一级缓存，Nginx本地磁盘二级缓存，TTL30天；
+2. Nginx自动转WebP压缩，URL传参动态生成缩略图；
+3. 按用户+日期分层目录，避免单目录文件过多卡顿。
+
+# 10 部署&维护约束
+1. 部署：Docker Compose启动MinIO+Nginx，配置cloudflared隧道绑定img.20sherry.com，启动SpringBoot服务；
+2. Cloudflare配置：img.20sherry.com CNAME隧道、橙色代理、缓存规则、防盗链WAF、强制HTTPS；
+3. 维护：无自动备份脚本，磁盘清理、缓存刷新、图片恢复全部人工操作；
+4. 风险：本地硬盘损坏会永久丢失图片，仅适合演示场景，无异地灾备。
+===【文档结束】===
+
+## 你的开发要求，严格遵守文档：
+1. 输出全套完整可运行代码，包含：
+   1) MinIO+Nginx docker-compose.yml、.env环境变量、nginx完整conf配置；
+   2) SpringBoot Maven pom MinIO、thumbnailator依赖；
+   3) application.yml MinIO配置；
+   4) MinIO客户端配置类 Java代码；
+   5) ImageUploadService 完整上传工具类（包含四层校验、图片清洗、上传、私有图签名方法）；
+   6) sys_upload_image 完整MySQL建表SQL；
+   7) 上传接口、私有图片签名接口 Controller层代码；
+   8) ImageEntity、ImageVO 实体类代码；
+2. 禁止输出任何定时备份、crontab、自动归档、异地灾备相关代码；
+3. 所有代码增加详细注释，适配本地Mac单机演示环境；
+4. 额外输出完整本地部署步骤，包含MinIO初始化命令、cloudflared隧道配置说明；
+5. 代码架构基于SpringBoot3 + SpringCloud Gateway，Java标准开发规范，代码可直接复制运行。
+

@@ -23,7 +23,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login } from '@/api/inspire.js'
+import { login } from '@/api/auth.js'
+import { setRememberMe } from '@/utils/tokenStorage.js'
 const router = useRouter()
 const goForgot = () => { router.push('/forgot-password') }
 const loading = ref(false)
@@ -38,15 +39,16 @@ const handleLogin = async () => {
   try {
     const res = await login({ username: form.value.account, password: form.value.password })
     if (res.code === 200) {
+      setRememberMe(remember.value)
       // 清除可能残留的管理员 token，避免 adminToken 影响普通用户请求
       localStorage.removeItem('adminToken')
       localStorage.removeItem('adminUser')
-      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('token', res.data.accessToken)
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
       localStorage.setItem('userNickname', res.data.nickname)
       if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
-      const _payload = JSON.parse(atob(res.data.token.split('.')[1]))
+      const _payload = JSON.parse(atob(res.data.accessToken.split('.')[1]))
       localStorage.setItem('userId', _payload.sub)
       ElMessage.success('登录成功')
       const redirect = localStorage.getItem('redirectPath')

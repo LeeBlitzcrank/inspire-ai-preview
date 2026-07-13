@@ -3,8 +3,12 @@ package com.inspire.platform.gateway.filter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.gateway.model.ErrorCode;
+import com.inspire.platform.gateway.service.TokenBlacklistService;
 import com.inspire.platform.gateway.util.JwtUtil;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -27,19 +31,28 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * JWT 全局鉴权过滤器
- *
- * 白名单路径直接放行，非白名单路径校验 JWT Token。
- * 校验通过后将 userId / username 写入请求头，透传给下游微服务。
- *
- * PRD 2.1 登录鉴权规则：
- * - 未登录权限限制：仅可浏览广场灵感，不可使用AI生成、发布、收藏、点赞、接收推送
+ * JWT 全局鉴权过滤器 —— 严格对照文档 4.2.2 鉴权校验顺序
+ * <p>
+ * 校验顺序（严格从上到下，不可颠倒）：
+ * <ol>
+ *   <li>判断请求路径是否属于白名单 → 是则直接放行，跳过后续所有鉴权</li>
+ *   <li>校验请求头是否携带 {@code Authorization: Bearer {token}} → 否则 401001</li>
+ *   <li>校验 Redis 黑名单 {@code black_token:{} → 命中则 401002</li>
+ *   <li>校验 JWT 签名（HS256 全局密钥）→ 篡改则 401003</li>
+ *   <li>校验 JWT 过期时间 → 过期则 401004</li>
+ *   <li>解析载荷写入 {@code X-User-Id} / {@code X-User-Role} 请求头，透传下游</li>
+ *   <li>转发请求至业务微服务</li>
+ * </ol>
+ * <p>
+ * 响应格式严格遵照文档 4.2.3：
+ * <pre>{@code {"code": 401004, "msg": "登录令牌已过期，请刷新令牌", "data": null}}</pre>
  */
 @Slf4j
 @Component
 public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService blacklistService;
     private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -48,9 +61,11 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
 
     public JwtAuthGlobalFilter(
             JwtUtil jwtUtil,
+            TokenBlacklistService blacklistService,
             ObjectMapper objectMapper,
-            @Value("${inspire.jwt.white-list:/api/auth/**,/api/inspire/public/**}") String whiteListStr) {
+            @Value("${inspire.jwt.white-list}") String whiteListStr) {
         this.jwtUtil = jwtUtil;
+        this.blacklistService = blacklistService;
         this.objectMapper = objectMapper;
         this.whiteList = Arrays.asList(whiteListStr.split(","));
     }
@@ -61,59 +76,98 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpResponse response = exchange.getResponse();
         String path = request.getURI().getPath();
 
-        // 1. 白名单路径直接放行，但仍尝试解析Token设置用户信息
+        // ==================================================================
+        // 步骤①：白名单判断 —— 文档 4.2.2 第1步
+        // 白名单接口直接放行，跳过鉴权
+        // ==================================================================
         if (isWhiteList(path)) {
-            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-                Claims claims = jwtUtil.validateToken(authHeader.substring(7));
-                if (claims != null) {
-                    request = request.mutate()
-                        .header("X-Inspire-UserId", claims.getSubject())
-                        .header("X-Inspire-Username", claims.get("username", String.class) == null ? "" : claims.get("username", String.class))
-                        .build();
-                }
-            }
-            log.debug("白名单路径放行: {}", path);
-            return chain.filter(exchange.mutate().request(request).build());
+            log.debug("[鉴权] 白名单放行: {}", path);
+            return chain.filter(exchange);
         }
 
-        // 2. 从请求头获取 Token
+        // ==================================================================
+        // 步骤②：校验请求头 Authorization —— 文档 4.2.2 第2步
+        // 缺失 → 返回 401001（未携带登录令牌）
+        // ==================================================================
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-            log.warn("请求缺少有效的Authorization头: {}", path);
-            return unauthorized(response, "未登录，请先登录账号");
+            log.warn("[鉴权] 缺少Authorization头: {}", path);
+            return unauthorizedResponse(response, ErrorCode.TOKEN_MISSING);
         }
 
         String token = authHeader.substring(7);
 
-        // 3. 校验 Token
-        Claims claims = jwtUtil.validateToken(token);
-        if (claims == null) {
-            log.warn("JWT校验失败: {}", path);
-            return unauthorized(response, "登录已过期，请重新登录");
-        }
+        // ==================================================================
+        // 步骤③：Redis 黑名单校验 —— 文档 4.2.2 第3步
+        // black_token:{accessToken} 命中 → 返回 401002（令牌已失效）
+        // 使用 Reactor 非阻塞链路
+        // ==================================================================
+        return blacklistService.isBlacklisted(token)
+                .flatMap(isBlacklisted -> {
+                    if (Boolean.TRUE.equals(isBlacklisted)) {
+                        log.warn("[鉴权] 黑名单命中: path={}", path);
+                        return unauthorizedResponse(response, ErrorCode.TOKEN_INVALIDATED);
+                    }
 
-        // 4. 将用户信息写入请求头，透传给下游服务
-        String userId = claims.getSubject();
-        String username = claims.get("username", String.class);
+                    // ==========================================================
+                    // 步骤④ + 步骤⑤：JWT 签名校验 & 过期校验 —— 文档 4.2.2 第4-5步
+                    // ExpiredJwtException → 401004（令牌过期）
+                    // 其他 JwtException     → 401003（签名篡改/非法）
+                    // 校验通过 → 步6
+                    // ==========================================================
+                    try {
+                        // parseToken 会校验签名 & 过期时间
+                        // 签名失败 → JwtException
+                        // 过期 → ExpiredJwtException（它是 JwtException 的子类，先捕获）
+                        Claims claims = jwtUtil.parseToken(token);
 
-        ServerHttpRequest mutatedRequest = request.mutate()
-                .header("X-Inspire-UserId", userId)
-                .header("X-Inspire-Username", username == null ? "" : username)
-                .build();
+                        // ======================================================
+                        // 步骤⑥：透传用户 Header —— 文档 4.2.2 第6步
+                        // X-User-Id: userId
+                        // X-User-Role: admin / core / user
+                        // ======================================================
+                        String userId = claims.getSubject();
+                        String role = claims.get("role", String.class);
 
-        log.debug("JWT鉴权通过: userId={}, path={}", userId, path);
-        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                        ServerHttpRequest mutatedRequest = request.mutate()
+                                .header("X-User-Id", userId)
+                                .header("X-Inspire-UserId", userId)
+                                .header("X-User-Role", role != null ? role : "")
+                                .build();
+
+                        log.debug("[鉴权] 通过: userId={}, role={}, path={}", userId, role, path);
+
+                        // ======================================================
+                        // 步骤⑦：转发请求至业务微服务 —— 文档 4.2.2 第7步
+                        // ======================================================
+                        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
+                    } catch (ExpiredJwtException e) {
+                        // 文档 4.2.2 第5步：过期 → 401004
+                        log.warn("[鉴权] 令牌过期: path={}, userId={}",
+                                path, e.getClaims() != null ? e.getClaims().getSubject() : "?");
+                        return unauthorizedResponse(response, ErrorCode.TOKEN_EXPIRED);
+
+                    } catch (JwtException e) {
+                        // 文档 4.2.2 第4步：签名非法/篡改 → 401003
+                        log.warn("[鉴权] 签名校验失败: path={}, error={}", path, e.getMessage());
+                        return unauthorizedResponse(response, ErrorCode.TOKEN_SIGNATURE_INVALID);
+                    }
+                });
     }
 
     @Override
     public int getOrder() {
-        // 优先级最高，在限流过滤器之前执行
+        // 优先级最高（Ordered.LOWEST_PRECEDENCE - 自定义高位），在限流过滤器之前执行
         return -200;
     }
 
+    // ======================================================================
+    //  私有方法
+    // ======================================================================
+
     /**
-     * 判断是否属于白名单路径
+     * Ant 风格路径匹配
      */
     private boolean isWhiteList(String path) {
         for (String pattern : whiteList) {
@@ -125,18 +179,23 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * 返回 401 未授权响应
+     * 封装标准 401 错误响应（文档 4.2.3 格式）
+     * <pre>{@code {"code": 401xxx, "msg": "xxx", "data": null}}</pre>
      */
-    private Mono<Void> unauthorized(ServerHttpResponse response, String msg) {
+    private Mono<Void> unauthorizedResponse(ServerHttpResponse response, ErrorCode errorCode) {
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        Result<?> result = Result.unauthorized(msg);
+        // 严格按照文档 4.2.3 标准错误码格式
+        Result<?> result = Result.error(errorCode.getCode(), errorCode.getMessage());
+
         byte[] bytes;
         try {
             bytes = objectMapper.writeValueAsString(result).getBytes(StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
-            bytes = "{\"code\":401,\"msg\":\"未授权\"}".getBytes(StandardCharsets.UTF_8);
+            bytes = ("{\"code\":" + errorCode.getCode()
+                    + ",\"msg\":\"" + errorCode.getMessage()
+                    + "\",\"data\":null}").getBytes(StandardCharsets.UTF_8);
         }
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));

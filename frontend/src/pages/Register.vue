@@ -31,7 +31,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { register } from '@/api/inspire.js'
+import { register } from '@/api/auth.js'
 import { randomNickname } from '@/utils/nickname.js'
 
 const avatarEmojis = [

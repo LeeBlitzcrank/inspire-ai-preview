@@ -1,5 +1,6 @@
 # =============================================
 # 开发环境配置 - 本地 Docker 中间件
+# JWT 双Token认证体系（文档 25、JWT双Token认证体系.md）
 # =============================================
 
 server:
@@ -8,8 +9,8 @@ server:
 spring:
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${INSPIRE_REDIS_HOST:localhost}
+      port: ${INSPIRE_REDIS_PORT:6379}
       password: '${INSPIRE_REDIS_PASSWORD:123456}'          # 本地 Docker Redis 无密码请留空
       timeout: 3000ms
       lettuce:
@@ -24,6 +25,31 @@ spring:
     password: ${INSPIRE_GATEWAY_DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+# ====================================================================
+# JWT 配置
+# 文档 5.1 节：密钥通过环境变量 JWT_SECRET 注入，不写入 YAML 硬编码
+# 开发环境可在 .env 文件中设置 INSPIRE_JWT_SECRET
+# AccessToken 有效期 15分钟（900秒）
+# ====================================================================
+inspire:
+  jwt:
+    secret: ${INSPIRE_JWT_SECRET:${JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}}
+    access-token-expiration: 900000
+    white-list:
+      /api/auth/login,
+      /api/auth/register,
+      /api/auth/refresh,
+      /api/auth/logout,
+      /uploads/**,
+      /favicon.ico,
+      /actuator/health/**,
+      /actuator/info,
+      /swagger-ui/**,
+      /v3/api-docs/**,
+      /api/inspire/public/**,
+      /api/search/public/**,
+      /api/admin/public/**,
+
 # 路由指向本地开发服务
 
 # 路由指向服务地址（Docker: 通过 env var 注入服务名，本地: 默认 localhost）
@@ -36,8 +62,8 @@ routes:
 
 logging:
   level:
-    com.inspire: debug
+    com.inspire.platform.gateway: debug
     org.springframework.cloud.gateway: info
     org.springframework.data.redis: debug
   pattern:
-      dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai
+    dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai

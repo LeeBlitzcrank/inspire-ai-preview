@@ -6,6 +6,17 @@ spring:
     name: inspire-auth
   profiles:
     active: dev
+  data:
+    redis:
+      host: ${INSPIRE_REDIS_HOST:localhost}
+      port: ${INSPIRE_REDIS_PORT:6379}
+      password: ${INSPIRE_REDIS_PASSWORD:123456}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
   # SQL 初始化
   sql:
@@ -27,7 +38,7 @@ spring:
 mybatis-plus:
   global-config:
     db-config:
-      id-type: none
+      id-type: input
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
@@ -37,8 +48,13 @@ mybatis-plus:
 
 inspire:
   jwt:
+    # JWT密钥：通过环境变量INSPIRE_JWT_SECRET注入（文档5.1节），开发环境有默认值
     secret: ${INSPIRE_JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}
-    expiration: 604800000
+    # AccessToken 有效期（文档4.1.2节）：15分钟 = 900秒
+    access-token-expiration: 900000
+  session:
+    # RefreshToken 有效期（文档4.1.2节）：7天
+    refresh-token-expiration: 604800000
   app:
     frontend-url: http://localhost:5173
 
