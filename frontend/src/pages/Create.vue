@@ -341,8 +341,8 @@ const suggestImages = async () => {
   try {
     console.log('✅ 函数开始执行 keyword=', keyword)
     imageKeywords.value = keyword
-    const baseUrl = import.meta.env.VITE_API_BASE_URL
-    console.log('✅ VITE_API_BASE_URL =', baseUrl)
+    const baseUrl = import.meta.env.VITE_API_BASE
+    console.log('✅ VITE_API_BASE =', baseUrl)
     const url = baseUrl + '/api/inspire/public/suggest-images'
     console.log('✅ 最终请求url=', url)
 

@@ -5,96 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="代码修复">
-      <change afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/constant/RedisKeyConstant.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/util/BlockingSessionRedisOps.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/util/JwtUtil.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/util/ReactiveSessionRedisOps.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/config/MinioConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/ImageController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/dto/image/UploadImageVO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/entity/UploadImage.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/mapper/UploadImageMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/ImageUploadService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/ImageUploadServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/schema-minio.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker/Dockerfile.local" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker/minio/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/projectWord/Inspire AI Preview 项目总览文档.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/projectWord/Inspire AI 鉴权体系完整说明.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/deploy-frontend.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/deploy-frontend.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/docker/Dockerfile" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/docker/Dockerfile.local" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/controller/AiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/controller/AiController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/impl/AuthServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/impl/AuthServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/util/JwtUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/util/RedisSessionUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/util/RedisSessionUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-common/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-common/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/CommentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/CommentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FollowController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FollowController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/MessageController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/MessageController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/NotificationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/NotificationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/InspireGatewayApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/InspireGatewayApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/config/RateLimiterConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/config/RateLimiterConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/filter/JwtAuthGlobalFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/filter/JwtAuthGlobalFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/util/JwtUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/init/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docker/init/init.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.00" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.01" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.02" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.03" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.04" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.05" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.06" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.07" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.08" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.09" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.10" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.11" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.12" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.13" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.14" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.15" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.16" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.17" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.18" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.19" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.20" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.21" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.22" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.23" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.24" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.25" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.26" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.27" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.28" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.29" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.30" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/elasticsearch/gc.log.31" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-admin/app.log.2026-07-11.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-admin/app.log.2026-07-12.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-auth/app.log.2026-07-11.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-auth/app.log.2026-07-12.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-core/app.log.2026-07-11.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-core/app.log.2026-07-12.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-gateway/app.log.2026-07-11.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/log/inspire-gateway/app.log.2026-07-12.0.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -262,6 +175,7 @@
       <workItem from="1789350172544" duration="1931000" />
       <workItem from="1789620850875" duration="252000" />
       <workItem from="1789621127157" duration="13622000" />
+      <workItem from="1789635710406" duration="713000" />
     </task>
     <task id="LOCAL-00001" summary="init frontend">
       <option name="closed" value="true" />
@@ -639,7 +553,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789634293571</updated>
     </task>
-    <option name="localTasksCounter" value="48" />
+    <task id="LOCAL-00048" summary="代码修复">
+      <option name="closed" value="true" />
+      <created>1789635734310</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1789635734311</updated>
+    </task>
+    <option name="localTasksCounter" value="49" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
