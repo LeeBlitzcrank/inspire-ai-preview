@@ -340,19 +340,18 @@ const suggestImages = async () => {
   const keyword = form.value.title || form.value.content?.slice(0, 50) || 'inspiration'
   try {
     imageKeywords.value = keyword
-    const res = await fetch('/api/inspire/public/suggest-images', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
-      body: JSON.stringify({ keyword })
-    })
-    const d = await res.json()
+    // api实例自带baseURL，直接写相对路径即可
+    const d = await api.post('/api/inspire/public/suggest-images', { keyword })
     imageSuggestions.value = d.data || []
     if (imageSuggestions.value.length > 0) {
       selectedSuggest.value = imageSuggestions.value[0]
       imageSuggestDialog.value = true
     }
-  } catch (e) { ElMessage.error('获取配图失败') }
+  } catch (e) {
+    ElMessage.error('获取配图失败')
+  }
 }
+
 
 const useSuggestedImage = async () => {
   if (!selectedSuggest.value) return
