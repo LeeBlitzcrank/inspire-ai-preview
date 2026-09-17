@@ -339,18 +339,38 @@ const insertMd = (before, after) => {
 const suggestImages = async () => {
   const keyword = form.value.title || form.value.content?.slice(0, 50) || 'inspiration'
   try {
+    console.log('✅ 函数开始执行 keyword=', keyword)
     imageKeywords.value = keyword
-    // api实例自带baseURL，直接写相对路径即可
-    const d = await api.post('/api/inspire/public/suggest-images', { keyword })
+    const baseUrl = import.meta.env.VITE_API_BASE_URL
+    console.log('✅ VITE_API_BASE_URL =', baseUrl)
+    const url = baseUrl + '/api/inspire/public/suggest-images'
+    console.log('✅ 最终请求url=', url)
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({ keyword })
+    })
+    console.log('✅ fetch完成，http状态码：', res.status)
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`)
+    }
+    const d = await res.json()
+    console.log('✅ 后端返回数据 d=', d)
     imageSuggestions.value = d.data || []
     if (imageSuggestions.value.length > 0) {
       selectedSuggest.value = imageSuggestions.value[0]
       imageSuggestDialog.value = true
     }
   } catch (e) {
+    console.error('❌ suggestImages异常：', e)
     ElMessage.error('获取配图失败')
   }
 }
+
 
 
 const useSuggestedImage = async () => {
