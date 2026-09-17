@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.result.Result;
 import com.inspire.platform.gateway.model.ErrorCode;
 import com.inspire.platform.gateway.service.TokenBlacklistService;
-import com.inspire.platform.gateway.util.JwtUtil;
+import com.inspire.platform.common.constant.RedisKeyConstant;
+import com.inspire.platform.common.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -81,8 +82,20 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         // 白名单接口直接放行，跳过鉴权
         // ==================================================================
         if (isWhiteList(path)) {
+            try {
+                String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+                if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+                    Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+                    if (claims != null) {
+                        request = request.mutate()
+                                .header("X-User-Id", claims.getSubject())
+                                .build();
+                    }
+                }
+            } catch (Exception e) {
+            }
             log.debug("[鉴权] 白名单放行: {}", path);
-            return chain.filter(exchange);
+            return chain.filter(exchange.mutate().request(request).build());
         }
 
         // ==================================================================
@@ -96,12 +109,18 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
+        // 拦截空白Token，避免jjwt产生空JWT异常日志
+        if (token.isBlank()) {
+            log.warn("[鉴权] 空白Token: path={}", path);
+            return unauthorizedResponse(response, ErrorCode.TOKEN_MISSING);
+        }
 
         // ==================================================================
         // 步骤③：Redis 黑名单校验 —— 文档 4.2.2 第3步
         // black_token:{accessToken} 命中 → 返回 401002（令牌已失效）
         // 使用 Reactor 非阻塞链路
         // ==================================================================
+        ServerHttpRequest finalRequest = request;
         return blacklistService.isBlacklisted(token)
                 .flatMap(isBlacklisted -> {
                     if (Boolean.TRUE.equals(isBlacklisted)) {
@@ -129,9 +148,8 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                         String userId = claims.getSubject();
                         String role = claims.get("role", String.class);
 
-                        ServerHttpRequest mutatedRequest = request.mutate()
+                        ServerHttpRequest mutatedRequest = finalRequest.mutate()
                                 .header("X-User-Id", userId)
-                                .header("X-Inspire-UserId", userId)
                                 .header("X-User-Role", role != null ? role : "")
                                 .build();
 

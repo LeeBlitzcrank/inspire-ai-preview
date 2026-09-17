@@ -25,7 +25,7 @@ public class MessageController {
     private final JdbcTemplate jdbcTemplate;
 
     private Long getUserId(HttpServletRequest request) {
-        String userId = request.getHeader("X-Inspire-UserId");
+        String userId = request.getHeader("X-User-Id");
         return userId != null ? Long.parseLong(userId) : null;
     }
 

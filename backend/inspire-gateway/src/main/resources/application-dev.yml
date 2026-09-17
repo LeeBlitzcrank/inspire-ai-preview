@@ -40,6 +40,8 @@ inspire:
       /api/auth/register,
       /api/auth/refresh,
       /api/auth/logout,
+      /api/auth/forgot-password,
+      /api/auth/reset-password,
       /uploads/**,
       /favicon.ico,
       /actuator/health/**,
@@ -49,6 +51,7 @@ inspire:
       /api/inspire/public/**,
       /api/search/public/**,
       /api/admin/public/**,
+      /api/my/**,
 
 # 路由指向本地开发服务
 

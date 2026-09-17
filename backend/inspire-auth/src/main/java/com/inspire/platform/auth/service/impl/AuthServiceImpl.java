@@ -11,7 +11,7 @@ import com.inspire.platform.auth.mapper.PasswordResetMapper;
 import com.inspire.platform.auth.mapper.UserMapper;
 import com.inspire.platform.auth.service.AuthService;
 import com.inspire.platform.auth.service.email.EmailService;
-import com.inspire.platform.auth.util.JwtUtil;
+import com.inspire.platform.common.util.JwtUtil;
 import com.inspire.platform.auth.util.RedisSessionUtil;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.mq.constant.MqTopicConstants;

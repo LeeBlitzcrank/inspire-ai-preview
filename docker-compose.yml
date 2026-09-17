@@ -10,6 +10,7 @@ x-common-env: &common-env
   INSPIRE_GATEWAY_DB_PASSWORD: 123456
   INSPIRE_SEARCH_DB_PASSWORD: 123456
   INSPIRE_JWT_SECRET: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
+  INSPIRE_MAIL_PASSWORD: csqrlhvdxuewbghe
   # 文档5.1节：Docker环境变量注入JWT_SECRET，与INSPIRE_JWT_SECRET保持一致
   JWT_SECRET: dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k
   # AccessToken有效期15分钟（文档4.1.2节）
@@ -25,7 +26,7 @@ x-common-env: &common-env
   TZ: Asia/Shanghai
 
 x-service-build: &service-build
-  context: ./backend
+  context: .
   dockerfile: docker/Dockerfile.local
 
 # ==================== 服务定义 ====================
@@ -123,7 +124,6 @@ services:
     depends_on:
       mysql: { condition: service_healthy }
       rocketmq-broker: { condition: service_healthy }
-    restart: unless-stopped
     environment: *common-env
     volumes: [ ./log/inspire-auth:/logs ]
 
@@ -138,7 +138,6 @@ services:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
       rocketmq-broker: { condition: service_healthy }
-    restart: unless-stopped
     environment:
       <<: *common-env
       INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
@@ -157,7 +156,6 @@ services:
       mysql: { condition: service_healthy }
       elasticsearch: { condition: service_healthy }
       rocketmq-broker: { condition: service_healthy }
-    restart: unless-stopped
     environment:
       <<: *common-env
       INSPIRE_UNSPLASH_ACCESS_KEY: ${INSPIRE_UNSPLASH_ACCESS_KEY:-}
@@ -174,7 +172,6 @@ services:
     ports: [ "8085:8085" ]
     depends_on:
       mysql: { condition: service_healthy }
-    restart: unless-stopped
     environment: *common-env
     volumes: [ ./log/inspire-admin:/logs ]
 
@@ -187,7 +184,6 @@ services:
     ports: [ "8086:8086" ]
     depends_on:
       elasticsearch: { condition: service_healthy }
-    restart: unless-stopped
     environment: *common-env
     volumes: [ ./log/inspire-search:/logs ]
 
@@ -203,7 +199,6 @@ services:
       inspire-ai: { condition: service_started }
       inspire-core: { condition: service_started }
       inspire-admin: { condition: service_started }
-    restart: unless-stopped
     environment:
       <<: *common-env
       routes_auth_service: http://inspire-auth:8081
@@ -212,6 +207,41 @@ services:
       routes_admin_service: http://inspire-admin:8085
     volumes: [ ./log/inspire-gateway:/logs ]
 
+  # -------- MinIO 对象存储 + Nginx 图片缓存 --------
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: inspire-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  nginx-image:
+    container_name: inspire-nginx-image
+    image: nginx:1.27-alpine
+    ports:
+      - "8088:80"
+    volumes:
+      - ./docker/minio/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx-cache:/var/cache/nginx/images
+    depends_on:
+      minio: { condition: service_started }
+    restart: unless-stopped
+
 volumes:
   mysql-data:
   es-data:
+  minio-data:
+  nginx-cache:

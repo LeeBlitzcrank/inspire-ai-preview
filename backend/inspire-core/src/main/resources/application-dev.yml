@@ -13,14 +13,14 @@ logging:
   level:
     com.inspire: debug
   pattern:
-      dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai
+    dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai
 
 # ES 同步配置（留空则不启用，不影响核心功能）
 inspire:
   es:
     hosts: ${INSPIRE_ES_HOSTS:localhost:9200}
 
-# Unsplash API 配置（注册获取 Access Key: https://unsplash.com/developers）
+  # Unsplash API 配置（注册获取 Access Key: https://unsplash.com/developers）
   unsplash:
     access-key: ${INSPIRE_UNSPLASH_ACCESS_KEY:}
 

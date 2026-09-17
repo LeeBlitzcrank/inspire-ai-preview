@@ -1,5 +1,7 @@
 package com.inspire.platform.auth.util;
 
+import com.inspire.platform.common.constant.RedisKeyConstant;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,9 +25,9 @@ public class RedisSessionUtil {
 
     private static final Logger log = LoggerFactory.getLogger(RedisSessionUtil.class);
 
-    private static final String REFRESH_PREFIX = "refresh:";
-    private static final String USER_REFRESH_PREFIX = "user_refresh:";
-    private static final String BLACKLIST_PREFIX = "black_token:";
+    private static final String REFRESH_PREFIX = RedisKeyConstant.REFRESH_PREFIX;
+    private static final String USER_REFRESH_PREFIX = RedisKeyConstant.USER_REFRESH_PREFIX;
+    private static final String BLACKLIST_PREFIX = RedisKeyConstant.BLACKLIST_PREFIX;
 
     private final StringRedisTemplate redisTemplate;
 

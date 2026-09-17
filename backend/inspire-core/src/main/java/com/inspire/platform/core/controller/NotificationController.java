@@ -23,7 +23,7 @@ public class NotificationController {
     @Operation(summary = "我的通知列表")
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> list(
-            @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return Result.success(notificationService.list(userId, page, size));
@@ -32,7 +32,7 @@ public class NotificationController {
     @Operation(summary = "未读通知数量")
     @GetMapping("/unread")
     public Result<Map<String, Object>> unread(
-            @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId) {
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
         Map<String, Object> data = new HashMap<>();
         data.put("count", notificationService.unreadCount(userId));
         return Result.success(data);
@@ -41,7 +41,7 @@ public class NotificationController {
     @Operation(summary = "标记已读", description = "notificationId传null则标记全部已读")
     @PutMapping("/read")
     public Result<Void> markRead(
-            @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @RequestParam(required = false) Long notificationId) {
         notificationService.markRead(userId, notificationId);
         return Result.success("已标记已读", null);

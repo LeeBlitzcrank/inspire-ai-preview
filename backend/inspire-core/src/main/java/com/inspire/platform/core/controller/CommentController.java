@@ -31,7 +31,7 @@ public class CommentController {
     @Operation(summary = "发表评论")
     @PostMapping("/{id}/comment")
     public Result<Void> create(@PathVariable("id") Long inspireId,
-                                @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId,
+                                @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
                                 @Valid @RequestBody CommentCreateRequest request) {
         request.setInspireId(inspireId);
         commentService.create(userId, request);
@@ -42,7 +42,7 @@ public class CommentController {
     @DeleteMapping("/{id}/comment/{commentId}")
     public Result<Void> delete(@PathVariable Long id,
                                 @PathVariable Long commentId,
-                                @Parameter(hidden = true) @RequestHeader("X-Inspire-UserId") Long userId) {
+                                @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
         commentService.deleteById(commentId, userId);
         return Result.success("删除成功", null);
     }

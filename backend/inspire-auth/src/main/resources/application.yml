@@ -30,7 +30,8 @@ spring:
     host: smtp.qq.com
     port: 587
     username: 45257209@qq.com
-    password: ${INSPIRE_AUTH_DB_PASSWORD:csqrlhvdxuewbghe}
+    # 文档5.2节：QQ邮箱SMTP授权码，非邮箱密码，非数据库密码
+    password: ${INSPIRE_MAIL_PASSWORD:csqrlhvdxuewbghe}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true

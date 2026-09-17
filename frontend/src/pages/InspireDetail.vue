@@ -225,7 +225,11 @@ async function loadData(id) {
     }
   } catch (e) { /* ignore */ }
   try {
-    const userRes = await getPublicUserInfo(detail.value.userId)
+  // 加载灵感详情
+  if (!detail.value || !detail.value.userId) {
+    return
+  }
+  const userRes = await getPublicUserInfo(detail.value.userId)
     if (userRes.code === 200 && userRes.data) detail.value.avatar = userRes.data.avatar
   } catch (e) { /* ignore */ }
 

@@ -56,7 +56,7 @@ public class RateLimiterConfig {
     public KeyResolver userKeyResolver() {
         return exchange -> {
             String userId = exchange.getRequest().getHeaders()
-                    .getFirst("X-Inspire-UserId");
+                    .getFirst("X-User-Id");
             if (userId != null && !userId.isEmpty()) {
                 return Mono.just(userId);
             }
