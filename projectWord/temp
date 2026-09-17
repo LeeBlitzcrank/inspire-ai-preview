@@ -784,3 +784,53 @@ Content-Type：multipart/form-data
 4. 额外输出完整本地部署步骤，包含MinIO初始化命令、cloudflared隧道配置说明；
 5. 代码架构基于SpringBoot3 + SpringCloud Gateway，Java标准开发规范，代码可直接复制运行。
 
+
+1、二次编辑灵感后端接口http://localhost:5173/api/inspire/public/202613531185516545返回
+{"code":500,"msg":"灵感不存在","data":null}
+，但是在http://localhost:5173/api/inspire/my/drafts?page=1&size=5里是有数据返回的；
+2、灵感发布后，并没有在首页-灵感推荐中看到。是否是需要flink去加载？
+3、点击我的收藏-灵感。后端http://localhost:5173/api/auth/user/public/undefined接口返回
+{
+    "code": 400,
+    "msg": "请求参数错误: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"undefined\"",
+    "data": null
+}
+4、点击我的收藏-灵感-分享后，该接口
+http://localhost:5173/api/inspire/undefined/share
+返回
+{
+    "code": 400,
+    "msg": "请求参数错误: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"undefined\"",
+    "data": null
+}
+http://localhost:5173/api/inspire/undefined/collect
+{
+    "code": 400,
+    "msg": "请求参数错误: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"undefined\"",
+    "data": null
+}
+http://localhost:5173/api/inspire/undefined/like
+{
+    "code": 400,
+    "msg": "请求参数错误: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"undefined\"",
+    "data": null
+}
+5、在auth服务里。已经配置了spring mail host。但是重置密码发送邮件，后台日志：
+inspire-auth: 2026-07-14 10:41:33,991  WARN 1 --- [inspire-auth] [nio-8081-exec-5] c.i.p.a.s.email.ConsoleEmailService      : SMTP发送失败，降级为控制台输出: Authentication failed
+6、当后端报错。前台是否应该有统一的异常提示窗口。
+7、minio的启动应该也是要 docker-compose一键启动的，包括建表语句和之前的要一起进行。
+
+
+
+
+# 项目根目录执行，清理所有模块编译产物并安装
+mvn clean install -DskipTests
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+
+
+
+
+
+
