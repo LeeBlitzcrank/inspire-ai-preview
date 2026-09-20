@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  方案 D（通栏 Banner）· 可交互原型 v2
+
+  本次改动：
+   1. 「我的收藏夹」改为先展示收藏夹（文件夹），点进去才看该夹下的灵感（对应 collect_folder）
+   2. 编辑资料补回 🎲 随机昵称
+   3. 头像从 7 个扩到 20 个（与项目 avatarList 一致）
+   4. 分页文案去掉「（1–5）」这种区间标记
+
+  可点：选项卡 / 收藏夹下钻 / 分页 / 卡片 / 编辑资料 / 修改密码 / 退出登录
+  全部为虚拟数据，仅为交互样机。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>方案 D · 可交互原型 v2</title>
+<style>
+  :root{
+    --text:#1d1d1f; --text2:#6b7280; --mint-deep:#0f766e; --mint-soft:#eef7f5;
+    --amber:#d98200; --danger:#f56c6c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#eef1f5;color:var(--text);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+  .stage{max-width:720px;margin:0 auto;padding:26px 16px 70px}
+  .stage > h1{font-size:20px;font-weight:700;margin:0 0 6px}
+  .stage > p.sub{font-size:13px;color:var(--text2);margin:0 0 8px;line-height:1.75}
+  .tips{font-size:12.5px;color:#5b7a74;background:#e6f4f1;border:1px solid #cde9e3;border-radius:10px;
+    padding:9px 12px;margin:0 0 20px;line-height:1.8}
+  .tips b{color:#0f766e}
+
+  .phone{width:100%;max-width:420px;margin:0 auto;background:#f7fbfa;border-radius:24px;
+    padding:0 0 16px;overflow:hidden;box-shadow:0 10px 34px rgba(20,50,45,.12);border:1px solid #dde9e6}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0}
+  .ico{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:16px;border:1px solid #e6f2ef;cursor:pointer;transition:.15s}
+  .ico:hover{background:#f2faf8}
+  .topbar .right{display:flex;gap:8px}
+
+  /* Banner */
+  .banner{margin:12px 16px 0;border-radius:18px;position:relative;overflow:hidden;text-align:center;
+    padding:22px 16px 46px;background:linear-gradient(160deg,#8fd0c3 0%,#b9e5db 55%,#e6f6f2 100%)}
+  .banner:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;
+    background:rgba(255,255,255,.5);filter:blur(30px);left:-50px;top:-70px}
+  .banner .av{width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:30px;margin:0 auto 10px;position:relative;
+    box-shadow:0 6px 18px rgba(30,90,80,.18)}
+  .banner h2{margin:0;font-size:19px;font-weight:700;color:#134e4a;position:relative}
+  .banner .mail{font-size:12px;color:#3f7268;margin-top:4px;position:relative}
+  .banner .tagchip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:2px 9px;
+    border-radius:999px;background:rgba(255,255,255,.88);color:var(--amber);margin-top:9px;position:relative}
+
+  .stats{margin:-30px 24px 12px;background:#fff;border-radius:16px;padding:14px 8px;display:grid;
+    grid-template-columns:repeat(3,1fr);position:relative;z-index:2;box-shadow:0 8px 20px rgba(30,90,80,.10)}
+  .stat{text-align:center;position:relative}
+  .stat + .stat:before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1px;background:#e8f3f0}
+  .stat .n{font-size:20px;font-weight:700;color:var(--mint-deep)}
+  .stat .l{font-size:11.5px;color:#6b8b85;margin-top:3px}
+
+  .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px 12px}
+  .quick .q{background:#fff;border:1px solid #e6f2ef;border-radius:14px;padding:12px;display:flex;
+    align-items:center;gap:10px;font-size:13.5px;font-weight:500;color:#28504a;cursor:pointer;transition:.15s}
+  .quick .q:hover{border-color:#a8dcd2;background:#fbfefd}
+  .quick .q i{width:30px;height:30px;border-radius:50%;background:var(--mint-soft);color:var(--mint-deep);
+    display:flex;align-items:center;justify-content:center;font-style:normal}
+
+  .tabs{display:flex;gap:6px;margin:0 16px 12px;background:#e9f5f2;border-radius:12px;padding:4px}
+  .tabs button{flex:1;text-align:center;padding:9px 0;font-size:13.5px;color:#5f807a;border-radius:9px;
+    background:transparent;border:none;font-family:inherit;cursor:pointer;transition:.15s}
+  .tabs button.on{background:#fff;color:var(--mint-deep);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .tabs .cnt{font-size:11px;color:#9bb5b0;margin-left:2px}
+  .tabs button.on .cnt{color:var(--mint-deep)}
+
+  .list{padding:0 16px;min-height:200px}
+  .card{background:#fff;border:1px solid #e6f2ef;border-radius:16px;padding:14px;margin-bottom:12px;
+    cursor:pointer;transition:.16s}
+  .card:hover{border-color:#a8dcd2;box-shadow:0 4px 14px rgba(30,90,80,.08)}
+  .card:active{transform:scale(.985)}
+  .item{display:flex;gap:12px;align-items:flex-start}
+  .thumb{width:64px;height:64px;border-radius:12px;flex:0 0 auto}
+  .item .t{font-size:14.5px;font-weight:600;line-height:1.45;margin-bottom:7px}
+  .item .m{font-size:12px;color:#9aa3b2;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .tag{display:inline-flex;align-items:center;gap:3px;background:#f1f7f5;color:#4b7a72;
+    border-radius:999px;padding:1px 8px;font-size:11.5px}
+  .sep{color:#dfe6e4}
+
+  .draft{background:#fff;border:1px solid #e6f2ef;border-radius:14px;padding:13px 14px;margin-bottom:10px;
+    cursor:pointer;transition:.16s}
+  .draft:hover{border-color:#a8dcd2;box-shadow:0 4px 14px rgba(30,90,80,.08)}
+  .draft:active{transform:scale(.985)}
+  .draft .dt{font-size:14.5px;font-weight:600;margin-bottom:6px;line-height:1.45}
+  .draft .dm{font-size:12px;color:#9aa3b2;display:flex;gap:6px;align-items:center}
+  .draft .badge{background:#fdf3e3;color:#b3760a;border-radius:999px;padding:1px 8px;font-size:11px}
+
+  /* 收藏夹：文件夹网格 */
+  .folders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .folder{background:#fff;border:1px solid #e6f2ef;border-radius:16px;padding:14px;cursor:pointer;transition:.16s}
+  .folder:hover{border-color:#a8dcd2;box-shadow:0 4px 14px rgba(30,90,80,.08)}
+  .folder:active{transform:scale(.985)}
+  .folder .fi{font-size:22px;margin-bottom:8px;display:block}
+  .folder .fn{font-size:14px;font-weight:600;margin-bottom:4px}
+  .folder .fc{font-size:11.5px;color:#9aa3b2}
+  .folder.add{border-style:dashed;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;color:#7b9891;font-size:12.5px;min-height:96px}
+  .folder.add .plus{font-size:22px;line-height:1}
+  .folder.add:hover{border-color:#a8dcd2;background:#fbfefd}
+
+  /* 进入文件夹后的返回行 */
+  .backrow{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+  .backrow .bk{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #e6f2ef;
+    border-radius:999px;padding:4px 11px;font-size:12.5px;color:#4b7a72;cursor:pointer;transition:.15s}
+  .backrow .bk:hover{border-color:#a8dcd2;background:#fbfefd}
+  .backrow .ttl{font-size:13.5px;font-weight:600;color:#28504a}
+  .backrow .c{font-size:12px;color:#9aa3b2;margin-left:auto}
+
+  .g1{background:linear-gradient(135deg,#dbeafe,#ede9fe)}
+  .g2{background:linear-gradient(135deg,#fef3c7,#fde68a)}
+  .g3{background:linear-gradient(135deg,#dcfce7,#bbf7d0)}
+  .g4{background:linear-gradient(135deg,#cffafe,#a5f3fc)}
+  .g5{background:linear-gradient(135deg,#fee2e2,#fecaca)}
+  .g6{background:linear-gradient(135deg,#e0e7ff,#c7d2fe)}
+
+  .empty{text-align:center;color:#93a5a1;font-size:13.5px;padding:48px 0}
+
+  .pager{display:flex;justify-content:center;align-items:center;gap:6px;margin:18px 0 4px}
+  .pager button{min-width:30px;height:30px;border-radius:9px;display:flex;align-items:center;
+    justify-content:center;font-size:13px;color:#4b7a72;background:#fff;border:1px solid #e6f2ef;
+    padding:0 6px;font-family:inherit;cursor:pointer;transition:.15s}
+  .pager button:hover:not(:disabled){border-color:#a8dcd2}
+  .pager button.on{background:var(--mint-deep);border-color:var(--mint-deep);color:#fff;font-weight:700}
+  .pager button:disabled{opacity:.4;cursor:not-allowed}
+  .foot-note{font-size:12.5px;color:#7b8a88;text-align:center;margin:6px 16px 0}
+
+  .logout{display:block;width:100%;text-align:center;font-size:13px;color:var(--danger);
+    margin:20px 0 4px;background:none;border:none;font-family:inherit;cursor:pointer}
+  .logout:hover{text-decoration:underline}
+
+  /* 弹窗 */
+  .mask{position:fixed;inset:0;background:rgba(20,40,45,.35);display:none;align-items:center;
+    justify-content:center;z-index:50;padding:20px}
+  .mask.show{display:flex}
+  .dlg{width:100%;max-width:340px;background:#fff;border-radius:18px;overflow:hidden;
+    box-shadow:0 20px 50px rgba(10,40,35,.25)}
+  .dlg-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+  .dlg-hd b{font-size:15.5px}
+  .dlg-x{width:28px;height:28px;border-radius:50%;background:#f3f6f5;color:#6b8b85;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+  .dlg-bd{padding:0 18px 6px;max-height:60vh;overflow:auto}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12.5px;color:#6b7280;margin-bottom:6px}
+  .fld input{width:100%;height:38px;border:1px solid #e6f2ef;border-radius:10px;padding:0 12px;
+    font-size:14px;font-family:inherit;outline:none;background:#fbfefd}
+  .fld input:focus{border-color:#a8dcd2}
+  /* 96 个头像：8 列自适应 + 限高滚动 */
+  .avatar-row{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:240px;
+    overflow-y:auto;padding:2px 8px 2px 2px}
+  .avatar-row::-webkit-scrollbar{width:6px}
+  .avatar-row::-webkit-scrollbar-thumb{background:#d5e9e4;border-radius:3px}
+  .avatar-row span{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:17px;line-height:1;cursor:pointer;border:2px solid transparent}
+  .avatar-row span:hover{border-color:#cde9e3}
+  .avatar-row span.on{border-color:#a8dcd2;background:var(--mint-soft)}
+  .nick-row{display:flex;gap:8px}
+  .nick-row input{flex:1}
+  .dice{width:38px;height:38px;flex:0 0 auto;border-radius:10px;border:1px solid #e6f2ef;background:#fbfefd;
+    font-size:16px;cursor:pointer;font-family:inherit;transition:.15s}
+  .dice:hover{border-color:#a8dcd2;background:#f2faf8}
+  .dice:active{transform:scale(.92)}
+  .dlg-ft{display:flex;gap:10px;padding:8px 18px 18px}
+  .dlg-ft button{flex:1;height:40px;border-radius:11px;font-size:14px;font-family:inherit;cursor:pointer}
+  .dlg-ft .cancel{background:#f4f7f6;border:1px solid #e6f2ef;color:#5f807a}
+  .dlg-ft .ok{background:var(--mint-deep);border:none;color:#fff;font-weight:600}
+
+  .toast{position:fixed;left:50%;bottom:38px;transform:translate(-50%,14px);background:rgba(24,48,44,.92);
+    color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;opacity:0;pointer-events:none;
+    transition:.25s;z-index:80}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>方案 D · 可交互原型 v2</h1>
+  <p class="sub">这版按你提的四点改了：收藏夹分层、随机昵称、头像扩充、分页文案。</p>
+  <p class="tips">
+    可点：<b>三个选项卡</b> · <b>点收藏夹进入该夹的灵感</b>（左上角可返回）· <b>分页</b> ·
+    <b>灵感卡片</b> · <b>编辑资料</b>（96 个头像 + 🎲 随机昵称）· <b>修改密码</b> · <b>退出登录</b>
+  </p>
+
+  <div class="phone">
+    <div class="topbar">
+      <div class="ico" data-act="home">🍎</div>
+      <div class="right">
+        <div class="ico" data-act="create">✨</div>
+        <div class="ico" data-act="search">🔍</div>
+      </div>
+    </div>
+
+    <div class="banner">
+      <div class="av" id="avatar">😺</div>
+      <h2 id="nick">宁静小猫</h2>
+      <div class="mail">lee@example.com</div>
+      <div><span class="tagchip" id="city">📍 杭州</span></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n" id="nPub">20</div><div class="l">总发布</div></div>
+      <div class="stat"><div class="n" id="nColl">48</div><div class="l">总收藏</div></div>
+      <div class="stat"><div class="n" id="nView">7,219</div><div class="l">总浏览量</div></div>
+    </div>
+
+    <div class="quick">
+      <div class="q" data-act="profile"><i>👤</i>编辑资料</div>
+      <div class="q" data-act="pwd"><i>🔒</i>修改密码</div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button data-tab="published" class="on">我的发布<span class="cnt">20</span></button>
+      <button data-tab="drafts">我的草稿<span class="cnt">7</span></button>
+      <button data-tab="collects">我的收藏夹<span class="cnt">7</span></button>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <div class="pager" id="pager"></div>
+    <div class="foot-note" id="footNote"></div>
+
+    <button class="logout" data-act="logout">退出登录</button>
+  </div>
+</div>
+
+<div class="mask" id="mask">
+  <div class="dlg">
+    <div class="dlg-hd"><b id="dlgTitle">编辑资料</b><span class="dlg-x" id="dlgX">×</span></div>
+    <div class="dlg-bd" id="dlgBody"></div>
+    <div class="dlg-ft">
+      <button class="cancel" id="dlgCancel">取消</button>
+      <button class="ok" id="dlgOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 基础数据 ============ */
+const IMG = ['g1','g2','g3','g4','g5','g6']
+// 96 个可选头像（与 Personal.vue 的 avatarList 一致）
+const AVATARS = [
+  '😊','😀','😃','😄','😁','😆','😅','😂','🤣','😇','🙂','😉',
+  '😍','🥰','😘','😋','😜','🤪','🤩','🥳','😎','🤠','🥺','😴',
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮',
+  '🐷','🐸','🐵','🐔','🐧','🐦','🦄','🐝','🐢','🐙','🦋','🐳',
+  '🌈','🌸','🌺','🌻','🌼','🌷','🌵','🌴','🌿','🍀','🍁','🌙',
+  '🍎','🍊','🍋','🍉','🍇','🍓','🍒','🥑','🍞','🧁','🍩','🍪',
+  '🍰','🍜','🍵','🍺','🔥','⭐','🌟','✨','⚡','💡','💻','🎨',
+  '🎬','📷','🎧','🎮','🏀','⚽','🎸','🚀','🛸','🎈','🎁','☕'
+]
+
+// 与 frontend/src/utils/nickname.js 一致：形容词 + 名词
+const NICK_ADJ = ['快乐','聪明','勇敢','温柔','可爱','阳光','清风','明月','星辰','大海',
+  '梦幻','甜蜜','俏皮','灵动','清新','文艺','酷炫','温暖','淡雅','宁静']
+const NICK_NOUN = ['小鱼','小猫','小鹿','蝴蝶','樱花','奶茶','豆浆','包子','饼干','糖果',
+  '花猫','松鼠','兔子','羊羔','熊猫','布丁','甜甜','冰淇淋','棉花糖','小幸福']
+const randomNick = () =>
+  NICK_ADJ[Math.floor(Math.random()*NICK_ADJ.length)] +
+  NICK_NOUN[Math.floor(Math.random()*NICK_NOUN.length)]
+
+const published = [
+  ['秋日露营：把周末过成小长假','🏕 旅行','2 小时前',328],
+  ['小户型也能有高级感：7 个收纳思路','🏠 家居','昨天',192],
+  ['周末 City Walk：三条不挤的路线','🏕 旅行','昨天',96],
+  ['一人食的仪式感：15 分钟快手菜','🍜 美食','2 天前',254],
+  ['胶片色调调色笔记：从欠曝到通透','📷 摄影','2 天前',411],
+  ['秋冬穿搭公式：三件单品撑起一整季','👗 穿搭','3 天前',587],
+  ['跑步半年，我的配速是怎么提上来的','🏃 运动','3 天前',176],
+  ['出租屋改造：花了 800 块的软装清单，房东看了都想加租','🏠 家居','4 天前',903],
+  ['写给自己的文案：那些没说出口的话','✍️ 文案','4 天前',142],
+  ['一个人的电影院：重看《海边的曼彻斯特》','🎬 电影','5 天前',88],
+  ['手冲咖啡入门：从磨豆到注水的完整记录','🍜 美食','5 天前',233],
+  ['城市里的植物角：五种好养的绿植','🏠 家居','6 天前',318],
+  ['晨跑路线记录：江边五公里','🏃 运动','1 周前',121],
+  ['关于「不完美」的一次碎碎念','✍️ 文案','1 周前',76],
+  ['旅行行李清单：7 天只背一个包','🏕 旅行','1 周前',655],
+  ['手机摄影构图：把日常拍出电影感','📷 摄影','1 周前',1042],
+  ['换季护肤：精简到四步','👗 穿搭','2 周前',209],
+  ['深夜食堂：一个人也要好好吃饭','🍜 美食','2 周前',380],
+  ['老电影清单：值得再看一遍的十部','🎬 电影','2 周前',267],
+  ['阳台改造记：把 4㎡ 变成小花园','🏠 家居','2 周前',741]
+].map((a,i)=>({t:a[0],tag:a[1],time:a[2],view:a[3],g:IMG[i%6]}))
+
+const drafts = [
+  ['关于「早起」这件小事的复盘','✍️ 文案','3 小时前'],
+  ['露营装备清单（待补充）','🏕 旅行','昨天'],
+  ['厨房收纳的五个坑','🏠 家居','2 天前'],
+  ['秋天第一杯热红酒怎么做','🍜 美食','4 天前'],
+  ['夜跑穿搭笔记','👗 穿搭','5 天前'],
+  ['老相机维修记录','📷 摄影','1 周前'],
+  ['未命名的灵感','—','2 周前']
+].map(a=>({t:a[0],tag:a[1],time:a[2]}))
+
+/* 收藏夹（对应 collect_folder 表：icon / name / 条数） */
+const folders = [
+  { id:1, icon:'🏠', name:'家居灵感', count:12, seed:0 },
+  { id:2, icon:'🏕', name:'旅行清单', count:8,  seed:3 },
+  { id:3, icon:'🍜', name:'美食收藏', count:6,  seed:7 },
+  { id:4, icon:'📷', name:'摄影参考', count:9,  seed:11 },
+  { id:5, icon:'👗', name:'穿搭灵感', count:5,  seed:15 },
+  { id:6, icon:'✍️', name:'文案素材', count:4,  seed:5 },
+  { id:7, icon:'📂', name:'未分类',   count:4,  seed:9 }
+]
+// 每个收藏夹里的灵感（用总池子按各自 seed 取，保证数量与 count 对得上）
+const folderItems = f => Array.from({ length:f.count }, (_, i) => published[(f.seed + i) % published.length])
+
+const TAB_COUNT = { published: published.length, drafts: drafts.length, collects: folders.length }
+const PAGE_SIZE = 5
+
+const state = { tab:'published', folder:null, page:{ published:1, drafts:1, collects:1 } }
+
+/* ============ 工具 ============ */
+const $ = id => document.getElementById(id)
+let toastTimer = null
+function toast(msg){
+  const el = $('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 1800)
+}
+// 当前页所处的列表：收藏夹详情页有自己的分页
+function currentList(){
+  if(state.tab === 'collects' && state.folder) return folderItems(state.folder)
+  if(state.tab === 'published') return published
+  if(state.tab === 'drafts') return drafts
+  return []
+}
+function pageKey(){
+  return state.tab === 'collects' && state.folder ? 'folder-' + state.folder.id : state.tab
+}
+
+/* ============ 渲染 ============ */
+function renderTabs(){
+  document.querySelectorAll('#tabs button').forEach(btn=>{
+    const k = btn.dataset.tab
+    btn.classList.toggle('on', k === state.tab)
+    btn.querySelector('.cnt').textContent = TAB_COUNT[k]
+  })
+}
+
+function renderList(){
+  const list = $('list')
+
+  // 收藏夹 Tab：先给文件夹网格
+  if(state.tab === 'collects' && !state.folder){
+    list.innerHTML = `<div class="folders">
+      ${folders.map(f=>`
+        <div class="folder" data-folder="${f.id}">
+          <span class="fi">${f.icon}</span>
+          <div class="fn">${f.name}</div>
+          <div class="fc">${f.count} 条灵感</div>
+        </div>`).join('')}
+      <div class="folder add" data-act="newfolder">
+        <span class="plus">+</span><span>新建收藏夹</span>
+      </div>
+    </div>`
+    return
+  }
+
+  const items = currentList()
+  const key = pageKey()
+  const cur = state.page[key] = state.page[key] || 1
+  const pageItems = items.slice((cur-1)*PAGE_SIZE, cur*PAGE_SIZE)
+
+  const back = (state.tab === 'collects' && state.folder)
+    ? `<div class="backrow">
+         <span class="bk" data-act="back">← 收藏夹</span>
+         <span class="ttl">${state.folder.icon} ${state.folder.name}</span>
+         <span class="c">共 ${state.folder.count} 条</span>
+       </div>` : ''
+
+  if(!pageItems.length){
+    list.innerHTML = back + '<div class="empty">这里还没有内容</div>'
+    return
+  }
+
+  if(state.tab === 'drafts'){
+    list.innerHTML = back + pageItems.map((d,i)=>`
+      <div class="draft" data-open="${(cur-1)*PAGE_SIZE+i}">
+        <div class="dt">${d.t}</div>
+        <div class="dm"><span class="badge">草稿</span><span>${d.tag}</span>
+          <span class="sep">·</span><span>${d.time}</span></div>
+      </div>`).join('')
+  } else {
+    list.innerHTML = back + pageItems.map((d,i)=>`
+      <div class="card" data-open="${(cur-1)*PAGE_SIZE+i}">
+        <div class="item">
+          <div class="thumb ${d.g}"></div>
+          <div>
+            <div class="t">${d.t}</div>
+            <div class="m"><span class="tag">${d.tag}</span>
+              <span class="sep">·</span><span>${d.time}</span>
+              <span class="sep">·</span><span>👁 ${d.view}</span></div>
+          </div>
+        </div>
+      </div>`).join('')
+  }
+}
+
+function renderPager(){
+  const box = $('pager')
+  // 收藏夹网格页不分页
+  if(state.tab === 'collects' && !state.folder){
+    box.innerHTML = ''
+    $('footNote').textContent = `共 ${folders.length} 个收藏夹`
+    return
+  }
+
+  const total = currentList().length
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const key = pageKey()
+  const cur = state.page[key] = Math.min(state.page[key] || 1, pages)
+
+  if(pages <= 1){
+    box.innerHTML = ''
+  } else {
+    let html = `<button data-go="${cur-1}" ${cur===1?'disabled':''}>‹</button>`
+    for(let p=1;p<=pages;p++) html += `<button data-go="${p}" class="${p===cur?'on':''}">${p}</button>`
+    html += `<button data-go="${cur+1}" ${cur===pages?'disabled':''}>›</button>`
+    box.innerHTML = html
+  }
+  $('footNote').textContent = pages > 1 ? `共 ${total} 条 · 第 ${cur}/${pages} 页` : `共 ${total} 条`
+}
+
+function render(){ renderTabs(); renderList(); renderPager() }
+
+/* ============ 交互 ============ */
+$('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]')
+  if(!btn) return
+  if(state.tab !== btn.dataset.tab){
+    state.tab = btn.dataset.tab
+    state.folder = null           // 切 Tab 时回到收藏夹列表层
+  }
+  render()
+})
+
+$('pager').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-go]')
+  if(!btn || btn.disabled) return
+  const pages = Math.max(1, Math.ceil(currentList().length / PAGE_SIZE))
+  state.page[pageKey()] = Math.min(pages, Math.max(1, Number(btn.dataset.go)))
+  renderList(); renderPager()
+})
+
+$('list').addEventListener('click', e=>{
+  // 进入某个收藏夹
+  const folderEl = e.target.closest('[data-folder]')
+  if(folderEl){
+    const f = folders.find(x=>String(x.id) === folderEl.dataset.folder)
+    if(f){
+      state.folder = f
+      state.page['folder-' + f.id] = 1
+      render()
+    }
+    return
+  }
+  // 卡片 / 草稿
+  const el = e.target.closest('[data-open]')
+  if(!el) return
+  const item = currentList()[Number(el.dataset.open)]
+  if(!item) return
+  toast(state.tab === 'drafts' ? `（演示）继续编辑草稿：${item.t}` : `（演示）打开灵感：${item.t}`)
+})
+
+/* 弹窗 */
+function openDialog(kind){
+  if(kind === 'profile'){
+    $('dlgTitle').textContent = '编辑资料'
+    $('dlgBody').innerHTML = `
+      <div class="fld"><label>头像</label>
+        <div class="avatar-row">
+          ${AVATARS.map((a,i)=>`<span class="${a===($('avatar').textContent.trim())?'on':''}" data-av="${a}">${a}</span>`).join('')}
+        </div>
+      </div>
+      <div class="fld"><label>昵称</label>
+        <div class="nick-row">
+          <input id="fNick" maxlength="20" value="${$('nick').textContent.trim()}" />
+          <button class="dice" id="fDice" title="随机昵称">🎲</button>
+        </div>
+      </div>
+      <div class="fld"><label>城市</label>
+        <input id="fCity" value="${$('city').textContent.replace('📍','').trim()}" /></div>`
+  } else {
+    $('dlgTitle').textContent = '修改密码'
+    $('dlgBody').innerHTML = `
+      <div class="fld"><label>旧密码</label><input type="password" placeholder="输入旧密码" /></div>
+      <div class="fld"><label>新密码</label><input type="password" placeholder="输入新密码" /></div>
+      <div class="fld"><label>确认新密码</label><input type="password" placeholder="再次输入新密码" /></div>`
+  }
+  $('mask').classList.add('show')
+}
+function closeDialog(){ $('mask').classList.remove('show') }
+
+$('mask').addEventListener('click', e=>{
+  if(e.target === $('mask')) return closeDialog()
+  const av = e.target.closest('.avatar-row span')
+  if(av){
+    av.parentElement.querySelectorAll('span').forEach(s=>s.classList.remove('on'))
+    av.classList.add('on')
+    $('avatar').textContent = av.dataset.av          // 立即同步到顶部头像
+    return
+  }
+  if(e.target.closest('#fDice')){                    // 🎲 随机昵称
+    const inp = $('fNick')
+    if(inp){ inp.value = randomNick(); inp.focus() }
+  }
+})
+$('dlgX').addEventListener('click', closeDialog)
+$('dlgCancel').addEventListener('click', closeDialog)
+$('dlgOk').addEventListener('click', ()=>{
+  const isProfile = $('dlgTitle').textContent === '编辑资料'
+  const nick = $('fNick')
+  if(nick) $('nick').textContent = nick.value.trim() || '灵感爱好者'
+  const city = $('fCity')
+  if(city) $('city').textContent = '📍 ' + (city.value.trim() || '未知')
+  closeDialog()
+  toast(isProfile ? '（演示）资料已保存' : '（演示）密码已修改')
+})
+
+document.body.addEventListener('click', e=>{
+  const el = e.target.closest('[data-act]')
+  if(!el) return
+  const act = el.dataset.act
+  if(act === 'profile') openDialog('profile')
+  else if(act === 'pwd') openDialog('pwd')
+  else if(act === 'back'){ state.folder = null; render() }
+  else if(act === 'logout') toast('（演示）已退出登录')
+  else if(act === 'newfolder') toast('（演示）新建收藏夹')
+  else if(act === 'create') toast('（演示）跳转到「录入新灵感」')
+  else if(act === 'search') toast('（演示）跳转到「搜索」')
+  else if(act === 'home') toast('（演示）返回首页')
+})
+
+render()
+</script>
+</body>
+</html>

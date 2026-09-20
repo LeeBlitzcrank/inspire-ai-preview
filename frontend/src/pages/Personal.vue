@@ -1,118 +1,184 @@
 <template>
   <div class="personal-page">
-    <div class="top-nav">
-      <div class="left-logo" @click="$router.push('/')">🍎</div>
-      <div class="right-icons">
-        <div class="icon-item" @click="$router.push('/create')">✨</div>
-        <div class="icon-item" @click="$router.push('/search')">🔍</div>
+    <div class="topbar">
+      <div class="ico" @click="$router.push('/')">🍎</div>
+      <div class="right">
+        <div class="ico" @click="$router.push('/create')">✨</div>
+        <div class="ico" @click="$router.push('/search')">🔍</div>
       </div>
     </div>
 
-    <!-- 用户信息 -->
-    <div class="user-header" @click="showProfileDialog = true">
-      <div class="avatar">{{ userInfo.avatar || (userInfo.nickname ? userInfo.nickname[0] : '👤') }}</div>
-      <div class="user-info">
-        <h2>{{ userInfo.nickname || userInfo.username || '灵感爱好者' }}</h2>
-        <p v-if="userInfo.email">{{ userInfo.email }}</p>
-        <p v-if="userInfo.city" class="city-tag">{{ userInfo.city }}</p>
-      </div>
-      <div class="edit-icon">✏️</div>
+    <!-- 通栏 Banner -->
+    <div class="banner">
+      <div class="av">{{ avatarText }}</div>
+      <h2>{{ userInfo.nickname || userInfo.username || '灵感爱好者' }}</h2>
+      <div class="mail" v-if="userInfo.email">{{ userInfo.email }}</div>
+      <div v-if="userInfo.city"><span class="tagchip">📍 {{ userInfo.city }}</span></div>
     </div>
 
     <!-- 统计 -->
-    <div class="stat-wrap">
-      <div class="stat-card" v-for="item in statList" :key="item.id">
-        <div class="stat-num">{{ item.num }}</div>
-        <div class="stat-line"></div>
-        <div class="stat-label">{{ item.label }}</div>
+    <div class="stats">
+      <div class="stat" v-for="item in statList" :key="item.id">
+        <div class="n">{{ item.num }}</div>
+        <div class="l">{{ item.label }}</div>
       </div>
     </div>
 
     <!-- 快捷操作 -->
-    <div class="quick-actions">
-      <div class="action-btn" @click="showProfileDialog = true">👤 编辑资料</div>
-      <div class="action-btn" @click="showPwdDialog = true">🔒 修改密码</div>
+    <div class="quick">
+      <div class="q" @click="showProfileDialog = true"><i>👤</i>编辑资料</div>
+      <div class="q" @click="showPwdDialog = true"><i>🔒</i>修改密码</div>
     </div>
 
     <!-- 选项卡 -->
-    <div class="tab-bar">
-      <div class="tab-item" :class="{active: activeTab==='published'}" @click="switchTab('published')">我的发布</div>
-      <div class="tab-item" :class="{active: activeTab==='drafts'}" @click="switchTab('drafts')">我的草稿</div>
-      <div class="tab-item" :class="{active: activeTab==='collects'}" @click="switchTab('collects')">我的收藏夹 <span style="font-size:11px;color:#409eff;cursor:pointer;" @click.stop="$router.push('/collections')">管理</span></div>
+    <div class="tabs">
+      <button :class="{ on: activeTab === 'published' }" @click="switchTab('published')">
+        我的发布<span class="cnt">{{ pubTotal }}</span>
+      </button>
+      <button :class="{ on: activeTab === 'drafts' }" @click="switchTab('drafts')">
+        我的草稿<span class="cnt">{{ draftTotal }}</span>
+      </button>
+      <button :class="{ on: activeTab === 'collects' }" @click="switchTab('collects')">
+        我的收藏夹<span class="cnt">{{ folders.length }}</span>
+      </button>
     </div>
 
-    <div v-if="loading" class="empty-sub"><div v-for="n in 3" :key="n" class="skeleton-card" style="padding:20px"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div><div class="s-line s-w-40"></div></div></div>
+    <div class="list">
+      <!-- 骨架屏 -->
+      <template v-if="loading">
+        <div v-for="n in 3" :key="n" class="card">
+          <div class="s-line s-w-60"></div>
+          <div class="s-line s-w-90"></div>
+          <div class="s-line s-w-40"></div>
+        </div>
+      </template>
 
-    <!-- 发布列表 -->
-    <div class="list-wrap" v-if="activeTab==='published'">
-      <InspireCard v-for="item in publishedList" :key="item.id" :item="item" />
-      <div v-if="publishedList.length === 0 && !loading" class="empty-sub">✍️ 还没有发布过灵感</div>
-    </div>
-    <div v-if="activeTab==='published' && pubTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
-      <el-pagination v-model:current-page="pubPage" background layout="prev, pager, next"
-        :total="pubTotal" :page-size="pageSize" @current-change="loadPublished" />
+      <!-- 我的发布 -->
+      <template v-else-if="activeTab === 'published'">
+        <div v-for="(item, idx) in publishedList" :key="item.id" class="card" @click="goDetail(item.id)">
+          <div class="item">
+            <div class="thumb" :style="thumbStyle(item, idx)"></div>
+            <div>
+              <div class="t">{{ item.title || '无标题' }}</div>
+              <div class="m">
+                <span class="tag" v-if="item.tag">{{ tagText(item.tag) }}</span>
+                <span class="sep" v-if="item.tag">·</span>
+                <span>{{ formatTime(item.createTime) }}</span>
+                <span class="sep">·</span>
+                <span>👁 {{ item.viewCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="!publishedList.length" class="empty">✍️ 还没有发布过灵感</div>
+      </template>
+
+      <!-- 我的草稿 -->
+      <template v-else-if="activeTab === 'drafts'">
+        <div v-for="item in draftList" :key="item.id" class="draft" @click="$router.push('/edit/' + item.id)">
+          <div class="dt">{{ item.title || '无标题' }}</div>
+          <div class="dm">
+            <span class="badge">草稿</span>
+            <span v-if="item.tag">{{ tagText(item.tag) }}</span>
+            <span class="sep" v-if="item.tag">·</span>
+            <span>{{ formatTime(item.createTime) }}</span>
+          </div>
+        </div>
+        <div v-if="!draftList.length" class="empty">📝 还没有草稿</div>
+      </template>
+
+      <!-- 我的收藏夹：先看文件夹，点进去才看该夹下的灵感 -->
+      <template v-else>
+        <div v-if="!activeFolder" class="folders">
+          <div v-for="f in folders" :key="f.id" class="folder" @click="openFolder(f)">
+            <span class="fi">{{ f.icon || '📁' }}</span>
+            <div class="fn">{{ f.name }}</div>
+            <div class="fc">{{ folderCounts[f.id] || 0 }} 条灵感</div>
+          </div>
+          <div class="folder add" @click="$router.push('/collections')">
+            <span class="plus">+</span><span>新建收藏夹</span>
+          </div>
+          <div v-if="!folders.length" class="empty" style="grid-column:1/-1">⭐ 还没有收藏夹</div>
+        </div>
+
+        <template v-else>
+          <div class="backrow">
+            <span class="bk" @click="activeFolder = null">← 收藏夹</span>
+            <span class="ttl">{{ activeFolder.icon }} {{ activeFolder.name }}</span>
+            <span class="c">共 {{ folderCollects.length }} 条</span>
+          </div>
+          <div v-if="folderLoading" class="card">
+            <div class="s-line s-w-60"></div><div class="s-line s-w-90"></div>
+          </div>
+          <template v-else>
+            <div v-for="(item, idx) in folderCollects" :key="item.id" class="card" @click="goDetail(item.id)">
+              <div class="item">
+                <div class="thumb" :style="thumbStyle(item, idx)"></div>
+                <div>
+                  <div class="t">{{ item.title || '无标题' }}</div>
+                  <div class="m">
+                    <span class="tag" v-if="item.tag">{{ tagText(item.tag) }}</span>
+                    <span class="sep" v-if="item.tag">·</span>
+                    <span class="uncollect" @click.stop="handleUncollect(item.id)">取消收藏</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="!folderCollects.length" class="empty">该收藏夹还没有灵感</div>
+          </template>
+        </template>
+      </template>
     </div>
 
-    <!-- 草稿列表 -->
-    <div class="list-wrap" v-if="activeTab==='drafts'">
-      <div v-for="item in draftList" :key="item.id" class="draft-card" @click="$router.push('/edit/' + item.id)">
-        <div class="draft-title">{{ item.title || '无标题' }}</div>
-        <div class="draft-meta">{{ item.tag }} &middot; {{ formatTime(item.createTime) }}</div>
+    <!-- 分页（我的发布 / 我的草稿） -->
+    <template v-if="(activeTab === 'published' || activeTab === 'drafts') && totalPages > 1">
+      <div class="pager">
+        <button :disabled="pagerPage <= 1" @click="goPage(pagerPage - 1)">‹</button>
+        <button v-for="p in totalPages" :key="p" :class="{ on: p === pagerPage }" @click="goPage(p)">{{ p }}</button>
+        <button :disabled="pagerPage >= totalPages" @click="goPage(pagerPage + 1)">›</button>
       </div>
-      <div v-if="draftList.length === 0 && !loading" class="empty-sub">📝 还没有草稿</div>
-    </div>
-    <div v-if="activeTab==='drafts' && draftTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
-      <el-pagination v-model:current-page="draftPage" background layout="prev, pager, next"
-        :total="draftTotal" :page-size="pageSize" @current-change="loadDrafts" />
-    </div>
-
-    <!-- 收藏列表 -->
-    <div class="list-wrap" v-if="activeTab==='collects'">
-      <InspireCard v-for="item in collectList" :key="item.id" :item="item" @collect="handleUncollect" />
-      <div v-if="collectList.length === 0 && !loading" class="empty-sub">⭐ 还没有收藏过灵感</div>
-    </div>
-    <div v-if="activeTab==='collects' && collTotal > pageSize" style="display:flex;justify-content:center;margin:16px 0;">
-      <el-pagination v-model:current-page="collPage" background layout="prev, pager, next"
-        :total="collTotal" :page-size="pageSize" @current-change="loadCollects" />
+      <div class="foot-note">共 {{ pagerTotal }} 条 · 第 {{ pagerPage }}/{{ totalPages }} 页</div>
+    </template>
+    <div class="foot-note" v-else-if="activeTab === 'collects' && !activeFolder && folders.length">
+      共 {{ folders.length }} 个收藏夹
     </div>
 
-    <div class="logout-wrap">
-      <el-button type="link" class="logout-btn" @click="handleLogout">退出登录</el-button>
-    </div>
+    <button class="logout" @click="handleLogout">退出登录</button>
 
     <!-- 编辑资料对话框 -->
-    <el-dialog v-model="showProfileDialog" title="编辑资料" width="90%" max-width="420px">
+    <el-dialog v-model="showProfileDialog" title="编辑资料" width="90%">
       <div class="dialog-form">
         <div class="form-row">
           <label>头像</label>
           <div class="avatar-grid">
-            <div v-for="a in avatarList" :key="a" class="avatar-option" :class="{selected: editForm.avatar === a}" @click="editForm.avatar = a">
-              {{ a }}
-            </div>
+            <div v-for="a in avatarList" :key="a" class="avatar-option"
+                 :class="{ selected: editForm.avatar === a }" @click="editForm.avatar = a">{{ a }}</div>
           </div>
         </div>
         <div class="form-row">
           <label>昵称</label>
-          <div style="display:flex;gap:8px"><el-input v-model="editForm.nickname" placeholder="输入昵称" maxlength="20" /><el-button size="small" @click="editForm.nickname = randomNickname()">🎲</el-button></div>
+          <div class="nick-row">
+            <el-input v-model="editForm.nickname" placeholder="输入昵称" maxlength="20" />
+            <button class="dice" title="随机昵称" @click="editForm.nickname = randomNickname()">🎲</button>
+          </div>
         </div>
         <div class="form-row">
           <label>城市</label>
-          <el-cascader v-model="cityPath" :options="cityOptions" placeholder="搜索或选择城市" clearable filterable :props="{ expandTrigger: 'hover' }" style="width:100%;max-width:280px;" popper-class="city-popper" @change="onCityChange" />
+          <el-cascader v-model="cityPath" :options="cityOptions" placeholder="搜索或选择城市" clearable filterable
+                       :props="{ expandTrigger: 'hover' }" style="width:100%" popper-class="city-popper" @change="onCityChange" />
           <div v-if="autoDetecting" class="detect-hint">⏳ 正在自动定位...</div>
-          <div v-if="detectCity && !cityPath.length" class="detect-hint">📍 检测到您可能在 <el-link type="primary" @click="applyDetectedCity">{{ detectCity }}</el-link>，点击使用</div>
+          <div v-if="detectCity && !cityPath.length" class="detect-hint">📍 检测到您可能在
+            <el-link type="primary" @click="applyDetectedCity">{{ detectCity }}</el-link>，点击使用</div>
         </div>
       </div>
       <template #footer>
         <el-button @click="showProfileDialog = false">取消</el-button>
         <el-button type="primary" :loading="savingProfile" @click="handleSaveProfile">保存</el-button>
-      
-    <!-- 导航入口已移除 -->
-
-</template>
+      </template>
     </el-dialog>
 
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="showPwdDialog" title="修改密码" width="90%" max-width="400px">
+    <el-dialog v-model="showPwdDialog" title="修改密码" width="90%">
       <div class="dialog-form">
         <div class="form-row">
           <label>旧密码</label>
@@ -130,24 +196,18 @@
       <template #footer>
         <el-button @click="showPwdDialog = false">取消</el-button>
         <el-button type="primary" :loading="savingPwd" @click="handleChangePassword">确认修改</el-button>
-      
-    <!-- 导航入口已移除 -->
-
-</template>
+      </template>
     </el-dialog>
   </div>
-
-    <!-- 导航入口已移除 -->
-
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
-import InspireCard from '@/components/InspireCard.vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserInfo, getMyInspires, getMyCollects, getMyDrafts,
-         uncollectInspire, updateUserInfo, changePassword } from '@/api/inspire.js'
+import { getUserInfo, getMyInspires, getMyCollects,
+         uncollectInspire, updateUserInfo, changePassword,
+         getCollectFolders, getCollectListByFolder } from '@/api/inspire.js'
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
 import { randomNickname } from '@/utils/nickname.js'
 import { useAuthStore } from '@/stores/auth'
@@ -160,7 +220,6 @@ const draftList = ref([])
 const collectList = ref([])
 const loading = ref(false)
 const activeTab = ref('published')
-const followingList = ref([])
 
 // 分页状态
 const pageSize = ref(5)
@@ -168,49 +227,143 @@ const pubPage = ref(1); const pubTotal = ref(0)
 const draftPage = ref(1); const draftTotal = ref(0)
 const collPage = ref(1); const collTotal = ref(0)
 
+// 收藏夹（对应 collect_folder 表）：先展示文件夹，点进去才看该夹下的灵感
+const folders = ref([])
+const folderCounts = ref({})
+const activeFolder = ref(null)
+const folderCollects = ref([])
+const folderLoading = ref(false)
+
+// Banner 头像：优先 emoji，否则取昵称首字
+const avatarText = computed(() => {
+  const a = userInfo.value.avatar
+  if (a) return a
+  const n = userInfo.value.nickname || userInfo.value.username
+  return n ? n[0] : '👤'
+})
+
+// 分页（仅「我的发布」「我的草稿」使用）
+const pagerTotal = computed(() => activeTab.value === 'drafts' ? draftTotal.value : pubTotal.value)
+const pagerPage = computed(() => activeTab.value === 'drafts' ? draftPage.value : pubPage.value)
+const totalPages = computed(() => Math.max(1, Math.ceil(pagerTotal.value / pageSize.value)))
+
+const goPage = (p) => {
+  if (p < 1 || p > totalPages.value) return
+  if (activeTab.value === 'drafts') loadDrafts(p)
+  else loadPublished(p)
+}
+
+const goDetail = (id) => { if (id) router.push({ name: 'InspireDetail', params: { id } }) }
+
+// 标签补一个 emoji，和创建页的分类图标保持一致
+const TAG_ICON = {
+  '家居':'🏠','美食':'🍜','旅行':'🏕','摄影':'📷','穿搭':'👗',
+  '运动':'🏃','文案':'✍️','电影':'🎬','生活':'🌿','手作':'🧶','其他':'✨'
+}
+const tagText = (t) => t ? ((TAG_ICON[t] ? TAG_ICON[t] + ' ' : '') + t) : ''
+
+// 缩略图：有图用真图，没有就用渐变占位（与设计稿一致）
+const GRADS = [
+  'linear-gradient(135deg,#dbeafe,#ede9fe)',
+  'linear-gradient(135deg,#fef3c7,#fde68a)',
+  'linear-gradient(135deg,#dcfce7,#bbf7d0)',
+  'linear-gradient(135deg,#cffafe,#a5f3fc)',
+  'linear-gradient(135deg,#fee2e2,#fecaca)',
+  'linear-gradient(135deg,#e0e7ff,#c7d2fe)'
+]
+const firstImage = (item) => {
+  if (Array.isArray(item?.images) && item.images.length) return item.images[0]
+  if (typeof item?.images === 'string' && item.images.trim()) {
+    try {
+      const arr = JSON.parse(item.images)
+      if (Array.isArray(arr) && arr.length) return arr[0]
+    } catch (e) { /* 非 JSON 就当作单张地址 */ }
+    return item.images
+  }
+  return item?.img || ''
+}
+const thumbStyle = (item, idx) => {
+  const url = firstImage(item)
+  if (url) {
+    return {
+      backgroundImage: `url("${url}")`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }
+  }
+  return { background: GRADS[idx % GRADS.length] }
+}
+
 const loadPublished = async (page) => {
-  console.log("[PAGECLK] loadPublished page=", page, "pubPage=", pubPage.value)
   if (page !== undefined) pubPage.value = page
   try {
     const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my?page=' + page + '&size=5', {
+    const resp = await fetch('/api/inspire/my?page=' + pubPage.value + '&size=' + pageSize.value, {
       headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
     })
     const json = await resp.json()
-    console.log("[PAGECLK] fetch response:", json)
     publishedList.value = json.data?.records || []
     pubTotal.value = json.data?.total || 0
-  } catch (e) { console.error("[PAGEERR]", e) }
+  } catch (e) { console.error(e) }
 }
 
 const loadDrafts = async (page) => {
-  console.log("[PAGECLK] loadDrafts page=", page, "draftPage=", draftPage.value)
   if (page !== undefined) draftPage.value = page
   try {
     const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my/drafts?page=' + page + '&size=5', {
+    const resp = await fetch('/api/inspire/my/drafts?page=' + draftPage.value + '&size=' + pageSize.value, {
       headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
     })
     const json = await resp.json()
-    console.log("[PAGECLK] fetch drafts response:", json)
     draftList.value = json.data?.records || []
     draftTotal.value = json.data?.total || 0
-  } catch (e) { console.error("[PAGEERR]", e) }
+  } catch (e) { console.error(e) }
 }
 
 const loadCollects = async (page) => {
-  console.log("[PAGECLK] loadCollects page=", page, "collPage=", collPage.value, "pageSize=", pageSize.value)
   if (page !== undefined) collPage.value = page
   try {
     const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my/collects?page=' + page + '&size=5', {
+    const resp = await fetch('/api/inspire/my/collects?page=' + collPage.value + '&size=' + pageSize.value, {
       headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
     })
     const json = await resp.json()
-    console.log("[PAGECLK] fetch collects response:", json)
     collectList.value = json.data?.records || []
     collTotal.value = json.data?.total || 0
-  } catch (e) { console.error("[PAGEERR]", e) }
+  } catch (e) { console.error(e) }
+}
+
+// 拉取收藏夹列表，并并行统计每个夹里的灵感条数
+const loadFolders = async () => {
+  try {
+    const res = await getCollectFolders()
+    folders.value = res.data || []
+    const counts = {}
+    await Promise.all(folders.value.map(async f => {
+      try {
+        const r = await getCollectListByFolder(f.id)
+        counts[f.id] = (r.data || []).length
+      } catch (e) { counts[f.id] = 0 }
+    }))
+    folderCounts.value = counts
+  } catch (e) {
+    folders.value = []
+    folderCounts.value = {}
+  }
+}
+
+// 进入某个收藏夹
+const openFolder = async (f) => {
+  activeFolder.value = f
+  folderLoading.value = true
+  try {
+    const res = await getCollectListByFolder(f.id)
+    folderCollects.value = res.data || []
+  } catch (e) {
+    folderCollects.value = []
+  } finally {
+    folderLoading.value = false
+  }
 }
 
 const statList = ref([
@@ -219,7 +372,17 @@ const statList = ref([
   { id: 3, num: 0, label: '总浏览量' }
 ])
 
-const avatarList = ['😊', '😎', '🤩', '😍', '😜', '🤠', '🌈', '🐻', '🐶', '🐱', '🐸', '🐮', '🌴', '🌺', '🔥', '🌟', '💡', '💻', '🎨', '🎬']
+// 96 个可选头像：表情 / 动物 / 自然 / 食物 / 物件
+const avatarList = [
+  '😊','😀','😃','😄','😁','😆','😅','😂','🤣','😇','🙂','😉',
+  '😍','🥰','😘','😋','😜','🤪','🤩','🥳','😎','🤠','🥺','😴',
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮',
+  '🐷','🐸','🐵','🐔','🐧','🐦','🦄','🐝','🐢','🐙','🦋','🐳',
+  '🌈','🌸','🌺','🌻','🌼','🌷','🌵','🌴','🌿','🍀','🍁','🌙',
+  '🍎','🍊','🍋','🍉','🍇','🍓','🍒','🥑','🍞','🧁','🍩','🍪',
+  '🍰','🍜','🍵','🍺','🔥','⭐','🌟','✨','⚡','💡','💻','🎨',
+  '🎬','📷','🎧','🎮','🏀','⚽','🎸','🚀','🛸','🎈','🎁','☕'
+]
 // 编辑资料
 const showProfileDialog = ref(false)
 const savingProfile = ref(false)
@@ -234,6 +397,14 @@ watch(showProfileDialog, (val) => {
     const existingPath = findCityPath(userInfo.value.city)
     cityPath.value = existingPath
     detectLocation()
+    // 96 个头像要滚动，打开时主动定位到当前选中的那个（没有选中就回到顶部）
+    nextTick(() => {
+      const grid = document.querySelector('.avatar-grid')
+      if (!grid) return
+      const selected = grid.querySelector('.avatar-option.selected')
+      if (selected) selected.scrollIntoView({ block: 'nearest' })
+      else grid.scrollTop = 0
+    })
   }
 })
 const cityPath = ref([])
@@ -340,16 +511,19 @@ onMounted(async () => {
     statList.value[2].num = publishedList.value.reduce((s, i) => s + (i.viewCount || 0), 0)
   } catch (e) { console.error(e) }
   finally { loading.value = false }
+  loadFolders()
 })
 
 const switchTab = async (tab) => {
   activeTab.value = tab
+  activeFolder.value = null          // 切 Tab 时回到收藏夹列表层
+  folderCollects.value = []
   if (tab === 'published') {
     pubPage.value = 1
     await loadPublished(1)
   } else if (tab === 'collects') {
-    collPage.value = 1
-    await loadCollects(1)
+    // 收藏夹 Tab 改为展示「收藏夹列表 → 进入某个夹」
+    await loadFolders()
   } else if (tab === 'drafts') {
     draftPage.value = 1
     await loadDrafts(1)
@@ -360,7 +534,12 @@ const handleUncollect = async (id) => {
   try {
     await uncollectInspire(id)
     collectList.value = collectList.value.filter(i => i.id !== id)
-    statList.value[1].num = collectList.value.length
+    folderCollects.value = folderCollects.value.filter(i => i.id !== id)
+    if (activeFolder.value) {
+      folderCounts.value[activeFolder.value.id] = Math.max(0, (folderCounts.value[activeFolder.value.id] || 1) - 1)
+    }
+    collTotal.value = Math.max(0, collTotal.value - 1)
+    statList.value[1].num = collTotal.value
     ElMessage.success('已取消收藏')
   } catch (e) { console.error(e) }
 }
@@ -412,64 +591,174 @@ const handleLogout = () => {
   ElMessage.success('已退出登录'); router.push('/login')
 }
 
-const goChat = async (u) => {
-  try {
-    const res = await startConversation(u.userId || u.id)
-    if (res.data && res.data.id) {
-      router.push('/messages?convId=' + res.data.id)
-    }
-  } catch (e) { console.error(e) }
-}
-
-
-const selectFollowee = (u) => {
-  router.push({ name: 'Search', query: { userId: u.userId || u.id } })
-}
-
 </script>
 
 <style scoped>
-.personal-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-.top-nav { display:flex; justify-content:space-between; align-items:center; padding:8px 16px 16px; }
-.left-logo { font-size:26px; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
-.right-icons { display:flex; gap:20px; }
-.icon-item { width:40px; height:40px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
-.user-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; cursor:pointer; position:relative; }
-.avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#d4c5a9,#b8a88c); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:500; }
-.user-info h2 { margin:0; font-size:20px; color:#1d1d1f; }
-.user-info p { margin:4px 0 0; font-size:14px; color:#86868b; }
-.city-tag { display:inline-block; background:#f0f9eb; color:#67c23a; font-size:12px; padding:2px 8px; border-radius:10px; margin-top:4px; }
-:deep(.city-popper) { --el-cascader-menu-min-width: 100px; }
-.edit-icon { margin-left:auto; padding-right:12px; font-size:18px; color:#c0c4cc; }
-.stat-wrap { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
-.stat-card { background:#fff; border-radius:14px; padding:20px 10px; text-align:center; }
-.stat-num { font-size:24px; font-weight:500; color:#1d1d1f; }
-.stat-line { width:30px; height:2px; background:#409eff; margin:10px auto; }
-.stat-label { font-size:13px; color:#86868b; }
-.quick-actions { display:flex; gap:12px; margin-bottom:20px; }
-.action-btn { flex:1; background:#fff; border-radius:12px; padding:12px; text-align:center; font-size:14px; color:#333; cursor:pointer; transition:0.2s; border:1px solid #f0f3f9; }
-.action-btn:hover { border-color:#409eff; color:#409eff; }
-.tab-bar { display:flex; background:#f4f7fd; border-radius:12px; padding:4px; margin-bottom:20px; }
-.tab-item { flex:1; text-align:center; padding:10px; font-size:15px; color:#666; cursor:pointer; border-radius:10px; transition:0.25s; }
-.tab-item.active { background:#fff; color:#409eff; font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
-.list-wrap { display:flex; flex-direction:column; gap:14px; }
-.draft-card { background:#fff; border-radius:14px; padding:16px; cursor:pointer; transition:0.2s; border:1px solid #f0f3f9; }
-.draft-card:hover { border-color:#409eff; }
-.draft-title { font-size:15px; font-weight:500; color:#1d1d1f; margin-bottom:6px; }
-.draft-meta { font-size:13px; color:#909399; }
-.logout-wrap { margin-top:40px; text-align:center; }
-.logout-btn { color:#f56c6c; font-size:14px; }
-.empty-sub { text-align:center; color:#999; font-size:14px; padding:20px 0; }
-.skeleton-card { border-radius:16px; border:1px solid #f0f3f9; background:#fff; }
-.s-line { height:14px; border-radius:8px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200px 100%; animation:shimmer 1.5s infinite; margin-bottom:12px; }
+/* ============ 方案 D：通栏 Banner + 薄荷绿 + 卡片（与「灵感录入」页统一） ============ */
+.personal-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#f7fbfa; min-height:100vh; }
+
+/* ---------- 顶部栏 ---------- */
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:0 4px 12px; }
+.topbar .ico { width:38px; height:38px; border-radius:50%; background:#fff; display:flex; align-items:center;
+  justify-content:center; font-size:17px; border:1px solid #e6f2ef; box-shadow:0 1px 5px rgba(0,0,0,.04);
+  cursor:pointer; transition:.15s; }
+.topbar .ico:hover { background:#f2faf8; }
+.topbar .right { display:flex; gap:8px; }
+
+/* ---------- 通栏 Banner ---------- */
+.banner { position:relative; overflow:hidden; border-radius:18px; text-align:center;
+  padding:22px 16px 46px; background:linear-gradient(160deg,#8fd0c3 0%,#b9e5db 55%,#e6f6f2 100%); }
+.banner:before { content:""; position:absolute; width:190px; height:190px; border-radius:50%;
+  background:rgba(255,255,255,.5); filter:blur(30px); left:-50px; top:-70px; }
+.banner .av { position:relative; width:72px; height:72px; margin:0 auto 10px; border-radius:50%;
+  background:#fff; display:flex; align-items:center; justify-content:center; font-size:30px;
+  box-shadow:0 6px 18px rgba(30,90,80,.18); }
+.banner h2 { position:relative; margin:0; font-size:19px; font-weight:700; color:#134e4a; }
+.banner .mail { position:relative; margin-top:4px; font-size:12px; color:#3f7268; }
+.banner .tagchip { position:relative; display:inline-flex; align-items:center; gap:4px; margin-top:9px;
+  padding:2px 9px; border-radius:999px; background:rgba(255,255,255,.88); color:#d98200; font-size:11.5px; }
+
+/* ---------- 悬浮统计 ---------- */
+.stats { position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,1fr);
+  margin:-30px 24px 12px; padding:14px 8px; background:#fff; border-radius:16px;
+  box-shadow:0 8px 20px rgba(30,90,80,.10); }
+.stat { position:relative; text-align:center; }
+.stat + .stat:before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:1px; background:#e8f3f0; }
+.stat .n { font-size:20px; font-weight:700; color:#0f766e; }
+.stat .l { margin-top:3px; font-size:11.5px; color:#6b8b85; }
+
+/* ---------- 快捷操作 ---------- */
+.quick { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.quick .q { display:flex; align-items:center; gap:10px; padding:12px; background:#fff;
+  border:1px solid #e6f2ef; border-radius:14px; font-size:13.5px; font-weight:500; color:#28504a;
+  cursor:pointer; transition:.15s; }
+.quick .q:hover { border-color:#a8dcd2; background:#fbfefd; }
+.quick .q i { width:30px; height:30px; border-radius:50%; background:#eef7f5; color:#0f766e;
+  display:flex; align-items:center; justify-content:center; font-style:normal; }
+
+/* ---------- 选项卡 ---------- */
+.tabs { display:flex; gap:6px; margin-bottom:12px; padding:4px; background:#e9f5f2; border-radius:12px; }
+.tabs button { flex:1; padding:9px 0; border:none; border-radius:9px; background:transparent;
+  font-family:inherit; font-size:13.5px; color:#5f807a; cursor:pointer; transition:.15s; }
+.tabs button.on { background:#fff; color:#0f766e; font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.tabs .cnt { margin-left:2px; font-size:11px; color:#9bb5b0; }
+.tabs button.on .cnt { color:#0f766e; }
+
+/* ---------- 列表卡片 ---------- */
+.list { min-height:200px; }
+.card { padding:14px; margin-bottom:12px; background:#fff; border:1px solid #e6f2ef;
+  border-radius:16px; cursor:pointer; transition:.16s; }
+.card:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.card:active { transform:scale(.985); }
+.item { display:flex; gap:12px; align-items:flex-start; }
+.thumb { width:64px; height:64px; border-radius:12px; flex:0 0 auto; background:#f1f5f4; }
+.item .t { margin-bottom:7px; font-size:14.5px; font-weight:600; line-height:1.45; color:#1d1d1f; }
+.item .m { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:#9aa3b2; }
+.tag { display:inline-flex; align-items:center; gap:3px; padding:1px 8px; border-radius:999px;
+  background:#f1f7f5; color:#4b7a72; font-size:11.5px; }
+.sep { color:#dfe6e4; }
+.uncollect { color:#d98200; cursor:pointer; }
+.uncollect:hover { text-decoration:underline; }
+
+/* ---------- 草稿卡片 ---------- */
+.draft { padding:13px 14px; margin-bottom:10px; background:#fff; border:1px solid #e6f2ef;
+  border-radius:14px; cursor:pointer; transition:.16s; }
+.draft:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.draft:active { transform:scale(.985); }
+.draft .dt { margin-bottom:6px; font-size:14.5px; font-weight:600; line-height:1.45; color:#1d1d1f; }
+.draft .dm { display:flex; align-items:center; gap:6px; font-size:12px; color:#9aa3b2; }
+.draft .badge { padding:1px 8px; border-radius:999px; background:#fdf3e3; color:#b3760a; font-size:11px; }
+
+/* ---------- 收藏夹 ---------- */
+.folders { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.folder { padding:14px; background:#fff; border:1px solid #e6f2ef; border-radius:16px;
+  cursor:pointer; transition:.16s; }
+.folder:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.folder:active { transform:scale(.985); }
+.folder .fi { display:block; margin-bottom:8px; font-size:22px; }
+.folder .fn { margin-bottom:4px; font-size:14px; font-weight:600; color:#1d1d1f;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.folder .fc { font-size:11.5px; color:#9aa3b2; }
+.folder.add { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; min-height:96px; border-style:dashed; color:#7b9891; font-size:12.5px; }
+.folder.add .plus { font-size:22px; line-height:1; }
+
+.backrow { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.backrow .bk { display:inline-flex; align-items:center; gap:4px; padding:4px 11px; background:#fff;
+  border:1px solid #e6f2ef; border-radius:999px; font-size:12.5px; color:#4b7a72;
+  cursor:pointer; transition:.15s; }
+.backrow .bk:hover { border-color:#a8dcd2; background:#fbfefd; }
+.backrow .ttl { font-size:13.5px; font-weight:600; color:#28504a; }
+.backrow .c { margin-left:auto; font-size:12px; color:#9aa3b2; }
+
+/* ---------- 分页 ---------- */
+.pager { display:flex; justify-content:center; align-items:center; gap:6px; margin:18px 0 4px; }
+.pager button { min-width:30px; height:30px; padding:0 6px; border:1px solid #e6f2ef; border-radius:9px;
+  background:#fff; font-family:inherit; font-size:13px; color:#4b7a72; cursor:pointer; transition:.15s; }
+.pager button:hover:not(:disabled) { border-color:#a8dcd2; }
+.pager button.on { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:700; }
+.pager button:disabled { opacity:.4; cursor:not-allowed; }
+.foot-note { margin-top:6px; text-align:center; font-size:12.5px; color:#7b8a88; }
+
+/* ---------- 空态 / 骨架 ---------- */
+.empty { padding:48px 0; text-align:center; font-size:13.5px; color:#93a5a1; }
+.s-line { height:14px; margin-bottom:12px; border-radius:8px;
+  background:linear-gradient(90deg,#eef2f1 25%,#e4ecea 50%,#eef2f1 75%);
+  background-size:200px 100%; animation:shimmer 1.5s infinite; }
 .s-w-40 { width:40%; } .s-w-60 { width:60%; } .s-w-90 { width:90%; }
-.dialog-form { padding:8px 0; }
-.detect-hint { font-size:12px; color:#909399; margin-top:4px; }
-.avatar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-.avatar-option { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; border:2px solid transparent; transition:0.2s; }
-.avatar-option:hover { border-color:#409eff; }
-.avatar-option.selected { border-color:#409eff; background:#ecf5ff; }
-.form-row { margin-bottom:16px; }
-.form-row label { display:block; font-size:13px; color:#666; margin-bottom:4px; }
 @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
+
+/* ---------- 退出登录 ---------- */
+.logout { display:block; width:100%; margin:24px 0 4px; padding:8px 0; border:none; background:none;
+  font-family:inherit; font-size:13px; color:#f56c6c; cursor:pointer; }
+.logout:hover { text-decoration:underline; }
+
+/* ---------- 弹窗表单 ---------- */
+/* 弹窗外观对齐设计稿：薄荷绿主按钮、圆角、自定义关闭按钮 */
+:deep(.el-dialog) { border-radius:18px; overflow:hidden; max-width:380px; }
+:deep(.el-dialog__header) { padding:16px 18px 10px; margin:0; }
+:deep(.el-dialog__title) { font-size:15.5px; font-weight:700; color:#1d1d1f; }
+:deep(.el-dialog__headerbtn) { top:14px; right:12px; width:28px; height:28px;
+  border-radius:50%; background:#f3f6f5; }
+:deep(.el-dialog__headerbtn:hover) { background:#e9f3f1; }
+:deep(.el-dialog__headerbtn .el-dialog__close) { color:#6b8b85; font-size:16px; }
+:deep(.el-dialog__body) { padding:0 18px 6px; max-height:60vh; overflow:auto; }
+:deep(.el-dialog__footer) { display:flex; gap:10px; padding:8px 18px 18px; }
+:deep(.el-dialog__footer .el-button) { flex:1; height:40px; margin:0; border-radius:11px; font-size:14px; }
+:deep(.el-dialog__footer .el-button--primary) { background:#0f766e; border-color:#0f766e;
+  color:#fff; font-weight:600; }
+:deep(.el-dialog__footer .el-button--primary:hover),
+:deep(.el-dialog__footer .el-button--primary:focus) { background:#0d6a62; border-color:#0d6a62; }
+:deep(.el-dialog__footer .el-button:not(.el-button--primary)) { background:#f4f7f6;
+  border-color:#e6f2ef; color:#5f807a; }
+
+/* 输入框也对齐设计稿：浅底、10px 圆角、聚焦薄荷描边 */
+:deep(.el-dialog .el-input__wrapper),
+:deep(.el-dialog .el-textarea__inner) { border-radius:10px; background:#fbfefd;
+  box-shadow:0 0 0 1px #e6f2ef inset; }
+:deep(.el-dialog .el-input__wrapper.is-focus) { box-shadow:0 0 0 1px #a8dcd2 inset; }
+
+.dialog-form { padding:4px 0; }
+.form-row { margin-bottom:16px; }
+.form-row label { display:block; margin-bottom:6px; font-size:13px; color:#6b7280; }
+.nick-row { display:flex; gap:8px; }
+.nick-row :deep(.el-input) { flex:1; }
+.dice { width:38px; height:38px; flex:0 0 auto; border:1px solid #e6f2ef; border-radius:10px;
+  background:#fbfefd; font-size:16px; cursor:pointer; transition:.15s; }
+.dice:hover { border-color:#a8dcd2; background:#f2faf8; }
+.dice:active { transform:scale(.92); }
+.detect-hint { margin-top:4px; font-size:12px; color:#909399; }
+
+/* 96 个头像：8 列自适应 + 限高滚动，避免弹窗被撑过长 */
+.avatar-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px;
+  max-height:240px; overflow-y:auto; padding:2px 8px 2px 2px; }
+.avatar-grid::-webkit-scrollbar { width:6px; }
+.avatar-grid::-webkit-scrollbar-thumb { background:#d5e9e4; border-radius:3px; }
+.avatar-option { width:100%; aspect-ratio:1; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-size:17px; line-height:1; cursor:pointer;
+  border:2px solid transparent; transition:.15s; }
+.avatar-option:hover { border-color:#cde9e3; }
+.avatar-option.selected { border-color:#a8dcd2; background:#eef7f5; }
+
+:deep(.city-popper) { --el-cascader-menu-min-width: 100px; }
 </style>

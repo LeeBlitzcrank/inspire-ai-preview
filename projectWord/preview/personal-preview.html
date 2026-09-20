@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  个人中心（Personal）美化 · 三方案对比预览
+  预览：直接双击本文件，或 open "…/personal-preview.html"
+  仅为样式样机，不改动前端项目。看中后我再落成 Vue 组件。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>个人中心 · 美化方案对比</title>
+<style>
+  :root{
+    --text:#1d1d1f; --text2:#6b7280; --line:#eceff4; --card:#fff;
+    --blue:#409eff; --blue-soft:#ecf5ff; --blue-line:#b3d8ff;
+    --mint:#a8dcd2; --mint-deep:#0f766e; --mint-soft:#eef7f5; --amber:#d98200;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f1f3f7;color:var(--text);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+
+  .stage{max-width:1360px;margin:0 auto;padding:28px 20px 60px}
+  .stage > h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .stage > p.sub{font-size:13.5px;color:var(--text2);margin:0 0 26px;line-height:1.7}
+
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+  @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+
+  .opt-label{display:flex;align-items:baseline;gap:8px;margin:0 0 10px 4px}
+  .opt-label b{font-size:15px}
+  .opt-label span{font-size:12px;color:var(--text2)}
+
+  /* 手机外框 */
+  .phone{background:#fbfcfe;border-radius:22px;padding:14px;
+    box-shadow:0 8px 28px rgba(20,40,80,.10);border:1px solid #e6eaf2;min-height:660px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .ico{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:16px;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+  .topbar .right{display:flex;gap:8px}
+
+  .card{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px}
+  .tagchip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:2px 9px;border-radius:999px}
+
+  .sec-title{font-size:12.5px;color:var(--text2);margin:0 0 8px 2px}
+
+  .ln{background:linear-gradient(90deg,#eef2f8,#e6ecf5);border-radius:10px}
+
+  /* 通用列表项 */
+  .item{display:flex;gap:12px;align-items:flex-start}
+  .thumb{width:64px;height:64px;border-radius:12px;flex:0 0 auto}
+  .item .t{font-size:14.5px;font-weight:600;line-height:1.45;margin-bottom:6px}
+  .item .m{font-size:12px;color:#9aa3b2;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  .g1{background:linear-gradient(135deg,#dbeafe,#ede9fe)}
+  .g2{background:linear-gradient(135deg,#fef3c7,#fde68a)}
+  .g3{background:linear-gradient(135deg,#dcfce7,#bbf7d0)}
+
+  /* ================= 方案 A：清爽卡片（蓝） ================= */
+  .a .hero{position:relative;height:96px;border-radius:18px;margin-bottom:34px;
+    background:linear-gradient(135deg,#dbeafe 0%,#eef5ff 55%,#f7fbff 100%)}
+  .a .hero:after{content:"灵感空间";position:absolute;right:16px;top:14px;font-size:11px;
+    color:#7aa7e6;letter-spacing:1px}
+  .a .avatar{position:absolute;left:18px;bottom:-28px;width:66px;height:66px;border-radius:50%;
+    background:linear-gradient(135deg,#8fb8f5,#5b8fe8);color:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:26px;border:3px solid #fff;box-shadow:0 4px 14px rgba(64,158,255,.28)}
+  .a .who{padding:0 4px 0 4px}
+  .a .who h2{margin:0;font-size:19px;font-weight:700}
+  .a .who .mail{font-size:12.5px;color:#8a94a6;margin-top:3px}
+  .a .who .row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .a .who .tagchip{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line)}
+  .a .edit{font-size:12px;color:var(--blue);background:var(--blue-soft);border:1px solid var(--blue-line);
+    padding:5px 12px;border-radius:999px;font-weight:600}
+
+  .a .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+  .a .stat{background:#fff;border-radius:14px;padding:14px 8px;text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .a .stat .n{font-size:21px;font-weight:700;color:var(--blue)}
+  .a .stat .l{font-size:11.5px;color:#8a94a6;margin-top:4px}
+
+  .a .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .a .quick .q{background:#fff;border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px;
+    font-size:13.5px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .a .quick .q i{width:30px;height:30px;border-radius:10px;background:var(--blue-soft);color:var(--blue);
+    display:flex;align-items:center;justify-content:center;font-size:15px;font-style:normal}
+
+  .a .tabs{display:flex;gap:6px;background:#eef2f9;border-radius:12px;padding:4px;margin-bottom:12px}
+  .a .tabs span{flex:1;text-align:center;padding:9px 0;font-size:13.5px;color:#6b7280;border-radius:9px}
+  .a .tabs .on{background:#fff;color:var(--blue);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+  /* ================= 方案 B：薄荷绿（与录入页统一） ================= */
+  .b{background:#f7fbfa}
+  .b .hero{position:relative;height:104px;border-radius:18px;margin-bottom:38px;overflow:hidden;
+    background:linear-gradient(135deg,#a8dcd2 0%,#cdeae3 45%,#eaf6f3 100%)}
+  .b .hero:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;
+    background:rgba(255,255,255,.55);filter:blur(26px);left:-30px;top:-40px}
+  .b .hero .zh{position:absolute;right:16px;top:12px;font-size:19px;color:rgba(15,118,110,.42);
+    font-family:"STKaiti","KaiTi",serif}
+  .b .avatar{position:absolute;left:18px;bottom:-30px;width:70px;height:70px;border-radius:50%;
+    background:#fff;color:var(--mint-deep);display:flex;align-items:center;justify-content:center;
+    font-size:28px;border:3px solid #fff;box-shadow:0 6px 18px rgba(60,120,110,.22),0 0 0 4px rgba(217,130,0,.14)}
+  .b .who h2{margin:0;font-size:19px;font-weight:700}
+  .b .who .mail{font-size:12.5px;color:#6b8b85;margin-top:3px}
+  .b .who .row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .b .who .tagchip{background:#fff4e0;color:var(--amber);border:1px solid #f6dcae}
+  .b .edit{font-size:12px;color:var(--mint-deep);background:#fff;border:1px solid #bfe4dc;
+    padding:5px 12px;border-radius:999px;font-weight:600}
+
+  .b .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;
+    background:var(--mint-soft);border-radius:16px;padding:14px 8px}
+  .b .stat{text-align:center;position:relative}
+  .b .stat + .stat:before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:1px;background:#d5e9e4}
+  .b .stat .n{font-size:21px;font-weight:700;color:var(--mint-deep)}
+  .b .stat .l{font-size:11.5px;color:#5f807a;margin-top:4px}
+
+  .b .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .b .quick .q{background:#fff;border:1px solid #e2f0ec;border-radius:14px;padding:12px;
+    display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;color:#28504a}
+  .b .quick .q i{width:30px;height:30px;border-radius:50%;background:var(--mint-soft);color:var(--mint-deep);
+    display:flex;align-items:center;justify-content:center;font-size:15px;font-style:normal}
+
+  .b .tabs{display:flex;gap:20px;border-bottom:1px solid #e2efeb;margin-bottom:12px;padding:0 4px}
+  .b .tabs span{position:relative;padding:10px 0;font-size:13.5px;color:#6b8b85}
+  .b .tabs .on{color:var(--mint-deep);font-weight:700}
+  .b .tabs .on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;
+    border-radius:2px;background:var(--amber)}
+
+  .b .card{border:1px solid #e6f2ef}
+
+  /* ================= 方案 C：杂志极简 ================= */
+  .c{background:#fff}
+  .c .head{display:flex;gap:16px;align-items:center;padding:6px 4px 0}
+  .c .avatar{width:72px;height:72px;border-radius:22px;flex:0 0 auto;
+    background:linear-gradient(135deg,#e7e2da,#cfc7ba);color:#6b6152;display:flex;align-items:center;
+    justify-content:center;font-size:30px}
+  .c .who h2{margin:0;font-size:24px;font-weight:700;letter-spacing:0}
+  .c .who .mail{font-size:12.5px;color:#8a8a8a;margin-top:5px}
+  .c .who .tagchip{background:#f4f1ec;color:#7a6f5e;border:1px solid #e8e2d8;margin-top:8px}
+
+  .c .stats{display:grid;grid-template-columns:repeat(3,1fr);margin:18px 0 0;
+    border-top:1px solid #eee;border-bottom:1px solid #eee}
+  .c .stat{padding:14px 4px;text-align:center;position:relative}
+  .c .stat + .stat:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:1px;background:#eee}
+  .c .stat .n{font-size:20px;font-weight:600}
+  .c .stat .l{font-size:11.5px;color:#9a9a9a;margin-top:4px}
+
+  .c .quick{display:flex;gap:10px;margin:16px 0 6px}
+  .c .quick .q{flex:1;border:1px solid #e9e9e9;border-radius:10px;padding:11px;text-align:center;
+    font-size:13px;color:#444}
+
+  .c .tabs{display:flex;gap:22px;margin:18px 0 4px;padding:0 2px}
+  .c .tabs span{position:relative;padding:6px 0;font-size:14px;color:#9a9a9a}
+  .c .tabs .on{color:#111;font-weight:700}
+  .c .tabs .on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#111}
+
+  .c .rows{margin-top:6px}
+  .c .row-item{display:flex;gap:12px;align-items:center;padding:14px 2px;border-bottom:1px solid #f0f0f0}
+  .c .row-item .tt{font-size:14.5px;font-weight:600;margin-bottom:5px}
+  .c .row-item .mm{font-size:12px;color:#a0a0a0;display:flex;gap:8px}
+
+  .logout{display:block;text-align:center;font-size:13px;color:#f56c6c;margin:18px 0 4px}
+
+  .more-title{font-size:16px;font-weight:700;margin:36px 0 6px}
+  .more-sub{font-size:13px;color:var(--text2);margin:0 0 20px;line-height:1.7}
+
+  /* ============ D/E/F 公共：薄荷绿 + 卡片 ============ */
+  .d, .e, .f{background:#f7fbfa;padding-bottom:14px}
+  .d .topbar, .e .topbar, .f .topbar{padding:14px 14px 0}
+  .d .ico, .e .ico, .f .ico, .d .edit, .e .edit{
+    box-shadow:0 1px 5px rgba(0,0,0,.04);border:1px solid #e6f2ef}
+  .d .logout, .e .logout, .f .logout{display:block;text-align:center;font-size:13px;color:#f56c6c;margin:16px 0 4px}
+
+  /* ---------- 方案 D：通栏薄荷 Banner + 悬浮统计 ---------- */
+  .d .banner{margin:12px 14px 0;border-radius:18px;position:relative;overflow:hidden;text-align:center;
+    padding:20px 16px 44px;background:linear-gradient(160deg,#8fd0c3 0%,#b9e5db 55%,#e6f6f2 100%)}
+  .d .banner:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;
+    background:rgba(255,255,255,.5);filter:blur(30px);left:-50px;top:-70px}
+  .d .banner .av{width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:30px;margin:0 auto 10px;position:relative;
+    box-shadow:0 6px 18px rgba(30,90,80,.18)}
+  .d .banner h2{margin:0;font-size:19px;font-weight:700;color:#134e4a;position:relative}
+  .d .banner .mail{font-size:12px;color:#3f7268;margin-top:4px;position:relative}
+  .d .banner .tagchip{background:rgba(255,255,255,.88);color:var(--amber);margin-top:9px;position:relative}
+  .d .stats{margin:-30px 22px 12px;background:#fff;border-radius:16px;padding:14px 8px;display:grid;
+    grid-template-columns:repeat(3,1fr);position:relative;z-index:2;box-shadow:0 8px 20px rgba(30,90,80,.10)}
+  .d .stat{text-align:center;position:relative}
+  .d .stat + .stat:before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1px;background:#e8f3f0}
+  .d .stat .n{font-size:20px;font-weight:700;color:var(--mint-deep)}
+  .d .stat .l{font-size:11.5px;color:#6b8b85;margin-top:3px}
+  .d .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 14px 12px}
+  .d .quick .q{background:#fff;border:1px solid #e6f2ef;border-radius:14px;padding:12px;display:flex;
+    align-items:center;gap:10px;font-size:13.5px;font-weight:500;color:#28504a}
+  .d .quick .q i{width:30px;height:30px;border-radius:50%;background:var(--mint-soft);color:var(--mint-deep);
+    display:flex;align-items:center;justify-content:center;font-style:normal}
+  .d .tabs{display:flex;gap:6px;margin:0 14px 12px;background:#e9f5f2;border-radius:12px;padding:4px}
+  .d .tabs span{flex:1;text-align:center;padding:9px 0;font-size:13.5px;color:#5f807a;border-radius:9px}
+  .d .tabs .on{background:#fff;color:var(--mint-deep);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .d .card{margin:0 14px 12px}
+
+  /* ---------- 方案 E：四宫格入口 + 右图列表 ---------- */
+  .e .head{display:flex;align-items:center;gap:12px;margin:12px 14px 14px}
+  .e .avatar{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid #cfeae4;
+    display:flex;align-items:center;justify-content:center;font-size:24px}
+  .e .who h2{margin:0;font-size:17px;font-weight:700}
+  .e .who .mail{font-size:12px;color:#6b8b85;margin-top:3px}
+  .e .edit{margin-left:auto;font-size:12px;color:var(--mint-deep);background:#fff;border:1px solid #bfe4dc;
+    padding:5px 11px;border-radius:999px;font-weight:600}
+  .e .stats{margin:0 14px 12px;background:var(--mint-soft);border-radius:16px;padding:13px 8px;
+    display:grid;grid-template-columns:repeat(3,1fr)}
+  .e .stat{text-align:center;position:relative}
+  .e .stat + .stat:before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:1px;background:#d5e9e4}
+  .e .stat .n{font-size:20px;font-weight:700;color:var(--mint-deep)}
+  .e .stat .l{font-size:11.5px;color:#5f807a;margin-top:3px}
+  .e .quad{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 14px 14px}
+  .e .quad .q{background:#fff;border:1px solid #e6f2ef;border-radius:14px;padding:12px 4px;text-align:center;
+    font-size:11.5px;color:#3f665f}
+  .e .quad .q i{display:flex;width:34px;height:34px;margin:0 auto 6px;border-radius:12px;
+    background:var(--mint-soft);color:var(--mint-deep);align-items:center;justify-content:center;
+    font-size:16px;font-style:normal}
+  .e .tabs{display:flex;gap:6px;margin:0 14px 12px;background:#e9f5f2;border-radius:12px;padding:4px}
+  .e .tabs span{flex:1;text-align:center;padding:9px 0;font-size:13.5px;color:#5f807a;border-radius:9px}
+  .e .tabs .on{background:#fff;color:var(--mint-deep);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .e .card{margin:0 14px 12px}
+  .e .item{justify-content:space-between;align-items:center}
+  .e .thumb{order:2;width:58px;height:58px;border-radius:14px}
+
+  /* ---------- 方案 F：紧凑信息卡 + 统计胶囊 ---------- */
+  .f .head{display:flex;align-items:center;gap:10px;margin:10px 14px}
+  .f .avatar{width:48px;height:48px;border-radius:16px;flex:0 0 auto;
+    background:linear-gradient(135deg,#a8dcd2,#d8efe9);display:flex;align-items:center;
+    justify-content:center;font-size:22px}
+  .f .who h2{margin:0;font-size:16px;font-weight:700}
+  .f .who .mail{font-size:11.5px;color:#6b8b85;margin-top:2px}
+  .f .pills{display:flex;gap:6px;margin:0 14px 12px;flex-wrap:wrap}
+  .f .pill{background:#fff;border:1px solid #dff0ec;border-radius:999px;padding:5px 11px;font-size:11.5px;color:#3f665f}
+  .f .pill b{color:var(--mint-deep);font-size:13px;margin-right:4px}
+  .f .pill.city{background:#fff4e0;border-color:#f6dcae;color:var(--amber)}
+  .f .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 14px 12px}
+  .f .quick .q{background:#fff;border:1px solid #e6f2ef;border-radius:12px;padding:10px;text-align:center;
+    font-size:12.5px;color:#28504a}
+  .f .tabs{display:flex;gap:6px;margin:0 14px 12px;background:#e9f5f2;border-radius:12px;padding:4px}
+  .f .tabs span{flex:1;text-align:center;padding:8px 0;font-size:13px;color:#5f807a;border-radius:9px}
+  .f .tabs .on{background:#fff;color:var(--mint-deep);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .f .card{margin:0 14px 10px;padding:12px}
+  .f .thumb{width:44px;height:44px;border-radius:10px}
+  .f .item .t{font-size:14px}
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>个人中心 · 美化方案对比</h1>
+  <p class="sub">
+    三个方案都是同一套信息（头像 / 昵称 / 城市 / 总发布·总收藏·总浏览量 / 三个选项卡 / 灵感列表 / 退出登录），
+    差别只在版式与配色：<b>A</b> 贴近现有蓝色系、最稳；<b>B</b> 与「灵感录入」页的薄荷绿统一；
+    <b>C</b> 最克制、信息密度高，适合内容多的账号。
+  </p>
+
+  <div class="grid">
+
+    <!-- ==================== A ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 A · 清爽卡片</b><span>蓝色系延续，改动最小</span></div>
+      <div class="phone a">
+        <div class="topbar">
+          <div class="ico">🍎</div>
+          <div class="right"><div class="ico">✨</div><div class="ico">🔍</div></div>
+        </div>
+
+        <div class="hero">
+          <div class="avatar">😺</div>
+        </div>
+        <div class="who">
+          <h2>宁静小猫</h2>
+          <div class="mail">lee@example.com</div>
+          <div class="row">
+            <span class="tagchip">📍 杭州</span>
+            <span class="edit">编辑资料</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">12</div><div class="l">总发布</div></div>
+          <div class="stat"><div class="n">28</div><div class="l">总收藏</div></div>
+          <div class="stat"><div class="n">1,436</div><div class="l">总浏览量</div></div>
+        </div>
+
+        <div class="quick">
+          <div class="q"><i>👤</i>编辑资料</div>
+          <div class="q"><i>🔒</i>修改密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="card">
+          <div class="item">
+            <div class="thumb g1"></div>
+            <div>
+              <div class="t">秋日露营：把周末过成小长假</div>
+              <div class="m"><span>🏕 旅行</span><span>·</span><span>2 小时前</span><span>·</span><span>👁 328</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div class="thumb g3"></div>
+            <div>
+              <div class="t">小户型也能有高级感：7 个收纳思路</div>
+              <div class="m"><span>🏠 家居</span><span>·</span><span>昨天</span><span>·</span><span>👁 192</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+    <!-- ==================== B ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 B · 薄荷绿统一</b><span>和「灵感录入」的薄荷+琥珀一致</span></div>
+      <div class="phone b">
+        <div class="topbar">
+          <div class="ico">🍎</div>
+          <div class="right"><div class="ico">✨</div><div class="ico">🔍</div></div>
+        </div>
+
+        <div class="hero">
+          <div class="zh">宁静致远</div>
+          <div class="avatar">😺</div>
+        </div>
+        <div class="who">
+          <h2>宁静小猫</h2>
+          <div class="mail">lee@example.com</div>
+          <div class="row">
+            <span class="tagchip">📍 杭州</span>
+            <span class="edit">编辑资料</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">12</div><div class="l">总发布</div></div>
+          <div class="stat"><div class="n">28</div><div class="l">总收藏</div></div>
+          <div class="stat"><div class="n">1,436</div><div class="l">总浏览量</div></div>
+        </div>
+
+        <div class="quick">
+          <div class="q"><i>👤</i>编辑资料</div>
+          <div class="q"><i>🔒</i>修改密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="card">
+          <div class="item">
+            <div class="thumb g1"></div>
+            <div>
+              <div class="t">秋日露营：把周末过成小长假</div>
+              <div class="m"><span>🏕 旅行</span><span>·</span><span>2 小时前</span><span>·</span><span>👁 328</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div class="thumb g3"></div>
+            <div>
+              <div class="t">小户型也能有高级感：7 个收纳思路</div>
+              <div class="m"><span>🏠 家居</span><span>·</span><span>昨天</span><span>·</span><span>👁 192</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+    <!-- ==================== C ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 C · 杂志极简</b><span>去卡片、靠留白与分割线</span></div>
+      <div class="phone c">
+        <div class="topbar">
+          <div class="ico" style="box-shadow:none;background:transparent">🍎</div>
+          <div class="right">
+            <div class="ico" style="box-shadow:none;background:transparent">✨</div>
+            <div class="ico" style="box-shadow:none;background:transparent">🔍</div>
+          </div>
+        </div>
+
+        <div class="head">
+          <div class="avatar">😺</div>
+          <div class="who">
+            <h2>宁静小猫</h2>
+            <div class="mail">lee@example.com</div>
+            <div><span class="tagchip">📍 杭州</span></div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">12</div><div class="l">总发布</div></div>
+          <div class="stat"><div class="n">28</div><div class="l">总收藏</div></div>
+          <div class="stat"><div class="n">1,436</div><div class="l">总浏览量</div></div>
+        </div>
+
+        <div class="quick">
+          <div class="q">编辑资料</div>
+          <div class="q">修改密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="rows">
+          <div class="row-item">
+            <div class="thumb g1" style="width:56px;height:56px"></div>
+            <div>
+              <div class="tt">秋日露营：把周末过成小长假</div>
+              <div class="mm"><span>旅行</span><span>2 小时前</span><span>328 阅读</span></div>
+            </div>
+          </div>
+          <div class="row-item">
+            <div class="thumb g3" style="width:56px;height:56px"></div>
+            <div>
+              <div class="tt">小户型也能有高级感：7 个收纳思路</div>
+              <div class="mm"><span>家居</span><span>昨天</span><span>192 阅读</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+  </div>
+
+  <h2 class="more-title">更多方案 · 保持「薄荷绿 + 卡片」不变</h2>
+  <p class="more-sub">
+    D / E / F 都沿用方案 B 的薄荷绿配色与卡片化承载，只换排布方式：<b>D</b> 通栏 Banner 最有「个人主页」的仪式感；
+    <b>E</b> 四宫格把功能入口铺开、列表图放右侧；<b>F</b> 最紧凑，统计压成一排胶囊，适合手机上一屏看更多。
+  </p>
+
+  <div class="grid">
+
+    <!-- ==================== D ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 D · 通栏 Banner</b><span>头像居中，统计卡压住 Banner 下沿</span></div>
+      <div class="phone d">
+        <div class="topbar">
+          <div class="ico">🍎</div>
+          <div class="right"><div class="ico">✨</div><div class="ico">🔍</div></div>
+        </div>
+
+        <div class="banner">
+          <div class="av">😺</div>
+          <h2>宁静小猫</h2>
+          <div class="mail">lee@example.com</div>
+          <div><span class="tagchip">📍 杭州</span></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">12</div><div class="l">总发布</div></div>
+          <div class="stat"><div class="n">28</div><div class="l">总收藏</div></div>
+          <div class="stat"><div class="n">1,436</div><div class="l">总浏览量</div></div>
+        </div>
+
+        <div class="quick">
+          <div class="q"><i>👤</i>编辑资料</div>
+          <div class="q"><i>🔒</i>修改密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="card">
+          <div class="item">
+            <div class="thumb g1"></div>
+            <div>
+              <div class="t">秋日露营：把周末过成小长假</div>
+              <div class="m"><span>🏕 旅行</span><span>·</span><span>2 小时前</span><span>·</span><span>👁 328</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div class="thumb g3"></div>
+            <div>
+              <div class="t">小户型也能有高级感：7 个收纳思路</div>
+              <div class="m"><span>🏠 家居</span><span>·</span><span>昨天</span><span>·</span><span>👁 192</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+    <!-- ==================== E ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 E · 四宫格入口</b><span>功能入口铺开，列表图放右侧</span></div>
+      <div class="phone e">
+        <div class="topbar">
+          <div class="ico">🍎</div>
+          <div class="right"><div class="ico">✨</div><div class="ico">🔍</div></div>
+        </div>
+
+        <div class="head">
+          <div class="avatar">😺</div>
+          <div class="who">
+            <h2>宁静小猫</h2>
+            <div class="mail">lee@example.com · 📍 杭州</div>
+          </div>
+          <span class="edit">编辑资料</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">12</div><div class="l">总发布</div></div>
+          <div class="stat"><div class="n">28</div><div class="l">总收藏</div></div>
+          <div class="stat"><div class="n">1,436</div><div class="l">总浏览量</div></div>
+        </div>
+
+        <div class="quad">
+          <div class="q"><i>✍️</i>写灵感</div>
+          <div class="q"><i>📝</i>草稿</div>
+          <div class="q"><i>⭐</i>收藏夹</div>
+          <div class="q"><i>🔒</i>密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="card">
+          <div class="item">
+            <div>
+              <div class="t">秋日露营：把周末过成小长假</div>
+              <div class="m"><span>🏕 旅行</span><span>·</span><span>2 小时前</span><span>·</span><span>👁 328</span></div>
+            </div>
+            <div class="thumb g1"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div>
+              <div class="t">小户型也能有高级感：7 个收纳思路</div>
+              <div class="m"><span>🏠 家居</span><span>·</span><span>昨天</span><span>·</span><span>👁 192</span></div>
+            </div>
+            <div class="thumb g3"></div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+    <!-- ==================== F ==================== -->
+    <section>
+      <div class="opt-label"><b>方案 F · 紧凑卡片</b><span>统计压成一排胶囊，一屏看更多</span></div>
+      <div class="phone f">
+        <div class="topbar">
+          <div class="ico">🍎</div>
+          <div class="right"><div class="ico">✨</div><div class="ico">🔍</div></div>
+        </div>
+
+        <div class="head">
+          <div class="avatar">😺</div>
+          <div class="who">
+            <h2>宁静小猫</h2>
+            <div class="mail">lee@example.com</div>
+          </div>
+        </div>
+
+        <div class="pills">
+          <span class="pill city">📍 杭州</span>
+          <span class="pill"><b>12</b>发布</span>
+          <span class="pill"><b>28</b>收藏</span>
+          <span class="pill"><b>1,436</b>浏览</span>
+        </div>
+
+        <div class="quick">
+          <div class="q">👤 编辑资料</div>
+          <div class="q">🔒 修改密码</div>
+        </div>
+
+        <div class="tabs">
+          <span class="on">我的发布</span><span>我的草稿</span><span>我的收藏夹</span>
+        </div>
+
+        <div class="card">
+          <div class="item">
+            <div class="thumb g1"></div>
+            <div>
+              <div class="t">秋日露营：把周末过成小长假</div>
+              <div class="m"><span>旅行</span><span>2 小时前</span><span>328 阅读</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div class="thumb g3"></div>
+            <div>
+              <div class="t">小户型也能有高级感：7 个收纳思路</div>
+              <div class="m"><span>家居</span><span>昨天</span><span>192 阅读</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="item">
+            <div class="thumb g2"></div>
+            <div>
+              <div class="t">周末City Walk：三条不挤的city路线</div>
+              <div class="m"><span>旅行</span><span>3 天前</span><span>96 阅读</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="logout">退出登录</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>
