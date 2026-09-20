@@ -30,7 +30,8 @@ public class ConsoleEmailService implements EmailService {
 
     @Override
     public void sendPasswordResetEmail(String to, String token) {
-        String resetLink = frontendUrl + "/reset-password?token=" + token;
+        // 前端已改用 hash 路由，重置链接需带 /#/ 前缀
+        String resetLink = frontendUrl + "/#/reset-password?token=" + token;
         String subject = "【灵思集】密码重置通知";
         String text = """
             <html><body>

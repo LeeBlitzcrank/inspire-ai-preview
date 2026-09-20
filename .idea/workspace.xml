@@ -6,8 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="代码修复">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/email/ConsoleEmailService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/email/ConsoleEmailService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -176,15 +177,7 @@
       <workItem from="1789350172544" duration="1931000" />
       <workItem from="1789620850875" duration="252000" />
       <workItem from="1789621127157" duration="13622000" />
-      <workItem from="1789635710406" duration="11292000" />
-    </task>
-    <task id="LOCAL-00004" summary="init 灵感创作服务开发">
-      <option name="closed" value="true" />
-      <created>1782704653668</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1782704653668</updated>
+      <workItem from="1789635710406" duration="13260000" />
     </task>
     <task id="LOCAL-00005" summary="init 灵感核心服务开发，收藏&amp;点赞功能实现">
       <option name="closed" value="true" />
@@ -570,7 +563,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789893094356</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="代码修复">
+      <option name="closed" value="true" />
+      <created>1789894709709</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1789894709709</updated>
+    </task>
+    <option name="localTasksCounter" value="54" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

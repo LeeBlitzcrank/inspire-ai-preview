@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { pinia } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
 import Index from '@/pages/index.vue'
@@ -55,7 +55,8 @@ const routes = [
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound }
 ]
 const router = createRouter({
-  history: createWebHistory(),
+  // 方案A：hash 路由，URL 形如 /#/login，静态托管(GitHub Pages)无需 SPA 兜底，彻底消除 404
+  history: createWebHashHistory(),
   routes,
   scrollBehavior() { return { top: 0, behavior: 'smooth' } }
 })
