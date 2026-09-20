@@ -871,4 +871,18 @@ docker compose up -d
 
 
 
+1、Safari浏览器访问首页时控制台的错误：
+[Error] Failed to load resource: the server responded with a status of 404 () (forgot-password, line 0)
+[Error] Access-Control-Allow-Origin cannot contain more than one origin.
+[Error] XMLHttpRequest cannot load https://api.20sherry.com/api/inspire/public/recommend?page=1&size=20 due to access control checks.
+[Error] AxiosError: Network Error
+	（匿名函数） (index-B1Zi67_O.js:14:17683)
+[Error] Failed to load resource: Access-Control-Allow-Origin cannot contain more than one origin. (recommend, line 0)
+同时，有弹窗提示网络异常，请检查连接
+2、safari浏览器，重置密码，输入邮箱后点击发送重置邮件，弹窗提示：网络异常，请检查连接。且并没有邮件发送
 
+1、页面大小选择不同分辨率设备还是有 上下左右的拖动条，证明不是按照比例放大和缩小。
+
+1、页面每个请求都多了一个Request Method OPTIONS的请求，可以去掉么？
+2、docker启动可以清除分为清除已有数据库（包含缓存）和保留已有数据库（包含缓存）两个选项供我选择么？
+3、

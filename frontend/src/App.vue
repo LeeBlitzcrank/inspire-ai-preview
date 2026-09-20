@@ -20,13 +20,14 @@ const DESIGN_WIDTH = 620   // 设计基准宽度（与各页面 max-width 一致
 const onScroll = () => { showTop.value = window.scrollY > 400 }
 const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-// 方案A：以 620px 为基准等比缩放，小屏整体缩小，大屏保持原始比例
+// 方案A（zoom 版）：zoom 会重排布局，缩放后元素实际占位 = 620×zoom，
+// 不会像 transform 那样撑出横向滚动条。
 const applyScale = () => {
   const vw = document.documentElement.clientWidth || window.innerWidth
   const scale = Math.min(vw / DESIGN_WIDTH, 1)
-  document.documentElement.style.setProperty('--app-scale', scale)
   if (designRoot.value) {
-    // 缩放后仍撑满视口高度，避免底部留白
+    designRoot.value.style.zoom = scale
+    // 缩放后仍撑满视口高度（min-height 处于缩放坐标系，需除以 scale）
     designRoot.value.style.minHeight = (window.innerHeight / scale) + 'px'
   }
 }
@@ -48,8 +49,6 @@ onBeforeUnmount(() => {
 .app-design {
   width: 620px;
   margin: 0 auto;
-  transform-origin: top center;
-  transform: scale(var(--app-scale, 1));
   background: #fbfcfe;
 }
 .offline-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#f56c6c; color:#fff; text-align:center; padding:6px; font-size:13px; }
@@ -72,4 +71,15 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateY(-3px);
 }
+</style>
+
+<style>
+/* 全局：消除浏览器默认边距与横向滚动条 */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+#app { overflow-x: hidden; }
 </style>
