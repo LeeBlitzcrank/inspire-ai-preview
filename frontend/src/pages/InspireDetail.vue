@@ -20,7 +20,7 @@
     <!-- 标题+正文+话题 -->
     <div class="text-wrap">
       <h2 class="note-title">{{ detail.title || '古道尘烟：李白诗中的苍茫旅迹' }}</h2>
-      <div class="note-desc">{{ detail.content || '李白笔下的古道，常是"古道连绵走西京，紫阙落日浮云生"的壮阔，或是"长歌吟松风，曲尽星河稀"的孤寂。可结合其《蜀道难》的险峻与《丁都护歌》的苍凉，描绘一条连接历史与侠客梦的沙石路径。' }}</div>
+      <div class="note-desc" v-html="descHtml"></div>
       <span class="tag-item" v-for="t in tagList" :key="t">#{{ t }}</span>
     </div>
 
@@ -145,6 +145,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getInspireDetail, getPublicUserInfo, shareInspire, collectInspire, uncollectInspire, likeInspire, unlikeInspire, getComments, createComment, followUser, unfollowUser, getFollowing } from '@/api/inspire.js'
+import { sanitizeHtml } from '@/utils/sanitizeHtml.js'
 
 const requireLogin = () => {
   ElMessageBox.alert('请先登录后进行操作', '提示', {
@@ -180,6 +181,9 @@ const isOwnInspire = computed(() => {
   return result
 })
 const detail = ref({})
+// 详情正文可能是富文本 HTML（新编辑器保存）或历史纯文本，统一清洗后再渲染
+const DEFAULT_DESC = '李白笔下的古道，常是"古道连绵走西京，紫阙落日浮云生"的壮阔，或是"长歌吟松风，曲尽星河稀"的孤寂。可结合其《蜀道难》的险峻与《丁都护歌》的苍凉，描绘一条连接历史与侠客梦的沙石路径。'
+const descHtml = computed(() => sanitizeHtml(detail.value.content || DEFAULT_DESC))
 const liked = ref(false)
 const collected = ref(false)
 const isFollowing = ref(false)
@@ -464,6 +468,15 @@ svg { width: 22px; height: 22px; fill: currentColor; }
 .text-wrap { padding: 16px 14px; }
 .note-title { font-size: 20px; font-weight: 600; margin-bottom: 12px; line-height: 1.4; }
 .note-desc { font-size: 15px; line-height: 1.75; color: #333; margin-bottom: 10px; }
+/* 富文本正文（v-html 注入，需 deep 选择器命中） */
+.note-desc :deep(p) { margin: 0 0 8px; }
+.note-desc :deep(h1) { font-size: 20px; font-weight: 700; margin: 10px 0 6px; }
+.note-desc :deep(h2) { font-size: 17px; font-weight: 700; margin: 10px 0 6px; }
+.note-desc :deep(h3) { font-size: 16px; font-weight: 700; margin: 8px 0 6px; }
+.note-desc :deep(blockquote) { margin: 8px 0; padding: 6px 12px; border-left: 3px solid #409eff; background: #f7fbff; color: #4b5563; border-radius: 0 8px 8px 0; }
+.note-desc :deep(ul),
+.note-desc :deep(ol) { margin: 8px 0; padding-left: 22px; }
+.note-desc :deep(hr) { border: none; border-top: 1px solid #ebeef5; margin: 14px 0; }
 .tag-item { color: #0066cc; font-size: 15px; cursor: pointer; margin-right: 6px; }
 
 .search-tip { margin: 0 14px 16px; padding: 8px 12px; background: #f7f7f7; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-size: 14px; color: #999; }

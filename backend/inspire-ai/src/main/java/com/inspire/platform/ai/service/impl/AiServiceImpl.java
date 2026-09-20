@@ -25,7 +25,8 @@ public class AiServiceImpl implements AiService {
     private final String model;
 
     private static final int CACHE_TTL = 3600; // 缓存1小时
-    private static final String CACHE_PREFIX = "ai:explore:";
+    // v2：提示词升级为「最终内容 300~500 字」，换前缀让旧的短内容缓存立即失效
+    private static final String CACHE_PREFIX = "ai:explore:v2:";
     private final JedisPool jedisPool;
 
     public AiServiceImpl(RestTemplate restTemplate,
@@ -149,10 +150,12 @@ public class AiServiceImpl implements AiService {
                 Map.of("role", "system", "content",
                         "你是一个创意灵感生成器。返回JSON格式数据，不要markdown标记。\n" +
                         "当有子选项时返回：{\"summary\":\"概括\",\"options\":[{\"id\":\"xxx\",\"label\":\"选项\"}],\"content\":null}\n" +
-                        "当到达最终内容时返回：{\"summary\":\"概括\",\"options\":[],\"content\":{\"title\":\"标题\",\"text\":\"详细内容\",\"tag\":\"分类\"}}"),
+                        "当到达最终内容时返回：{\"summary\":\"概括\",\"options\":[],\"content\":{\"title\":\"标题\",\"text\":\"详细内容\",\"tag\":\"分类\"}}\n" +
+                        "硬性要求：最终内容的 text 必须是 300~500 个中文字符，分成 3~5 个自然段；" +
+                        "其中至少一段用“1. 2. 3.”分条给出可执行的具体建议；语气自然、内容具体，不要空话套话。"),
                 Map.of("role", "user", "content", prompt)));
         body.put("temperature", 0.8);
-        body.put("max_tokens", 800);
+        body.put("max_tokens", 2048);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
@@ -203,6 +206,9 @@ public class AiServiceImpl implements AiService {
         }
         // 深度≥2 → 直接返回最终内容，不再有options
         return "用户对「" + keyword + "」感兴趣，已选择：" + String.join(" > ", parts) +
-               "。请围绕「" + focus + "」直接返回最终灵感内容(content)，不要options。";
+               "。请围绕「" + focus + "」直接返回最终灵感内容(content)，不要options。" +
+               "content.title 是 10~20 字的标题；content.text 必须是 300~500 个中文字符，" +
+               "分成 3~5 个自然段，其中至少一段用“1. 2. 3.”分条列出可落地的建议，" +
+               "内容要具体、有画面感，不要泛泛而谈；content.tag 从「家居/美食/旅行/摄影/穿搭/手作/运动/文案/电影/生活」中选一个。";
     }
 }

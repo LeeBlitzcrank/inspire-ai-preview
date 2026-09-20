@@ -276,6 +276,13 @@ public class InspireController {
     @Operation(summary = "AI 配图建议", description = "配置了 Unsplash Access Key 则搜索真实图片，否则回退到 picsum 随机占位图")
     public Result<java.util.List<String>> suggestImages(@RequestBody Map<String, String> body) {
         String keyword = body.getOrDefault("keyword", "");
+        // 换一批靠翻页实现：page 由前端递增，默认第一页
+        int page = 1;
+        try {
+            page = Math.max(1, Integer.parseInt(body.getOrDefault("page", "1").trim()));
+        } catch (Exception ignore) {
+            page = 1;
+        }
         java.util.List<String> urls = new java.util.ArrayList<>();
         
         // 尝试 Unsplash API
@@ -291,9 +298,9 @@ public class InspireController {
                     clean = "inspiration";
                 }
                 String encoded = java.net.URLEncoder.encode(clean, "UTF-8").replace("+", "%20");
-                log.info("Unsplash URL: https://api.unsplash.com/search/photos?query={}&per_page=6", encoded);
+                log.info("Unsplash URL: https://api.unsplash.com/search/photos?query={}&per_page=6&page={}", encoded, page);
                 java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("https://api.unsplash.com/search/photos?query=" + encoded + "&per_page=6"))
+                    .uri(java.net.URI.create("https://api.unsplash.com/search/photos?query=" + encoded + "&per_page=6&page=" + page))
                     .header("Authorization", "Client-ID " + unsplashAccessKey)
                     .header("User-Agent", "Mozilla/5.0 (compatible; InspireAI/1.0)")
                     .build();
@@ -330,7 +337,8 @@ public class InspireController {
             log.info("AI配图使用picsum(未配置Unsplash): keyword={}", keyword);
         }
         if (urls.isEmpty()) {
-            int seed = keyword.hashCode() & 0x7fffffff;
+            // 回退占位图也按 page 换种子，保证「换一批」有变化
+            int seed = (keyword.hashCode() & 0x7fffffff) + page * 131;
             for (int i = 0; i < 6; i++) {
                 urls.add("https://picsum.photos/seed/" + (seed + i) + "/400/300");
             }

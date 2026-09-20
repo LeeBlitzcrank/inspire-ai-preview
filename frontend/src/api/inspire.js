@@ -55,6 +55,11 @@ export const uploadFile = (formData, onUploadProgress) => request.post('/file/up
 
 export const exploreInspiration = (data) => request.post('/ai/explore', data)
 
+// AI 配图建议（公开接口）：返回 6 张图片 URL
+// page 用于「换一批」翻页，不传即第一页
+export const suggestImages = (keyword, page = 1) =>
+  request.post('/inspire/public/suggest-images', { keyword, page: String(page) })
+
 
 // ===== 评论 =====
 export const getComments = (id, params) => request.get(`/inspire/${id}/comments`, { params })
