@@ -14,20 +14,34 @@
 
       <!-- AI 探索区 -->
       <div v-if="!editId" class="ai-section">
-        <div class="ai-row">
-          <el-input v-model="aiKeyword" placeholder="输入关键词，AI探索灵感" size="large" @keyup.enter="handleExplore">
-            <template #append><el-button type="warning" :loading="exploring" @click="handleExplore">✨ 探索</el-button>
-        </template>
-          </el-input>
-        </div>
+        <!-- 薄荷绿书法词云面板（合并原「输入框 + 面包屑」） -->
+        <div class="cloud-scene">
+          <div class="cloud-hint">
+            <span class="dot"></span>
+            <template v-if="pathLabels.length">
+              <span class="crumb" @click="resetExplore">{{ aiKeyword }}</span>
+              <span v-for="(label, idx) in pathLabels" :key="idx" class="crumb">
+                <span class="sep">›</span><span class="crumb-txt" @click="goToLevel(idx)">{{ label }}</span>
+              </span>
+            </template>
+            <template v-else>点选一个方向，继续深入</template>
+          </div>
 
-        <!-- 面包屑 -->
-        <div v-if="pathLabels.length > 0" class="breadcrumb">
-          <span class="crumb-item" @click="resetExplore">{{ aiKeyword }}</span>
-          <span v-for="(label, idx) in pathLabels" :key="idx" class="crumb-item">
-            <span class="crumb-sep">›</span>
-            <span @click="goToLevel(idx)">{{ label }}</span>
-          </span>
+          <div v-for="(lane, li) in cloudLanes" :key="li" class="lane" :style="{ top: laneTop(li) }">
+            <div class="track" :style="{ animationDuration: laneDur(li) }">
+              <template v-for="round in 2" :key="round">
+                <span v-for="(w, wi) in lane" :key="round + '-' + wi"
+                      class="word" :class="[w.size, { picked: pickedWordId === w.id, deco: w.deco }]"
+                      :style="{ '--rot': w.rot + 'deg' }"
+                      @click="pickCloudWord(w)">{{ w.label }}</span>
+              </template>
+            </div>
+          </div>
+
+          <div class="cloud-bar">
+            <input v-model="aiKeyword" placeholder="输入关键词，重新探索…" @keyup.enter="handleExplore" />
+            <button :disabled="exploring" @click="handleExplore">✨ 探索</button>
+          </div>
         </div>
 
         <!-- 摘要 -->
@@ -121,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo } from '@/api/inspire.js'
@@ -141,6 +155,46 @@ const summary = ref('')
 const path = ref([])
 const pathLabels = ref([])
 const leafContent = ref(null)
+
+// —— AI 探索 · 词云（把当前层的选项渲染成流动的书法词） ——
+const pickedWordId = ref(null)
+const CLOUD_SIZES = ['big', 'mid', 'small', 'mid']
+const DEFAULT_CLOUD_WORDS = ['灵感', '生活', '旅行', '美食', '摄影', '家居', '手作', '穿搭']
+
+const cloudLanes = computed(() => {
+  const src = options.value.length
+    ? options.value.map((o, i) => ({
+        id: o.id, label: o.label,
+        size: CLOUD_SIZES[i % CLOUD_SIZES.length],
+        rot: ((i * 37) % 13) - 6
+      }))
+    : DEFAULT_CLOUD_WORDS.map((label, i) => ({
+        id: 'd' + i, label, deco: true,
+        size: CLOUD_SIZES[i % CLOUD_SIZES.length],
+        rot: ((i * 37) % 13) - 6
+      }))
+  const laneCount = src.length <= 4 ? 1 : (src.length <= 8 ? 2 : 3)
+  const lanes = Array.from({ length: laneCount }, () => [])
+  src.forEach((w, i) => lanes[i % laneCount].push(w))
+  return lanes
+})
+
+const laneTop = (i) => {
+  if (cloudLanes.value.length === 1) return '42%'
+  return ['24%', '52%', '78%'][i] || '52%'
+}
+const laneDur = (i) => ['30s', '22s', '26s'][i] || '26s'
+
+// 点词 = 选择该方向，继续深入
+const pickCloudWord = (w) => {
+  if (w.deco) return
+  pickedWordId.value = w.id
+  const opt = options.value.find(o => String(o.id) === String(w.id))
+  if (opt) selectOption(opt)
+}
+
+// 每次刷新出一批新选项时，清掉上一次的选中态
+watch(options, () => { pickedWordId.value = null })
 
 const handleExplore = async () => {
   if (!aiKeyword.value.trim()) return ElMessage.warning('请输入关键词')
@@ -497,4 +551,65 @@ const useSuggestedImage = async () => {
 .md-btn:hover{border-color:#409eff;color:#409eff;}
 .suggest-img.selected{border-color:#409eff;}
 .suggest-img:hover{border-color:#409eff44;}
+
+/* ================= AI 探索 · 薄荷绿书法词云 ================= */
+.cloud-scene{
+  position:relative;width:100%;height:250px;border-radius:16px;overflow:hidden;
+  background:url('/bg/explore-bg.svg') center / cover no-repeat, #a8dcd2;
+  box-shadow:0 6px 20px rgba(60,120,110,.18);
+  margin-bottom:14px;
+}
+.cloud-hint{
+  position:absolute;z-index:4;left:14px;top:12px;font-size:12px;color:rgba(38,68,63,.72);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.cloud-hint .dot{width:6px;height:6px;border-radius:50%;background:#d98200;box-shadow:0 0 8px rgba(217,130,0,.9)}
+.cloud-hint .crumb{color:#0f766e;cursor:pointer}
+.cloud-hint .crumb .sep{color:rgba(38,68,63,.4);margin:0 4px}
+.cloud-hint .crumb-txt:hover{text-decoration:underline}
+
+/* 轨道：右 → 左无缝流动 */
+.lane{position:absolute;left:0;width:100%;height:0}
+.lane .track{
+  position:absolute;top:0;left:0;display:flex;align-items:center;white-space:nowrap;
+  will-change:transform;animation:cloudMarquee linear infinite;
+}
+@keyframes cloudMarquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.lane:hover .track{ animation-play-state:paused }   /* 悬停暂停，方便点选 */
+
+.cloud-scene .word{
+  position:static;flex:0 0 auto;margin-right:3rem;cursor:pointer;user-select:none;
+  font-family:"Ma Shan Zheng","STKaiti","KaiTi","Songti SC",serif;font-weight:400;color:#2f4f4a;
+  line-height:1;white-space:nowrap;rotate:var(--rot,0deg);
+  animation:cloudTwinkle 5s ease-in-out infinite;
+  transition:color .22s, text-shadow .22s, scale .22s, opacity .22s;
+}
+.cloud-scene .word.deco{cursor:default}
+.cloud-scene .word.small{font-size:15px;--tmin:.42;--tmax:.72}
+.cloud-scene .word.mid{font-size:21px;--tmin:.6;--tmax:.9}
+.cloud-scene .word.big{font-size:32px;--tmin:.78;--tmax:1}
+@keyframes cloudTwinkle{0%,100%{opacity:var(--tmin,.5)}50%{opacity:var(--tmax,.95)}}
+.cloud-scene .word:hover{scale:1.08}
+/* 选中的词：琥珀色 + 暖光脉冲（覆盖闪烁动画，避免被压暗） */
+.cloud-scene .word.picked{
+  color:#d98200;
+  animation:cloudPickGlow 1.8s ease-in-out infinite;
+}
+@keyframes cloudPickGlow{
+  0%,100%{text-shadow:0 0 6px rgba(217,130,0,.35),0 0 16px rgba(217,130,0,.18)}
+  50%{text-shadow:0 0 12px rgba(217,130,0,.72),0 0 28px rgba(217,130,0,.42)}
+}
+
+.cloud-bar{position:absolute;z-index:5;left:12px;right:12px;bottom:12px;display:flex;gap:8px}
+.cloud-bar input{
+  flex:1;height:40px;border-radius:11px;border:1px solid rgba(47,79,74,.18);
+  background:rgba(255,255,255,.82);color:#2f4f4a;padding:0 14px;font-size:14px;outline:none;
+}
+.cloud-bar input::placeholder{color:rgba(47,79,74,.45)}
+.cloud-bar button{
+  height:40px;padding:0 16px;border:none;border-radius:11px;font-size:14px;font-weight:700;
+  color:#5a3d00;background:linear-gradient(135deg,#ffd76a,#f0b429);cursor:pointer;white-space:nowrap;
+  box-shadow:0 3px 12px rgba(240,180,41,.35);
+}
+.cloud-bar button:disabled{opacity:.7;cursor:not-allowed}
 </style>
