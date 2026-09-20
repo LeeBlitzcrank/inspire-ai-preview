@@ -20,10 +20,14 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { resetPassword } from '@/api/inspire.js'
+import { saveTokens } from '@/utils/tokenStorage.js'
+import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 const form = ref({ token: '', password: '', confirm: '' })
 const loading = ref(false)
 const success = ref(false)
@@ -45,8 +49,19 @@ const handleSubmit = async () => {
   loading.value = true
   try {
     const res = await resetPassword({ token: form.value.token, newPassword: password })
-    if (res.code === 200) success.value = true
-    else ElMessage.error(res.msg || '重置失败')
+    if (res.code === 200 && res.data) {
+      // 后端返回双Token → 保存并自动登录
+      saveTokens(res.data)
+      localStorage.setItem('isLogin', '1')
+      if (res.data.userId) localStorage.setItem('userId', String(res.data.userId))
+      if (res.data.username) localStorage.setItem('userAccount', res.data.username)
+      auth.setLoggedIn()
+      success.value = true
+      ElMessage.success('密码重置成功，正在进入首页…')
+      router.push('/')
+    } else {
+      ElMessage.error(res.msg || '重置失败')
+    }
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
 </script>

@@ -64,45 +64,52 @@ public class FileController {
             return Result.error("文件为空");
         }
         String name = file.getOriginalFilename();
-        String ext = name != null && name.contains(".") ? name.substring(name.lastIndexOf(".")) : ".jpg";
-        String filename = UUID.randomUUID().toString().replace("-", "") + ext;
+        String rawExt = name != null && name.contains(".")
+                ? name.substring(name.lastIndexOf(".")).toLowerCase() : ".jpg";
+        String filename = UUID.randomUUID().toString().replace("-", "") + rawExt;
+        // 输出格式：png 保留透明通道，其余统一 jpg
+        String format = ".png".equals(rawExt) ? "png" : "jpg";
+        int imgType = "png".equals(format) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB;
         try {
             File dir = new File(uploadDir);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            file.transferTo(new File(dir, filename));
+            // 一次性读入内存，避免多次磁盘 IO
+            BufferedImage img = ImageIO.read(file.getInputStream());
+            if (img == null) {
+                return Result.error("图片解析失败，请上传有效图片");
+            }
+
+            // 压缩：仅当宽度超过 1920px 时才缩放
+            BufferedImage out = img;
+            int maxW = 1920;
+            if (img.getWidth() > maxW) {
+                int newW = maxW;
+                int newH = Math.max((int) (maxW * (double) img.getHeight() / img.getWidth()), 1);
+                out = new BufferedImage(newW, newH, imgType);
+                Graphics2D g = out.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(img, 0, 0, newW, newH, null);
+                g.dispose();
+                log.info("图片已压缩: {}x{} -> {}x{}", img.getWidth(), img.getHeight(), newW, newH);
+            }
+            ImageIO.write(out, format, new File(dir, filename));
+
+            // 缩略图（400px）直接从内存图像生成，不再二次读盘
+            int tw = 400;
+            int th = Math.max((int) (tw * (double) out.getHeight() / out.getWidth()), 1);
+            BufferedImage thumb = new BufferedImage(tw, th, imgType);
+            Graphics2D g2 = thumb.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.drawImage(out, 0, 0, tw, th, null);
+            g2.dispose();
+            ImageIO.write(thumb, format, new File(dir, "thumb_" + filename));
+
             String url = "/uploads/" + filename;
-            // 图片压缩：限制最大宽度 1920px
-            try {
-                BufferedImage img = ImageIO.read(new File(dir, filename));
-                int maxW = 1920;
-                if (img.getWidth() > maxW) {
-                    int newW = maxW;
-                    int newH = (int)(maxW * (double)img.getHeight() / img.getWidth());
-                    BufferedImage resized = new BufferedImage(newW, Math.max(newH, 1), BufferedImage.TYPE_INT_RGB);
-                    Graphics2D g2d = resized.createGraphics();
-                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g2d.drawImage(img, 0, 0, newW, newH, null);
-                    g2d.dispose();
-                    ImageIO.write(resized, "jpg", new File(dir, filename));
-                    log.info("图片已压缩: {}x{} -> {}x{}", img.getWidth(), img.getHeight(), newW, newH);
-                }
-            } catch (Exception e) { log.warn("图片压缩失败(非致命): {}", e.getMessage()); }
-            // 生成缩略图（400px宽）
-            try {
-                BufferedImage original = ImageIO.read(new File(dir, filename));
-                int tw = 400;
-                int th = (int)(tw * (double)original.getHeight() / original.getWidth());
-                BufferedImage thumb = new BufferedImage(tw, Math.max(th, 1), BufferedImage.TYPE_INT_RGB);
-                Graphics2D g2d = thumb.createGraphics();
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2d.drawImage(original, 0, 0, tw, th, null);
-                g2d.dispose();
-                ImageIO.write(thumb, "jpg", new File(dir, "thumb_" + filename));
-            } catch (Exception e) { log.warn("缩略图生成失败: {}", e.getMessage()); }
             return Result.success(Map.of("url", url, "thumbUrl", "/uploads/thumb_" + filename, "name", name));
         } catch (Exception e) {
+            log.error("上传失败", e);
             return Result.error("上传失败: " + e.getMessage());
         }
     }

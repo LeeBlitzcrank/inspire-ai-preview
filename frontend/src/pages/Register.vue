@@ -33,6 +33,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register } from '@/api/auth.js'
 import { randomNickname } from '@/utils/nickname.js'
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 
 const avatarEmojis = [
     '🌸',
@@ -81,12 +83,13 @@ const handleRegister = async () => {
       // 清除可能残留的管理员 token
       localStorage.removeItem('adminToken')
       localStorage.removeItem('adminUser')
-      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('token', res.data.accessToken || '')
       localStorage.setItem('isLogin', '1')
       localStorage.setItem('userAccount', res.data.username)
       localStorage.setItem('userNickname', res.data.nickname)
       if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
       localStorage.setItem('userId', res.data.userId)
+      auth.setLoggedIn()
       ElMessage.success('注册成功，自动登录')
       router.push('/')
     } else {

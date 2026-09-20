@@ -84,7 +84,11 @@
           </div>
           <div class="upload-box add-box" @click="triggerUpload">
             <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFile" />
-            <div class="upload-placeholder"><div class="upload-icon">+</div><div class="upload-text">添加图片</div></div>
+            <div v-if="!uploading" class="upload-placeholder"><div class="upload-icon">+</div><div class="upload-text">添加图片</div></div>
+            <div v-else class="upload-placeholder">
+              <el-progress type="circle" :percentage="uploadPercent" :width="52" />
+              <div class="upload-text">上传中 {{ uploadPercent }}%</div>
+            </div>
           </div>
         </div>
       </div>
@@ -259,17 +263,72 @@ onUnmounted(() => {
 
 // 文件上传
 const fileInput = ref(null)
+const uploading = ref(false)
+const uploadPercent = ref(0)
 const triggerUpload = () => { fileInput.value?.click() }
+
+// C. 前端压缩：Canvas 缩到最大边 1920，输出 jpeg（质量 0.85），GIF 不处理
+const compressImage = (file) => new Promise((resolve) => {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file)
+  const img = new Image()
+  const objUrl = URL.createObjectURL(file)
+  img.onload = () => {
+    const maxSide = 1920
+    let w = img.width, h = img.height
+    if (Math.max(w, h) > maxSide) {
+      const ratio = maxSide / Math.max(w, h)
+      w = Math.round(w * ratio); h = Math.round(h * ratio)
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+    URL.revokeObjectURL(objUrl)
+    canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', 0.85)
+  }
+  img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(file) }
+  img.src = objUrl
+})
+
 const handleFile = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-  const fd = new FormData(); fd.append('file', file)
-  try {
-    const res = await uploadFile(fd)
-    if (res.code === 200 && res.data?.url) form.value.images.push(res.data.url)
-    else ElMessage.error('上传失败')
-  } catch (e) { ElMessage.error('上传失败') }
+  const raw = e.target.files[0]
+  if (!raw) return
   e.target.value = ''
+  if (!raw.type.startsWith('image/')) return ElMessage.warning('请选择图片文件')
+
+  // A. 立即本地预览（不等上传完成）
+  const localUrl = URL.createObjectURL(raw)
+  form.value.images.push(localUrl)
+
+  try {
+    uploading.value = true
+    uploadPercent.value = 0
+    // C. 上传前压缩
+    const blob = await compressImage(raw)
+    const fd = new FormData()
+    fd.append('file', blob, raw.name.replace(/\.[^.]+$/, '') + '.jpg')
+
+    // D. 带进度的异步上传
+    const res = await uploadFile(fd, (evt) => {
+      const total = evt.total || evt.loaded || 1
+      uploadPercent.value = Math.min(99, Math.round(evt.loaded * 100 / total))
+    })
+    const idx = form.value.images.indexOf(localUrl)
+    if (res.code === 200 && res.data?.url) {
+      if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)   // 用服务端地址替换本地预览
+      uploadPercent.value = 100
+    } else {
+      if (idx >= 0) form.value.images.splice(idx, 1)
+      ElMessage.error(res.msg || '上传失败')
+    }
+  } catch (err) {
+    const idx = form.value.images.indexOf(localUrl)
+    if (idx >= 0) form.value.images.splice(idx, 1)
+    ElMessage.error('上传失败')
+  } finally {
+    URL.revokeObjectURL(localUrl)
+    uploading.value = false
+    uploadPercent.value = 0
+  }
 }
 
 const removeImage = (idx) => { form.value.images.splice(idx, 1) }
@@ -304,6 +363,10 @@ onMounted(async () => {
 
 const goBack = () => { router.back() }
 const submit = async (status) => {
+  if (uploading.value) return ElMessage.warning('图片上传中，请稍候再提交')
+  // 剔除未完成上传的本地预览（blob:）地址
+  const pending = form.value.images.filter(i => typeof i === 'string' && i.startsWith('blob:'))
+  if (pending.length > 0) return ElMessage.warning('有图片尚未上传完成，请稍候')
   if (!form.value.title) return ElMessage.warning('请填写标题')
   if (!form.value.tag) return ElMessage.warning('请选择分类')
   if (!form.value.content) return ElMessage.warning('请填写灵感详情')

@@ -145,6 +145,8 @@
 </template>
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -152,7 +154,7 @@ import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, get
 import { startConversation } from '@/api/message.js'
 const router = useRouter()
 const unreadCount = ref(0)
-const isLogin = computed(() => !!localStorage.getItem('isLogin'))
+const isLogin = computed(() => auth.isLogin)
 	const activeTab = ref('recommend')
 
 const switchTab = async (tab) => {

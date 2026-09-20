@@ -11,6 +11,9 @@ spring:
   cloud:
     gateway:
       default-filters:
+        # 去重 CORS 响应头，防止下游/代理额外注入导致
+        # "Access-Control-Allow-Origin cannot contain more than one origin"
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
         - name: RequestRateLimiter
           args:
             key-resolver: "#{@userKeyResolver}"

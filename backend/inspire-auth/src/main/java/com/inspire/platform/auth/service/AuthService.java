@@ -41,5 +41,10 @@ public interface AuthService {
 
     void forgotPassword(String email);
 
-    void resetPassword(String token, String newPassword);
+    /**
+     * 重置密码（成功后自动登录）
+     *
+     * @return 新签发的双Token，前端可直接自动登录
+     */
+    TokenResponse resetPassword(String token, String newPassword);
 }

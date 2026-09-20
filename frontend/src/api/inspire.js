@@ -48,7 +48,10 @@ export const adminUpdateConfig = (data) => request.put('/admin/config', data)
 export const adminManualPush = (data) => request.post('/admin/config/push', data)
 
 // ===== 文件上传 =====
-export const uploadFile = (formData) => request.post('/file/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+export const uploadFile = (formData, onUploadProgress) => request.post('/file/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  onUploadProgress
+})
 
 export const exploreInspiration = (data) => request.post('/ai/explore', data)
 

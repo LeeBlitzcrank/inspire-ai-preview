@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { pinia } from '@/stores'
+import { useAuthStore } from '@/stores/auth'
 import Index from '@/pages/index.vue'
 const Search = () => import('@/pages/Search.vue')
 const InspireDetail = () => import('@/pages/InspireDetail.vue')
@@ -58,9 +60,11 @@ const router = createRouter({
   scrollBehavior() { return { top: 0, behavior: 'smooth' } }
 })
 router.beforeEach((to, from, next) => {
-  const login = localStorage.getItem('isLogin')
+  // 方案C：读取全局登录态 store（启动时已从 localStorage 同步，零延迟）
+  const auth = useAuthStore(pinia)
+  auth.init()
   const adminToken = localStorage.getItem('adminToken')
-  if (to.meta.needLogin && !login) {
+  if (to.meta.needLogin && !auth.isLogin) {
     next('/login')
   }
   else if (to.meta.needAdmin && !adminToken) next('/admin/login')

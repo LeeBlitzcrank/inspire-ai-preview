@@ -145,9 +145,9 @@ public class AuthController {
 
     @Operation(summary = "重置密码", description = "使用忘记密码接口获取的令牌设置新密码")
     @PostMapping("/reset-password")
-    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request.getToken(), request.getNewPassword());
-        return Result.success("密码重置成功", null);
+    public Result<TokenResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        TokenResponse resp = authService.resetPassword(request.getToken(), request.getNewPassword());
+        return Result.success("密码重置成功", resp);
     }
 
     // ==================== IP定位 ====================

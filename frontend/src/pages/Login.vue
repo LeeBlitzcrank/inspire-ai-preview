@@ -25,7 +25,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { login } from '@/api/auth.js'
 import { setRememberMe } from '@/utils/tokenStorage.js'
+import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
+const auth = useAuthStore()
 const goForgot = () => { router.push('/forgot-password') }
 const loading = ref(false)
 const remember = ref(false)
@@ -40,6 +42,7 @@ const handleLogin = async () => {
     const res = await login({ username: form.value.account, password: form.value.password })
     if (res.code === 200) {
       setRememberMe(remember.value)
+      auth.setLoggedIn()
       // 清除可能残留的管理员 token，避免 adminToken 影响普通用户请求
       localStorage.removeItem('adminToken')
       localStorage.removeItem('adminUser')

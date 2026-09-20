@@ -150,6 +150,8 @@ import { getUserInfo, getMyInspires, getMyCollects, getMyDrafts,
          uncollectInspire, updateUserInfo, changePassword } from '@/api/inspire.js'
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
 import { randomNickname } from '@/utils/nickname.js'
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
 
 const router = useRouter()
 const userInfo = ref({})
@@ -406,6 +408,7 @@ const handleLogout = () => {
   localStorage.removeItem('token'); localStorage.removeItem('isLogin')
   localStorage.removeItem('userAccount'); localStorage.removeItem('userId')
   localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser')
+  auth.setLoggedOut()
   ElMessage.success('已退出登录'); router.push('/login')
 }
 

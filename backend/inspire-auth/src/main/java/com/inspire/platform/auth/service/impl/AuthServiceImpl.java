@@ -345,7 +345,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void resetPassword(String token, String newPassword) {
+    public TokenResponse resetPassword(String token, String newPassword) {
         LambdaQueryWrapper<PasswordReset> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(PasswordReset::getToken, token);
         wrapper.eq(PasswordReset::getUsed, 0);
@@ -368,6 +368,9 @@ public class AuthServiceImpl implements AuthService {
         passwordResetMapper.updateById(record);
 
         log.info("密码重置成功: userId={}", user.getId());
+
+        // 重置成功后自动创建双Token会话，实现免密自动登录
+        return createDualTokenSession(user);
     }
 
     // ==================== 查询工具 ====================
