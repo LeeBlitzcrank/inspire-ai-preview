@@ -152,7 +152,8 @@ const requireLogin = () => {
     type: 'warning',
     closeOnClickModal: false
   }).then(() => {
-    localStorage.setItem('redirectPath', window.location.pathname)
+    // hash 路由下记录路由路径（供登录后回跳）
+    localStorage.setItem('redirectPath', detail.value.id ? '/detail/' + detail.value.id : '/')
     router.push('/login')
   }).catch(() => {})
 }
@@ -411,7 +412,8 @@ const handleShare = async () => {
 }
 
 const copyShareLink = () => {
-  const url = window.location.origin + '/detail/' + detail.value.id
+  // hash 路由：分享链接必须带 /#/
+  const url = window.location.origin + '/#/detail/' + detail.value.id
   navigator.clipboard.writeText(url).then(() => ElMessage.success('链接已复制'))
   showSharePanel.value = false
 }

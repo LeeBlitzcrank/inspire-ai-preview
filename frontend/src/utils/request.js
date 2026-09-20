@@ -42,7 +42,7 @@ service.interceptors.request.use(async config => {
   // 检查 15 分钟无操作过期
   if (isSessionExpired()) {
     clearAllTokens()
-    window.location.href = '/login'
+    window.location.href = '/#/login'
     return Promise.reject(new Error('Session expired'))
   }
 
@@ -159,9 +159,9 @@ service.interceptors.response.use(
 
 function redirectToLogin(path) {
   if (path.includes('/admin/')) {
-    window.location.href = '/admin/login'
+    window.location.href = '/#/admin/login'
   } else {
-    window.location.href = '/login'
+    window.location.href = '/#/login'
   }
 }
 
