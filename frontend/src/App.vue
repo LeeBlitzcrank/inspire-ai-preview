@@ -1,5 +1,5 @@
 <template>
-  <div ref="designRoot" class="app-design">
+  <div class="app-design">
     <router-view v-slot="{ Component, route }">
       <transition name="page">
         <component :is="Component" :key="route.fullPath" />
@@ -14,43 +14,22 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 const showTop = ref(false)
 const isOnline = ref(navigator.onLine)
-const designRoot = ref(null)
-const DESIGN_WIDTH = 620   // 设计基准宽度（与各页面 max-width 一致）
 
 const onScroll = () => { showTop.value = window.scrollY > 400 }
 const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-// 方案A（zoom 版）：zoom 会重排布局，缩放后元素实际占位 = 620×zoom，
-// 不会像 transform 那样撑出横向滚动条。
-const applyScale = () => {
-  const vw = document.documentElement.clientWidth || window.innerWidth
-  const scale = Math.min(vw / DESIGN_WIDTH, 1)
-  if (designRoot.value) {
-    designRoot.value.style.zoom = scale
-    // 缩放后仍撑满视口高度（min-height 处于缩放坐标系，需除以 scale）
-    designRoot.value.style.minHeight = (window.innerHeight / scale) + 'px'
-  }
-}
-
 onMounted(() => {
-  applyScale()
-  window.addEventListener('resize', applyScale)
   window.addEventListener('scroll', onScroll)
   window.addEventListener('online', () => isOnline.value = true)
   window.addEventListener('offline', () => isOnline.value = false)
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', applyScale)
   window.removeEventListener('scroll', onScroll)
 })
 </script>
 
 <style scoped>
-.app-design {
-  width: 620px;
-  margin: 0 auto;
-  background: #fbfcfe;
-}
+.app-design { width: 100%; background: #fbfcfe; }
 .offline-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#f56c6c; color:#fff; text-align:center; padding:6px; font-size:13px; }
 .back-top { position:fixed; right:16px; bottom:80px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.9); color:#909399; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; z-index:999; transition:all 0.25s; backdrop-filter:blur(4px); box-shadow:0 1px 6px rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.05); }
 .back-top:hover { color:#606266; border-color:#c0c4cc; box-shadow:0 2px 10px rgba(0,0,0,.12); }
@@ -82,4 +61,15 @@ html, body {
   overflow-x: hidden;
 }
 #app { overflow-x: hidden; }
+
+/* iOS Safari：表单控件字号必须 ≥16px，否则聚焦时会自动放大页面并卡在放大态 */
+@media screen and (max-width: 620px) {
+  input,
+  textarea,
+  select,
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 16px !important;
+  }
+}
 </style>
