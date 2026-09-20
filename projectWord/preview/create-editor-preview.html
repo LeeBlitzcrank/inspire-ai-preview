@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  灵感创建页 · 完整样式预览（独立 HTML，无需依赖）
+  预览：双击本文件，或  open "…/create-editor-preview.html"
+  包含：AI 探索 / 标题 / 分类 / 富文本详情 + 语音 / 图片 + AI 配图
+  仅为样式样机，不改动前端项目。看中后我再落成 Vue 组件。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>灵感创建 · 完整样式预览</title>
+<!-- 马善政毛笔楷书（OFL 可商用） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#409eff; --primary-soft:#ecf5ff; --primary-line:#b3d8ff;
+    --text:#1d1d1f; --text-2:#6b7280; --line:#ebeef5; --bg:#fbfcfe; --card:#fff;
+    --danger:#f56c6c; --warn:#e6a23c; --warn-soft:#fdf6ec; --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+  .page{width:94%;max-width:620px;margin:0 auto;padding:16px 0 80px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 14px}
+  .topbar .page-title{font-size:17px;font-weight:600}
+  .topbar .ico{width:38px;height:38px;border-radius:50%;background:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:17px;box-shadow:0 1px 6px rgba(0,0,0,.05);cursor:pointer}
+
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:14px}
+  .label{font-size:13px;color:var(--text-2);margin-bottom:8px;display:block}
+
+  /* ---------- AI 探索 ---------- */
+  .ai-card{background:linear-gradient(180deg,#f5f9ff 0%,#ffffff 60%);border:1px solid #e8f1ff}
+  .ai-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .ai-badge{width:26px;height:26px;border-radius:8px;background:var(--primary-soft);color:var(--primary);
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .ai-title{font-size:15px;font-weight:600}
+  .ai-sub{font-size:12px;color:#a8abb2;margin-left:auto}
+  .explore-input{display:flex;gap:8px}
+  .explore-input input{flex:1;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 14px;
+    font-size:15px;outline:none;background:#fff}
+  .explore-input input:focus{border-color:var(--primary-line)}
+  .explore-btn{height:42px;padding:0 18px;border:none;border-radius:10px;font-size:14px;font-weight:600;
+    color:#fff;background:linear-gradient(135deg,#ffb75e,#f59e0b);cursor:pointer;white-space:nowrap;
+    box-shadow:0 3px 10px rgba(245,158,11,.28)}
+  .explore-btn:active{transform:translateY(1px)}
+
+  .breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
+  .crumb{font-size:12.5px;color:var(--primary);background:var(--primary-soft);
+    padding:3px 10px;border-radius:999px;cursor:pointer}
+  .crumb-sep{color:#c0c4cc;font-size:12px}
+  .summary{margin-top:10px;font-size:13px;color:var(--text-2);line-height:1.7;
+    background:#f8fafc;border-radius:10px;padding:10px 12px}
+
+  .option-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .option-card{border:1px solid var(--line);border-radius:12px;padding:14px 12px;font-size:14px;
+    text-align:center;cursor:pointer;background:#fff;transition:.15s}
+  .option-card:hover{border-color:var(--primary-line);background:var(--primary-soft);color:var(--primary)}
+  .option-card.shuffle{color:var(--text-2);background:#fafbfc}
+  .leaf-notice{margin-top:12px;font-size:13px;color:#67c23a;background:#f0f9eb;
+    border-radius:10px;padding:10px 12px}
+
+  /* ---------- AI 探索 · 暗色书法词云（替换红框区） ---------- */
+  .scene{
+    position:relative;width:100%;height:250px;border-radius:16px;overflow:hidden;
+    background:
+      url('../../frontend/public/bg/explore-bg.svg') center / cover no-repeat,
+      #a8dcd2;
+    box-shadow:0 6px 20px rgba(60,120,110,.18);
+  }
+  .scene .glow{position:absolute;border-radius:50%;filter:blur(36px);opacity:.5;pointer-events:none}
+  .scene .glow{mix-blend-mode:soft-light}
+  .scene .glow.g1{width:200px;height:200px;left:-40px;top:-30px;background:rgba(255,255,255,.85);opacity:.6}
+  .scene .glow.g2{width:220px;height:220px;right:-50px;bottom:-40px;background:rgba(70,150,135,.8);opacity:.45}
+  .scene .shint{position:absolute;z-index:4;left:14px;top:12px;font-size:12px;color:rgba(233,237,242,.7);
+    display:flex;align-items:center;gap:6px}
+  .scene .shint{color:rgba(38,68,63,.72)}
+  .scene .shint .dot{width:6px;height:6px;border-radius:50%;background:#d98200;box-shadow:0 0 8px rgba(217,130,0,.9)}
+  .scene .word{position:absolute;z-index:3;cursor:pointer;user-select:none;
+    font-family:"Ma Shan Zheng","STKaiti","KaiTi","Songti SC",serif;font-weight:400;color:#2f4f4a;
+    line-height:1;white-space:nowrap;
+    rotate:var(--rot,0deg);
+    animation:drift var(--dur,7s) ease-in-out infinite, twinkle var(--tdur,5s) ease-in-out infinite;
+    animation-delay:var(--delay,0s), var(--delay,0s);
+    transition:color .22s, text-shadow .22s, scale .22s, opacity .22s;
+    will-change:translate, opacity;
+    text-shadow:none}
+  .scene .word:hover{scale:1.08}
+  /* 二维游走：左右 + 上下，路径自然不对称 */
+  @keyframes drift{
+    0%  {translate:0 0}
+    25% {translate:8px -7px}
+    50% {translate:-3px -11px}
+    75% {translate:-8px 3px}
+    100%{translate:0 0}
+  }
+  @keyframes twinkle{0%,100%{opacity:var(--tmin,.35)}50%{opacity:var(--tmax,.85)}}
+  .scene .word.small{font-size:15px;--tmin:.42;--tmax:.72}
+  .scene .word.mid{font-size:21px;--tmin:.6;--tmax:.9}
+  .scene .word.big{font-size:32px;--tmin:.78;--tmax:1}
+  /* 主词只是"字号更大"，默认同样是白色；黄色只属于被点中的词 */
+  .scene .word.main{font-size:40px;--tmin:.8;--tmax:1}
+  /* 选中的词：黄色高亮 + 恒定满亮度 + 金色脉冲（替换掉忽明忽暗，避免被压暗） */
+  .scene .word.picked{
+    color:#d98200;
+    animation:drift var(--dur,7s) ease-in-out infinite, pickGlow 1.8s ease-in-out infinite;
+    animation-delay:var(--delay,0s), 0s;
+  }
+  @keyframes pickGlow{
+    0%,100%{text-shadow:0 0 6px rgba(217,130,0,.35),0 0 16px rgba(217,130,0,.18)}
+    50%{text-shadow:0 0 12px rgba(217,130,0,.72),0 0 28px rgba(217,130,0,.42)}
+  }
+  /* 重新探索时：先隐去，再错落浮现 */
+  .scene .word.hide{animation:none;opacity:0;scale:.9}
+  /* 背景光斑缓慢游移 */
+  .scene .glow.g1{animation:drift1 14s ease-in-out infinite}
+  .scene .glow.g2{animation:drift2 17s ease-in-out infinite}
+  @keyframes drift1{0%,100%{translate:0 0;opacity:.4}50%{translate:16px 12px;opacity:.62}}
+  @keyframes drift2{0%,100%{translate:0 0;opacity:.45}50%{translate:-18px -10px;opacity:.65}}
+  .scene .explore-bar{position:absolute;z-index:5;left:12px;right:12px;bottom:12px;display:flex;gap:8px}
+  .scene .explore-bar input{flex:1;height:40px;border-radius:11px;border:1px solid rgba(47,79,74,.18);
+    background:rgba(255,255,255,.82);color:#2f4f4a;padding:0 14px;font-size:14px;outline:none}
+  .scene .explore-bar input::placeholder{color:rgba(47,79,74,.45)}
+  .scene .explore-bar button{height:40px;padding:0 16px;border:none;border-radius:11px;font-size:14px;
+    font-weight:700;color:#5a3d00;background:linear-gradient(135deg,#ffd76a,#f0b429);cursor:pointer;white-space:nowrap;
+    box-shadow:0 3px 12px rgba(240,180,41,.35)}
+
+  /* ---------- 词云轮播：右 → 左 无缝流动 ---------- */
+  .lane{position:absolute;left:0;width:100%;height:0}
+  .lane .track{
+    position:absolute;top:0;left:0;display:flex;align-items:center;white-space:nowrap;
+    will-change:transform;animation:marquee linear infinite;
+  }
+  /* 轨道内的词：去掉绝对定位与漂移，保留"忽明忽暗" */
+  .lane .word{position:static;margin-right:3rem;flex:0 0 auto;
+    animation:twinkle var(--tdur,5s) ease-in-out infinite;animation-delay:var(--delay,0s)}
+  /* 轨道内的词被选中时：只保留金光脉冲，不再叠加漂移 */
+  .lane .word.picked{animation:pickGlow 1.8s ease-in-out infinite}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  /* 悬停暂停，方便点选 */
+  .lane:hover .track{animation-play-state:paused}
+
+  /* ---------- 标题 / 分类 ---------- */
+  .title-input{width:100%;border:none;outline:none;font-size:19px;font-weight:600;color:var(--text);
+    background:transparent;padding:4px 0}
+  .title-input::placeholder{color:#c0c4cc;font-weight:400}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:6px 14px;border-radius:999px;font-size:13px;color:var(--text-2);background:#f5f7fa;
+    cursor:pointer;border:1px solid transparent;transition:.15s}
+  .chip.on{color:var(--primary);background:var(--primary-soft);border-color:var(--primary-line)}
+
+  /* ---------- 富文本编辑器 ---------- */
+  .editor{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .toolbar{display:flex;align-items:center;gap:2px;padding:8px 10px;background:#fafbfc;
+    border-bottom:1px solid var(--line);overflow-x:auto}
+  .toolbar::-webkit-scrollbar{display:none}
+  .tb-btn{flex:0 0 auto;min-width:34px;height:32px;padding:0 8px;border:none;background:transparent;
+    border-radius:8px;cursor:pointer;font-size:14px;color:#4b5563;display:inline-flex;
+    align-items:center;justify-content:center;transition:.15s}
+  .tb-btn:hover{background:#eef1f5}
+  .tb-btn.bold{font-weight:800}
+  .tb-btn.italic{font-style:italic;font-family:Georgia,serif}
+  .tb-btn.h1{font-weight:800;font-size:15px}
+  .tb-btn.h2{font-weight:700;font-size:14px}
+  .tb-btn.ai{color:#6366f1;font-weight:600;margin-left:auto}
+  .tb-divider{width:1px;height:18px;background:var(--line);margin:0 4px;flex:0 0 auto}
+  .editable{min-height:150px;padding:14px 16px;outline:none;font-size:15.5px;line-height:1.75;color:var(--text)}
+  .editable:empty:before{content:attr(data-placeholder);color:#c0c4cc}
+  .editable h1{font-size:22px;font-weight:700;margin:8px 0}
+  .editable h2{font-size:18px;font-weight:700;margin:8px 0}
+  .editable blockquote{margin:8px 0;padding:6px 12px;border-left:3px solid var(--primary);
+    background:#f7fbff;color:#4b5563;border-radius:0 8px 8px 0}
+  .editable ul{margin:8px 0;padding-left:22px}
+  .editable hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+  .editor-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
+    border-top:1px solid var(--line);background:#fafbfc}
+  .mic{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;background:transparent;
+    padding:6px 10px;border-radius:999px;color:var(--text-2);font-size:13px;transition:.15s}
+  .mic:hover{background:#eef1f5}
+  .mic .ico{width:30px;height:30px;border-radius:50%;background:var(--primary-soft);color:var(--primary);
+    display:inline-flex;align-items:center;justify-content:center;font-size:15px;transition:.15s}
+  .mic.rec{color:var(--danger)}
+  .mic.rec .ico{background:#fff0f0;color:var(--danger);animation:pulse 1.1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,108,108,.5)}70%{box-shadow:0 0 0 12px rgba(245,108,108,0)}100%{box-shadow:0 0 0 0 rgba(245,108,108,0)}}
+  .count{font-size:12px;color:#a8abb2}
+
+  /* ---------- 图片 + AI 配图 ---------- */
+  .img-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ai-img-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;border-radius:999px;
+    border:1px solid var(--primary-line);background:var(--primary-soft);color:var(--primary);
+    font-size:12.5px;font-weight:600;cursor:pointer}
+  .image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#f5f7fa;
+    display:flex;align-items:center;justify-content:center}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .del{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;
+    background:rgba(0,0,0,.55);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .thumb.add{border:1.5px dashed #d3dce6;color:#a8abb2;flex-direction:column;gap:4px;cursor:pointer;font-size:12px}
+  .thumb.add .plus{font-size:24px;line-height:1}
+
+  .suggest-panel{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  .suggest-title{font-size:13px;color:var(--text-2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .suggest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .suggest-img{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;cursor:pointer;
+    border:2px solid transparent;background:linear-gradient(135deg,#dbeafe,#ede9fe)}
+  .suggest-img:nth-child(2){background:linear-gradient(135deg,#fef3c7,#fde68a)}
+  .suggest-img:nth-child(3){background:linear-gradient(135deg,#dcfce7,#bbf7d0)}
+  .suggest-img:nth-child(4){background:linear-gradient(135deg,#fee2e2,#fecaca)}
+  .suggest-img:nth-child(5){background:linear-gradient(135deg,#e0e7ff,#c7d2fe)}
+  .suggest-img:nth-child(6){background:linear-gradient(135deg,#cffafe,#a5f3fc)}
+  .suggest-img.selected{border-color:var(--primary)}
+  .suggest-img .check{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+    background:var(--primary);color:#fff;display:none;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .suggest-img.selected .check{display:flex}
+  .suggest-actions{display:flex;gap:10px;margin-top:12px}
+  .suggest-actions .ghost{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);
+    background:#fff;color:var(--text-2);font-size:14px;cursor:pointer}
+  .suggest-actions .primary{flex:1.6;height:40px;border-radius:10px;border:none;background:var(--primary);
+    color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+
+  /* ---------- 底部按钮 ---------- */
+  .actions{display:flex;gap:12px;margin-top:18px}
+  .btn{flex:1;height:46px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.publish{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(64,158,255,.28)}
+  .btn.draft{background:#f5f7fa;color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <span class="ico">🍎</span>
+    <span class="page-title">录入新灵感</span>
+    <span class="ico">👤</span>
+  </div>
+
+  <!-- ============ AI 探索 ============ -->
+  <div class="card ai-card">
+    <!-- 暗色书法词云：点词选方向，底部输入可重新探索 -->
+    <div class="scene" id="scene">
+      <div class="glow g1"></div>
+      <div class="glow g2"></div>
+      <div class="shint"><span class="dot"></span>点选一个方向，继续深入</div>
+
+      <!-- 三层轨道 · 右→左无缝流动（速度不同 = 视差） -->
+      <div class="lane" style="top:20%">
+        <div class="track" style="animation-duration:30s">
+          <span class="word main"  style="--rot:-6deg" data-w="无垢">无垢</span>
+          <span class="word mid"   style="--rot:4deg"  data-w="木纹">木纹</span>
+          <span class="word small" style="--rot:-3deg" data-w="慢生活">慢生活</span>
+          <span class="word mid"   style="--rot:6deg"  data-w="暖光">暖光</span>
+        </div>
+      </div>
+
+      <div class="lane" style="top:48%">
+        <div class="track" style="animation-duration:22s">
+          <span class="word big"   style="--rot:3deg"  data-w="何处">何处</span>
+          <span class="word mid"   style="--rot:-5deg" data-w="窗影">窗影</span>
+          <span class="word small" style="--rot:5deg"  data-w="午后">午后</span>
+          <span class="word big"   style="--rot:-3deg" data-w="不是">不是</span>
+        </div>
+      </div>
+
+      <div class="lane" style="top:76%">
+        <div class="track" style="animation-duration:26s">
+          <span class="word mid"   style="--rot:7deg"  data-w="茶烟">茶烟</span>
+          <span class="word small" style="--rot:-4deg" data-w="旧书">旧书</span>
+          <span class="word small" style="--rot:4deg"  data-w="纸灯">纸灯</span>
+          <span class="word mid"   style="--rot:-6deg" data-w="檐下">檐下</span>
+        </div>
+      </div>
+
+      <div class="explore-bar">
+        <input id="aiKeyword" placeholder="输入关键词，重新探索…" />
+        <button id="exploreBtn">✨ 探索</button>
+      </div>
+    </div>
+
+    <div class="summary" id="summary">
+      换个角度看看：从「光线 + 材质」入手，也许能写出更有画面感的内容。
+    </div>
+
+    <div class="option-grid" id="optionGrid">
+      <div class="option-card">温馨木质客厅</div>
+      <div class="option-card">北欧极简卧室</div>
+      <div class="option-card">阳台绿植角</div>
+      <div class="option-card shuffle" id="reshuffle">🔄 换一批</div>
+    </div>
+  </div>
+
+  <!-- ============ 标题 ============ -->
+  <div class="card">
+    <label class="label">灵感标题</label>
+    <input class="title-input" placeholder="输入简短标题…" />
+  </div>
+
+  <!-- ============ 分类 ============ -->
+  <div class="card">
+    <label class="label">所属分类</label>
+    <div class="chips">
+      <span class="chip on">家居好物</span>
+      <span class="chip">美食</span>
+      <span class="chip">旅行</span>
+      <span class="chip">摄影</span>
+      <span class="chip">穿搭</span>
+      <span class="chip">手作</span>
+    </div>
+  </div>
+
+  <!-- ============ 富文本详情 + 语音 ============ -->
+  <div class="card">
+    <label class="label">灵感详情</label>
+    <div class="editor">
+      <div class="toolbar">
+        <button class="tb-btn bold" data-cmd="bold" title="加粗">B</button>
+        <button class="tb-btn italic" data-cmd="italic" title="斜体">I</button>
+        <span class="tb-divider"></span>
+        <button class="tb-btn h1" data-cmd="h1" title="一级标题">H1</button>
+        <button class="tb-btn h2" data-cmd="h2" title="二级标题">H2</button>
+        <button class="tb-btn" data-cmd="quote" title="引用">❝</button>
+        <button class="tb-btn" data-cmd="ul" title="列表">☰</button>
+        <button class="tb-btn" data-cmd="hr" title="分割线">—</button>
+        <button class="tb-btn" data-cmd="clear" title="清除格式">⌫</button>
+      </div>
+      <div id="editable" class="editable" contenteditable="true"
+           data-placeholder="详细描述你的创意；可用上方按钮加粗、设标题，或点左下角语音输入…"></div>
+      <div class="editor-foot">
+        <button id="mic" class="mic" title="语音输入">
+          <span class="ico">🎤</span><span id="mic-text">点击说话</span>
+        </button>
+        <span id="count" class="count">0 字</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 图片 + AI 配图 ============ -->
+  <div class="card">
+    <div class="img-head">
+      <span class="label" style="margin:0">图片（可多张）</span>
+      <button class="ai-img-btn" id="aiImgBtn">🤖 AI 配图</button>
+    </div>
+    <div class="image-grid">
+      <div class="thumb"><div style="width:100%;height:100%;background:linear-gradient(135deg,#dbeafe,#ede9fe)"></div>
+        <span class="del" onclick="this.parentElement.remove()">✕</span></div>
+      <div class="thumb add"><span class="plus">+</span><span>添加</span></div>
+    </div>
+
+    <!-- AI 配图推荐面板 -->
+    <div class="suggest-panel" id="suggestPanel" style="display:none">
+      <div class="suggest-title">🤖 为你推荐（点击选择）</div>
+      <div class="suggest-grid" id="suggestGrid">
+        <div class="suggest-img"><span class="check">✓</span></div>
+        <div class="suggest-img"><span class="check">✓</span></div>
+        <div class="suggest-img"><span class="check">✓</span></div>
+        <div class="suggest-img"><span class="check">✓</span></div>
+        <div class="suggest-img"><span class="check">✓</span></div>
+        <div class="suggest-img"><span class="check">✓</span></div>
+      </div>
+      <div class="suggest-actions">
+        <button class="ghost" id="reshuffleImg">🔄 换一批</button>
+        <button class="primary" id="useImg">使用选中</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn draft">保存草稿</button>
+    <button class="btn publish">发布</button>
+  </div>
+</div>
+
+<script>
+  /* ---------- 富文本工具栏 ---------- */
+  const editable = document.getElementById('editable')
+  const count = document.getElementById('count')
+  document.querySelectorAll('.tb-btn').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>e.preventDefault())
+    btn.addEventListener('click', ()=>{
+      const c = btn.dataset.cmd; editable.focus()
+      const map = { bold:['bold'], italic:['italic'],
+        h1:['formatBlock',false,'H1'], h2:['formatBlock',false,'H2'],
+        quote:['formatBlock',false,'BLOCKQUOTE'], ul:['insertUnorderedList'],
+        hr:['insertHorizontalRule'] }
+      if(c==='clear'){ document.execCommand('removeFormat'); document.execCommand('formatBlock',false,'P') }
+      else if(c==='hr'){ document.execCommand('insertHorizontalRule') }
+      else document.execCommand(...map[c])
+      updateCount()
+    })
+  })
+  function updateCount(){ count.textContent = editable.innerText.replace(/\s/g,'').length + ' 字' }
+  editable.addEventListener('input', updateCount)
+
+  /* ---------- 语音输入 ---------- */
+  const mic = document.getElementById('mic'), micText = document.getElementById('mic-text')
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  let rec=null, recording=false
+  mic.addEventListener('click', ()=>{
+    if(!SR){ alert('当前浏览器不支持语音识别，请用 Chrome / Safari 体验'); return }
+    if(recording){ rec && rec.stop(); return }
+    rec = new SR(); rec.lang='zh-CN'; rec.interimResults=false; rec.continuous=true
+    rec.onresult = e=>{ const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+      editable.focus(); document.execCommand('insertText',false,t); updateCount() }
+    rec.onend = ()=>{ recording=false; mic.classList.remove('rec'); micText.textContent='点击说话' }
+    rec.onerror = ()=>{ recording=false; mic.classList.remove('rec'); micText.textContent='识别失败，重试' }
+    rec.start(); recording=true; mic.classList.add('rec'); micText.textContent='正在聆听…点击停止'
+  })
+
+  /* ---------- AI 配图 ---------- */
+  const suggestPanel = document.getElementById('suggestPanel')
+  document.getElementById('aiImgBtn').addEventListener('click', ()=>{
+    suggestPanel.style.display = suggestPanel.style.display==='none' ? 'block' : 'none'
+  })
+  document.querySelectorAll('#suggestGrid .suggest-img').forEach(img=>{
+    img.addEventListener('click', ()=> img.classList.toggle('selected'))
+  })
+  document.getElementById('reshuffleImg').addEventListener('click', ()=>{
+    document.querySelectorAll('#suggestGrid .suggest-img').forEach(i=>i.classList.remove('selected'))
+  })
+  document.getElementById('useImg').addEventListener('click', ()=>{
+    alert('（样机）会把选中的图片加入上方图片区')
+  })
+
+  /* ---------- AI 探索（样机：轮播词云 + 点选高亮） ---------- */
+  // 1) 轨道内容复制一份，实现无缝循环（translateX 0 → -50%）
+  document.querySelectorAll('.lane .track').forEach(t=>{ t.innerHTML += t.innerHTML })
+
+  // 2) 点选高亮（只保留一个黄词）
+  const words = () => document.querySelectorAll('.scene .word')
+  words().forEach(w=>{
+    w.addEventListener('click', ()=>{
+      words().forEach(x=>x.classList.remove('picked'))
+      w.classList.add('picked')
+      w.style.scale = '1.2'                       // 点选弹一下
+      setTimeout(()=>{ w.style.scale = '' }, 220)
+      document.getElementById('summary').textContent =
+        '已选择方向「' + w.dataset.w + '」，为你调整下面的选项…'
+    })
+  })
+
+  // 3) 重新探索：加速流动作为反馈（真实实现里会换成新一批词）
+  document.getElementById('exploreBtn').addEventListener('click', ()=>{
+    const kw = document.getElementById('aiKeyword').value.trim() || '关键词'
+    document.getElementById('summary').textContent =
+      '正在以「' + kw + '」重新探索…（词云已换一批）'
+    document.querySelectorAll('.lane .track').forEach((t,i)=>{
+      t.style.animationDuration = (16 + i*4) + 's'
+    })
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  AI 探索 · 「暗色书法词云」样式预览
+  预览：open "…/ai-explore-wordcloud-preview.html"
+  说明：点任意词 = 选择该方向；底部可重新输入关键词探索。
+        背景目前用 CSS 渐变近似，若要真实质感可换成一张 AI 生成的背景图。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>AI 探索 · 暗色书法词云预览</title>
+<style>
+  :root{
+    --gold:#f5d98b; --gold-2:#ffe9a8; --ink:#e9edf2;
+    --bg:#fbfcfe; --card:#fff; --line:#ebeef5; --text:#1d1d1f; --text-2:#6b7280;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+  .page{width:94%;max-width:620px;margin:0 auto;padding:16px 0 80px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 14px}
+  .topbar .page-title{font-size:17px;font-weight:600}
+  .topbar .ico{width:38px;height:38px;border-radius:50%;background:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:17px;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+
+  /* =========== 场景（暗色氛围 + 书法词云） =========== */
+  .scene{
+    position:relative;width:100%;height:440px;border-radius:20px;overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 20% 15%, rgba(120,140,160,.35) 0%, rgba(0,0,0,0) 55%),
+      radial-gradient(90% 80% at 85% 80%, rgba(90,110,130,.30) 0%, rgba(0,0,0,0) 60%),
+      linear-gradient(160deg, #2b3440 0%, #1b222b 45%, #12171d 100%);
+    box-shadow:0 10px 30px rgba(20,26,34,.28);
+  }
+  /* 暗角 */
+  .scene::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 120% at 50% 45%, rgba(0,0,0,0) 45%, rgba(0,0,0,.55) 100%);
+  }
+  /* 氛围光斑 */
+  .glow{position:absolute;border-radius:50%;filter:blur(40px);opacity:.5;pointer-events:none}
+  .glow.g1{width:180px;height:180px;left:-40px;top:10px;background:rgba(245,217,139,.35)}
+  .glow.g2{width:220px;height:220px;right:-60px;bottom:-40px;background:rgba(140,170,200,.30)}
+
+  /* 词（书法体） */
+  .word{
+    position:absolute;z-index:3;cursor:pointer;user-select:none;
+    font-family:"STKaiti","KaiTi","Songti SC","STSong",serif;
+    font-weight:700;color:var(--ink);line-height:1;white-space:nowrap;
+    transition:transform .18s, color .18s, text-shadow .18s, opacity .18s;
+    text-shadow:0 2px 10px rgba(0,0,0,.45);
+  }
+  .word:hover{transform:scale(1.06)}
+  .word.small{font-size:17px;opacity:.42}
+  .word.mid{font-size:26px;opacity:.72}
+  .word.big{font-size:44px;opacity:.95}
+  .word.main{
+    font-size:56px;color:var(--gold);
+    text-shadow:0 0 18px rgba(245,217,139,.75), 0 0 42px rgba(245,217,139,.45), 0 2px 10px rgba(0,0,0,.4);
+    animation:breathe 3.2s ease-in-out infinite;
+  }
+  @keyframes breathe{
+    0%,100%{text-shadow:0 0 18px rgba(245,217,139,.75),0 0 42px rgba(245,217,139,.40),0 2px 10px rgba(0,0,0,.4)}
+    50%{text-shadow:0 0 26px rgba(245,217,139,.95),0 0 60px rgba(245,217,139,.60),0 2px 10px rgba(0,0,0,.4)}
+  }
+  .word.picked{color:var(--gold);text-shadow:0 0 20px rgba(245,217,139,.8),0 0 46px rgba(245,217,139,.45)}
+
+  /* 提示条 */
+  .hint{
+    position:absolute;z-index:4;left:16px;top:14px;font-size:12.5px;color:rgba(233,237,242,.7);
+    display:flex;align-items:center;gap:6px;letter-spacing:.02em;
+  }
+  .hint .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+  /* 底部输入 */
+  .explore-bar{
+    position:absolute;z-index:5;left:14px;right:14px;bottom:14px;
+    display:flex;gap:8px;align-items:center;
+  }
+  .explore-bar input{
+    flex:1;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.10);color:#fff;padding:0 14px;font-size:14.5px;outline:none;
+    backdrop-filter:blur(6px);
+  }
+  .explore-bar input::placeholder{color:rgba(255,255,255,.5)}
+  .explore-bar button{
+    height:42px;padding:0 18px;border:none;border-radius:12px;font-size:14.5px;font-weight:700;
+    color:#3a2c08;background:linear-gradient(135deg,var(--gold-2),var(--gold));cursor:pointer;
+    box-shadow:0 4px 14px rgba(245,217,139,.35);white-space:nowrap;
+  }
+
+  /* 选中反馈 */
+  .picked-note{margin:14px 4px 0;font-size:13.5px;color:var(--text-2);text-align:center}
+  .picked-note b{color:#b8860b}
+
+  .actions{display:flex;gap:12px;margin-top:18px}
+  .btn{flex:1;height:46px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.publish{background:#409eff;color:#fff;box-shadow:0 4px 12px rgba(64,158,255,.28)}
+  .btn.draft{background:#f5f7fa;color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar"><span class="ico">🍎</span><span class="page-title">AI 探索</span><span class="ico">👤</span></div>
+
+  <div class="scene" id="scene">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="hint"><span class="dot"></span>点选一个方向，继续深入</div>
+
+    <!-- 主词（金光） -->
+    <div class="word main"  style="left:6%;top:16%;transform:rotate(-6deg)"  data-w="冬日暖阳">无垢</div>
+    <div class="word big"   style="left:56%;top:8%;"  data-w="静谧">何处</div>
+    <div class="word big"   style="left:34%;top:40%;transform:rotate(4deg)" data-w="治愈">不是</div>
+
+    <!-- 次级词（半透明） -->
+    <div class="word mid"   style="left:70%;top:30%;transform:rotate(8deg)" data-w="木纹">木纹</div>
+    <div class="word mid"   style="left:8%;top:56%;transform:rotate(-4deg)" data-w="窗影">窗影</div>
+    <div class="word mid"   style="left:60%;top:60%;transform:rotate(-7deg)" data-w="暖光">暖光</div>
+
+    <!-- 小词（更淡） -->
+    <div class="word small" style="left:22%;top:74%" data-w="慢生活">慢生活</div>
+    <div class="word small" style="left:46%;top:78%" data-w="午后">午后</div>
+    <div class="word small" style="left:78%;top:70%" data-w="茶烟">茶烟</div>
+    <div class="word small" style="left:5%;top:34%" data-w="旧书">旧书</div>
+    <div class="word small" style="left:52%;top:22%" data-w="纸灯">纸灯</div>
+    <div class="word small" style="left:30%;top:6%" data-w="檐下">檐下</div>
+
+    <div class="explore-bar">
+      <input id="kw" placeholder="输入关键词，重新探索…" />
+      <button id="btn">✨ 探索</button>
+    </div>
+  </div>
+
+  <div class="picked-note" id="note">当前未选择方向</div>
+
+  <div class="actions">
+    <button class="btn draft">保存草稿</button>
+    <button class="btn publish">发布</button>
+  </div>
+</div>
+
+<script>
+  const note = document.getElementById('note')
+  document.querySelectorAll('.word').forEach(w=>{
+    w.addEventListener('click', ()=>{
+      document.querySelectorAll('.word').forEach(x=>x.classList.remove('picked'))
+      w.classList.add('picked')
+      note.innerHTML = '已选择方向：<b>' + w.dataset.w + '</b>（下一层继续探索）'
+    })
+  })
+  document.getElementById('btn').addEventListener('click', ()=>{
+    const kw = document.getElementById('kw').value.trim() || '关键词'
+    note.innerHTML = '正在以「<b>'+kw+'</b>」重新探索…（样机）'
+  })
+</script>
+</body>
+</html>

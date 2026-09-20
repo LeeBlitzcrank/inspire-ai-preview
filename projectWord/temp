@@ -893,3 +893,14 @@ docker compose up -d
 我是通过docker启动，并且git提交测试。还是有404页面。本地是访问哪个地址？
 1、iphone访问ai.20sherry.com，输入账号密码，包括其他输入操作时，会有类似聚焦一样的视觉效果，然后页面就会被拉大,
 等到输入完成页面就不是固定的，而是有上下左右边框。导致后续页面都不是按比例的样子。这个有解决方案么？
+
+1、ios 灵感创建添加图片回显有问题
+GET https://ai.20sherry.com/login 404 (Not Found)
+63c4a5a7d7e64fdd889df2ccb493dd17.jpg:1  GET https://ai.20sherry.com/uploads/63c4a5a7d7e64fdd889df2ccb493dd17.jpg 404 (Not Found)
+
+
+1、灵感创建页面，文本输入不够美观，且加粗、/、H1、H2有问题。
+是否可以和语音输入合并，让输入更加美观？
+你是否可以给我一个样式，我来预览下，看是否做
+
+

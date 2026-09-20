@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  书法/文艺字体对比（用于 AI 探索词云选字）
+  预览：open "…/font-compare.html"
+  字体均为免费可商用（Google Fonts / OFL）或开源，联网加载。
+  看中哪个，告诉我编号即可。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>字体对比 · AI 探索词云</title>
+
+<!-- 系统字体 -->
+<!-- 免费可商用书法/文艺字体（联网加载） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Liu+Jian+Mao+Cao&family=Long+Cang&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<!-- 霞鹜文楷（开源 OFL，通过 CDN） -->
+<link href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" rel="stylesheet">
+
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 18px 60px;background:#12171d;color:#e9edf2;
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{font-size:13px;color:#9aa4b2;margin-bottom:22px}
+  .row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;padding:16px;margin-bottom:14px}
+  .meta{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .no{font-size:12px;font-weight:700;color:#f5d98b;background:rgba(245,217,139,.14);
+    padding:2px 8px;border-radius:999px}
+  .name{font-size:14px;font-weight:600}
+  .tag{font-size:11.5px;color:#9aa4b2;border:1px solid rgba(255,255,255,.14);
+    padding:1px 7px;border-radius:999px}
+  .sample{font-size:34px;line-height:1.5;letter-spacing:.06em;color:#fff;
+    text-shadow:0 2px 10px rgba(0,0,0,.5);word-break:break-all}
+  .sample .g{color:#f5d98b;text-shadow:0 0 16px rgba(245,217,139,.7)}
+  .note{font-size:12px;color:#8b95a3;margin-top:8px}
+
+  /* 各字体 */
+  .f1{font-family:"STKaiti","KaiTi","Songti SC",serif}
+  .f2{font-family:"Ma Shan Zheng",serif}
+  .f3{font-family:"Zhi Mang Xing",serif}
+  .f4{font-family:"Liu Jian Mao Cao",serif}
+  .f5{font-family:"Long Cang",serif}
+  .f6{font-family:"ZCOOL XiaoWei",serif}
+  .f7{font-family:"LXGW WenKai",serif}
+  .f8{font-family:"Noto Serif SC",serif}
+  .f9{font-family:"ZCOOL KuaiLe",serif}
+</style>
+</head>
+<body>
+  <h1>AI 探索词云 · 字体对比</h1>
+  <div class="sub">同一组词：无垢 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟（金色 = 主词效果）</div>
+
+  <div class="row">
+    <div class="meta"><span class="no">①</span><span class="name">系统楷体 STKaiti / KaiTi</span><span class="tag">免费 · Mac/iPhone 自带</span></div>
+    <div class="sample f1"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">零加载、体积 0；但 Windows 会退化成宋体，跨平台不一致。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">②</span><span class="name">马善政毛笔楷书 Ma Shan Zheng</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f2"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">毛笔楷书，最接近你给的那种"书法字"味道；笔画饱满。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">③</span><span class="name">志莽行书 Zhi Mang Xing</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f3"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">行书笔意，连带感强，氛围更"江湖/禅意"。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">④</span><span class="name">柳建毛草 Liu Jian Mao Cao</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f4"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">草书，辨识度低一些，适合纯氛围、不强调可读性时用。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">⑤</span><span class="name">龙藏体 Long Cang</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f5"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">手写感，比草书好认，介于书法与手写之间。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">⑥</span><span class="name">站酷小薇 ZCOOL XiaoWei</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f6"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">文艺宋体，克制、现代；如果不想太"江湖"，选它最稳。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">⑦</span><span class="name">霞鹜文楷 LXGW WenKai</span><span class="tag">OFL · 开源</span></div>
+    <div class="sample f7"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">优雅楷体，中文圈口碑极好、可读性强；完整包较大，需按字子集化。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">⑧</span><span class="name">思源宋体 Noto Serif SC</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f8"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">最稳重、最通用；不书法，但清晰专业。</div>
+  </div>
+
+  <div class="row">
+    <div class="meta"><span class="no">⑨</span><span class="name">站酷快乐体 ZCOOL KuaiLe</span><span class="tag">OFL · 可商用</span></div>
+    <div class="sample f9"><span class="g">无垢</span> 何处 不是 木纹 窗影 暖光 慢生活 午后 茶烟</div>
+    <div class="note">圆润可爱，和"禅意"氛围不搭，列出仅作对比。</div>
+  </div>
+
+  <div class="sub" style="margin-top:24px">
+    提示：②③④⑤⑨ 需要联网加载 Google Fonts；⑦ 走 jsdelivr CDN。
+    实际落地时，只会把**词云用到的那些字**做成子集，体积可压到几十 KB。
+  </div>
+</body>
+</html>
