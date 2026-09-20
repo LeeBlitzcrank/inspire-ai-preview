@@ -5,7 +5,7 @@
       <div id="nav-icon-group" class="right-icons">
         <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
-        <div id="icon-message" class="icon-item" @click="$router.push('/messages')" style="position:relative;">💬</div>
+        <div v-if="isLogin" id="icon-message" class="icon-item" @click="$router.push('/messages')" style="position:relative;">💬</div>
         <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
