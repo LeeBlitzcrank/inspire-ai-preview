@@ -43,6 +43,7 @@ inspire:
       /api/auth/forgot-password,
       /api/auth/reset-password,
       /api/admin/login,
+      /api/file/poster-cover,
       /uploads/**,
       /favicon.ico,
       /actuator/health/**,

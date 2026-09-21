@@ -4,6 +4,8 @@ import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
@@ -214,6 +216,71 @@ public class FileController {
             return Math.round(Double.parseDouble(out));
         } catch (Exception e) {
             return 0L;
+        }
+    }
+
+    /** 允许被代理的图源白名单（防止被当成任意 URL 的开放代理） */
+    private static final Set<String> PROXY_ALLOWED_HOSTS = Set.of(
+            "picsum.photos", "fastly.picsum.photos", "images.unsplash.com",
+            "img.20sherry.com", "api.20sherry.com", "localhost", "127.0.0.1");
+
+    /**
+     * 海报封面代理：把站外图片用本站域名转发出去。
+     *
+     * 各家图源的 CORS 响应在不同网络/边缘节点上并不一致，前端 canvas 直接画会时好时坏；
+     * 走这个接口拿到的字节流由我们自己加 CORS 头，海报导出就稳定了。
+     * 只允许白名单图源，且限制大小，避免变成开放代理。
+     */
+    @Operation(summary = "海报封面代理", description = "仅白名单图源，返回图片字节流并带 CORS 头")
+    @GetMapping("/poster-cover")
+    public ResponseEntity<byte[]> posterCover(@RequestParam("url") String urlStr) {
+        try {
+            URL url = new URI(urlStr).toURL();
+            String host = url.getHost() == null ? "" : url.getHost().toLowerCase();
+            if (!PROXY_ALLOWED_HOSTS.contains(host)) {
+                log.warn("海报封面代理拒绝非白名单图源: {}", host);
+                return ResponseEntity.status(403).build();
+            }
+            String protocol = url.getProtocol();
+            if (!"https".equalsIgnoreCase(protocol) && !"http".equalsIgnoreCase(protocol)) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            if ("https".equalsIgnoreCase(protocol)) {
+                SSLSocketFactory ssf = getTrustAllSslFactory();
+                if (ssf != null && conn instanceof HttpsURLConnection httpsConn) {
+                    httpsConn.setSSLSocketFactory(ssf);
+                    httpsConn.setHostnameVerifier((h, session) -> true);
+                }
+            }
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(15000);
+            conn.connect();
+            if (conn.getResponseCode() != 200) {
+                return ResponseEntity.status(502).build();
+            }
+            String contentType = conn.getContentType();
+            byte[] bytes;
+            try (InputStream in = conn.getInputStream()) {
+                bytes = in.readAllBytes();
+            }
+            conn.disconnect();
+            if (bytes.length == 0 || bytes.length > 12 * 1024 * 1024) {
+                return ResponseEntity.status(413).build();
+            }
+            if (contentType == null || !contentType.startsWith("image/")) {
+                contentType = "image/jpeg";
+            }
+            return ResponseEntity.ok()
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Cache-Control", "public, max-age=86400")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(bytes);
+        } catch (Exception e) {
+            log.warn("海报封面代理失败: {}", e.getMessage());
+            return ResponseEntity.status(502).build();
         }
     }
 

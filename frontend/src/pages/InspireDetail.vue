@@ -240,10 +240,13 @@ import {
   shareInspire,
   uncollectInspire,
   unfollowUser,
-  unlikeInspire,
-  uploadFromUrl
+  unlikeInspire
 } from '@/api/inspire.js'
 import { sanitizeHtml } from '@/utils/sanitizeHtml.js'
+
+// 海报封面代理：站外图片经本站转发，返回的响应带 ACAO，canvas 不会被跨域污染
+const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
+const posterCoverProxy = (url) => `${API_BASE}/file/poster-cover?url=${encodeURIComponent(url)}`
 
 const route = useRoute()
 const router = useRouter()
@@ -757,19 +760,14 @@ const loadPosterCover = async (src) => {
   if (!src) return null
   try {
     const abs = new URL(src, window.location.href)
-    // 站外图源：先让后端抓成本站副本再画。
-    // 各家图源的 CORS 响应在不同网络/边缘节点上并不一致，直连会时好时坏；
-    // 抓回本站后由我们自己控制 CORS 头，海报导出才能稳定成功。
-    // 代理接口需要登录，游客直接走直连，避免 401 把游客弹去登录页
-    if (abs.origin !== window.location.origin && isLogin.value) {
-      const res = await uploadFromUrl(src)
-      if (res?.code === 200 && res.data?.url) {
-        const proxied = await loadImage(res.data.url)
-        if (proxied) return proxied
-      }
+    // 站外图源统一走本站代理接口，CORS 头由我们自己控制，
+    // 不再依赖 picsum / 各家 CDN 在不同网络下是否返回 ACAO（游客也可用）
+    if (abs.origin !== window.location.origin) {
+      const proxied = await loadImage(posterCoverProxy(src))
+      if (proxied) return proxied
     }
   } catch (e) {
-    console.warn('[poster] 封面走服务端代理失败，回退直连', e)
+    console.warn('[poster] 封面代理失败，回退直连', e)
   }
   return await loadImage(src)
 }
