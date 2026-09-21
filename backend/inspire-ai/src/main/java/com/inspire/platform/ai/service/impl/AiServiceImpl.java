@@ -24,7 +24,8 @@ public class AiServiceImpl implements AiService {
     private final String apiUrl;
     private final String model;
 
-    private static final int CACHE_TTL = 3600; // 缓存1小时
+    // 缓存 24 小时：同一关键词的结果可被其他用户直接复用，减少 token 消耗
+    private static final int CACHE_TTL = 24 * 3600;
     // v2：提示词升级为「最终内容 300~500 字」，换前缀让旧的短内容缓存立即失效
     private static final String CACHE_PREFIX = "ai:explore:v2:";
     private final JedisPool jedisPool;
@@ -76,12 +77,18 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public AiExploreResponse explore(AiExploreRequest request) {
-        return doExplore(request.getKeyword(), request.getPath(), request.isRefresh());
+        int variants = request.getVariants() == null ? 3 : Math.max(1, Math.min(5, request.getVariants()));
+        return doExplore(request.getKeyword(), request.getPath(), request.isRefresh(), variants);
     }
 
     private AiExploreResponse doExplore(String keyword, String path, boolean refresh) {
+        return doExplore(keyword, path, refresh, 1);
+    }
+
+    private AiExploreResponse doExplore(String keyword, String path, boolean refresh, int variants) {
         String cacheKey = keyword + (path != null ? "|" + path : "");
-        String json = getOrFetch(cacheKey, keyword, path, refresh);
+        FetchResult fetched = getOrFetch(cacheKey, keyword, path, refresh, variants);
+        String json = fetched.json;
         try {
             // 清理可能的markdown标记
             json = json.replaceAll("```json\\s*|```\\s*", "").trim();
@@ -89,6 +96,7 @@ public class AiServiceImpl implements AiService {
 
             AiExploreResponse resp = new AiExploreResponse();
             resp.setCacheKey(cacheKey);
+            resp.setFromCache(fetched.fromCache);
             resp.setSummary((String) data.getOrDefault("summary", ""));
 
             List<Map<String, String>> optList = (List<Map<String, String>>) data.get("options");
@@ -109,6 +117,25 @@ public class AiServiceImpl implements AiService {
                 content.setTitle((String) contentMap.get("title"));
                 content.setText((String) contentMap.get("text"));
                 content.setTag((String) contentMap.get("tag"));
+                // 多风格候选：解析后主字段与第一组保持一致，兼容旧前端
+                Object rawVariants = contentMap.get("variants");
+                if (rawVariants instanceof List<?> vList && !vList.isEmpty()) {
+                    List<AiExploreResponse.Variant> variantList = new ArrayList<>();
+                    for (Object item : vList) {
+                        if (!(item instanceof Map<?, ?> vm)) continue;
+                        AiExploreResponse.Variant variant = new AiExploreResponse.Variant();
+                        variant.setStyle(vm.get("style") == null ? null : String.valueOf(vm.get("style")));
+                        variant.setTitle(vm.get("title") == null ? null : String.valueOf(vm.get("title")));
+                        variant.setText(vm.get("text") == null ? null : String.valueOf(vm.get("text")));
+                        variantList.add(variant);
+                    }
+                    if (!variantList.isEmpty()) {
+                        content.setVariants(variantList);
+                        AiExploreResponse.Variant first = variantList.get(0);
+                        if (first.getTitle() != null) content.setTitle(first.getTitle());
+                        if (first.getText() != null) content.setText(first.getText());
+                    }
+                }
                 resp.setContent(content);
             }
 
@@ -125,7 +152,9 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    private String getOrFetch(String cacheKey, String keyword, String path, boolean refresh) {
+    /** 取缓存或调用模型；fromCache=true 表示本次没有消耗 token */
+    private FetchResult getOrFetch(String cacheKey, String keyword, String path, boolean refresh, int variants) {
+        FetchResult result = new FetchResult();
         String redisKey = CACHE_PREFIX + cacheKey;
         if (refresh) {
             log.info("换一批: keyword={}", keyword);
@@ -137,11 +166,14 @@ public class AiServiceImpl implements AiService {
         if (jedisPool != null) {
             try (Jedis jedis = jedisPool.getResource()) { cached = jedis.get(redisKey); }
         }
-        if (cached != null) {
-            return cached;
+        if (cached != null && !cached.isBlank()) {
+            result.json = cached;
+            result.fromCache = true;
+            log.info("命中AI缓存（未消耗token）: {}", cacheKey);
+            return result;
         }
 
-        String prompt = buildPrompt(keyword, path);
+        String prompt = buildPrompt(keyword, path, variants);
         log.info("DeepSeek请求: cacheKey={}", cacheKey);
 
         Map<String, Object> body = new HashMap<>();
@@ -150,7 +182,7 @@ public class AiServiceImpl implements AiService {
                 Map.of("role", "system", "content",
                         "你是一个创意灵感生成器。返回JSON格式数据，不要markdown标记。\n" +
                         "当有子选项时返回：{\"summary\":\"概括\",\"options\":[{\"id\":\"xxx\",\"label\":\"选项\"}],\"content\":null}\n" +
-                        "当到达最终内容时返回：{\"summary\":\"概括\",\"options\":[],\"content\":{\"title\":\"标题\",\"text\":\"详细内容\",\"tag\":\"分类\"}}\n" +
+                        "当到达最终内容时返回：{\"summary\":\"概括\",\"options\":[],\"content\":{\"title\":\"标题\",\"text\":\"详细内容\",\"tag\":\"分类\",\"variants\":[{\"style\":\"风格名\",\"title\":\"标题\",\"text\":\"正文\"}]}}\n" +
                         "硬性要求：最终内容的 text 必须是 300~500 个中文字符，分成 3~5 个自然段；" +
                         "其中至少一段用“1. 2. 3.”分条给出可执行的具体建议；语气自然、内容具体，不要空话套话。"),
                 Map.of("role", "user", "content", prompt)));
@@ -182,15 +214,23 @@ public class AiServiceImpl implements AiService {
                     } catch (Exception ex) { /* 记录失败不影响主流程 */ }
                 }).start();
             } catch (Exception ex) { /* 忽略 */ }
-            return msg;
+            result.json = msg;
+            return result;
         } catch (Exception e) {
             log.warn("DeepSeek调用失败: {}", e.getMessage());
             // 降级返回
-            return "{\"summary\":\"关于「" + keyword + "」的创意灵感\",\"options\":[{\"id\":\"create\",\"label\":\"直接创作\"}],\"content\":null}";
+            result.json = "{\"summary\":\"关于「" + keyword + "」的创意灵感\",\"options\":[{\"id\":\"create\",\"label\":\"直接创作\"}],\"content\":null}";
+            return result;
         }
     }
 
-    private String buildPrompt(String keyword, String path) {
+    /** 缓存读取结果：json + 是否命中缓存 */
+    private static final class FetchResult {
+        private String json = "";
+        private boolean fromCache = false;
+    }
+
+    private String buildPrompt(String keyword, String path, int variants) {
         if (path == null || path.isEmpty()) {
             return "用户对「" + keyword + "」感兴趣。请返回关于「" + keyword + "」的3~5个探索方向。" +
                    "每个方向是一个子选项，用户会点击深入。返回JSON格式options。";
@@ -209,6 +249,10 @@ public class AiServiceImpl implements AiService {
                "。请围绕「" + focus + "」直接返回最终灵感内容(content)，不要options。" +
                "content.title 是 10~20 字的标题；content.text 必须是 300~500 个中文字符，" +
                "分成 3~5 个自然段，其中至少一段用“1. 2. 3.”分条列出可落地的建议，" +
-               "内容要具体、有画面感，不要泛泛而谈；content.tag 从「家居/美食/旅行/摄影/穿搭/手作/运动/文案/电影/生活」中选一个。";
+               "内容要具体、有画面感，不要泛泛而谈；content.tag 从「家居/美食/旅行/摄影/穿搭/手作/运动/文案/电影/生活」中选一个。" +
+               "另外必须在 content.variants 里一次给出 " + variants + " 组不同风格的文案，" +
+               "每组格式 {\"style\":\"风格名\",\"title\":\"标题\",\"text\":\"正文\"}，" +
+               "style 用「温柔治愈/干货清单/故事叙事/活泼种草」这类中文风格名，各组标题与正文必须明显不同，" +
+               "每组的 text 同样满足 300~500 字的要求；content.title 与 content.text 取第一组的内容。";
     }
 }

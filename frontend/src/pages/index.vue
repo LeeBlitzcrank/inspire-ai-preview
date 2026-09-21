@@ -13,7 +13,6 @@
     <div class="tab-bar">
      <span class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">👇 推荐卡片</span>
      <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
-     <span class="tab-item" :class="{active: activeTab==='hot'}" @click="switchTab('hot')">🔥 热门排行</span>
      <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='following'}" @click="switchTab('following')">👥 关注</span>
    </div>
 
@@ -62,14 +61,6 @@
       </div>
     </transition>
     </div>
-    <!-- 热门 / 推荐 -->
-  <div v-if="activeTab === 'hot'" class="feed-list">
-    <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
-    <div v-if="loading" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
-    <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
-    <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
-  </div>
-
   <!-- 关注：关注的人列表 / 灵感列表 -->
   <div v-if="activeTab === 'following'" class="feed-list">
     <div v-if="!selectedFollowee && !loading" class="following-list">
@@ -150,7 +141,7 @@ const auth = useAuthStore()
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
+import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder, getCategoryTree } from '@/api/inspire.js'
 import { startConversation } from '@/api/message.js'
 const router = useRouter()
 const unreadCount = ref(0)
@@ -158,14 +149,20 @@ const isLogin = computed(() => auth.isLogin)
 	const activeTab = ref('recommend')
 
 const switchTab = async (tab) => {
-  if (tab === 'recommend') await loadSwipeCards()
+  if (tab === 'recommend') {
+    stopAutoAdvance()
+    await loadSwipeCards(true)
+    scheduleAutoAdvance()
+  } else {
+    stopAutoAdvance()
+  }
   activeTab.value = tab
   inspireList.value = []
   currentPage.value = 1
   hasMore.value = true
   selectedFollowee.value = null
   resetCategory()
-  if (tab === 'following') {
+  if (tab === 'following' && followingList.value.length === 0) {
     try {
       const res = await getFollowing()
       followingList.value = res.data || []
@@ -205,17 +202,16 @@ const fetchUnreadCount = async () => {
   } catch (e) { console.error(e) }
 }
 
-const categoryList = ref([
-  { id:1, name:'美食', icon:'🍜', count:268 }, { id:2, name:'运动', icon:'🏃', count:135 },
-  { id:3, name:'电影', icon:'🎬', count:96 }, { id:4, name:'穿搭', icon:'👗', count:182 },
-  { id:5, name:'文案', icon:'✍️', count:321 }
-])
-const subData = {
-  美食: [{id:101,name:'鸡腿'},{id:102,name:'火锅'},{id:103,name:'烧烤'}],
-  运动: [{id:201,name:'跑步'},{id:202,name:'健身'},{id:203,name:'篮球'}],
-  电影: [{id:301,name:'悬疑片'},{id:302,name:'纪录片'},{id:303,name:'喜剧片'}],
-  穿搭: [{id:401,name:'夏日穿搭'},{id:402,name:'通勤穿搭'}],
-  文案: [{id:501,name:'短视频文案'},{id:502,name:'朋友圈文案'}]
+// 分类改为后台可配置：从 /api/inspire/public/categories 读取两级分类
+const categoryList = ref([])
+
+const loadCategories = async () => {
+  try {
+    const res = await getCategoryTree()
+    categoryList.value = res.data || []
+  } catch (e) {
+    console.error('[categories]', e)
+  }
 }
 
 const activeCategory = ref('')
@@ -226,7 +222,7 @@ const loading = ref(false)
 
 const handleClickCategory = (item) => {
   activeCategory.value = item.name; activeSubItem.value = ''; inspireList.value = []
-  currentSubList.value = subData[item.name] ?? []
+  currentSubList.value = item.children || []
 }
 const currentPage = ref(1)
 const hasMore = ref(true)
@@ -246,11 +242,7 @@ const loadInspireList = async () => {
   if (loading.value) return
   loading.value = true
   try {
-    if (activeTab.value === 'hot') {
-      const res = await getInspireList({ sort: 'heat', page: currentPage.value, size: 10 })
-      if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
-      if (!res.data || res.data.length < 10) hasMore.value = false
-    } else if (activeTab.value === 'recommend') {
+    if (activeTab.value === 'recommend') {
       const res = await getRecommendList({ page: currentPage.value, size: 10 })
             console.log("[SWIPE] recommend API response:", JSON.stringify(res.data ? res.data.slice(0,2) : null))
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
@@ -289,12 +281,28 @@ const onScroll = () => {
   const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
   if (nearBottom) loadMore()
 }
-onMounted(() => {
+const onVisibilityChange = () => {
+  if (document.hidden) stopAutoAdvance()
+  else scheduleAutoAdvance()
+}
+
+onMounted(async () => {
   window.addEventListener("scroll", onScroll)
-  if (isLogin.value) fetchUnreadCount()
-  loadSwipeCards()
+  document.addEventListener("visibilitychange", onVisibilityChange)
+  // 首页并行预取，避免点进去才发现要等接口
+  const preload = []
+  if (isLogin.value) {
+    preload.push(fetchUnreadCount())
+    preload.push(getFollowing().then(r => { followingList.value = r.data || [] }).catch(() => {}))
+  }
+  await Promise.all([loadSwipeCards(true), loadCategories(), ...preload])
+  scheduleAutoAdvance()
 })
-onBeforeUnmount(() => window.removeEventListener("scroll", onScroll))
+onBeforeUnmount(() => {
+  window.removeEventListener("scroll", onScroll)
+  document.removeEventListener("visibilitychange", onVisibilityChange)
+  stopAutoAdvance()
+})
 
 const resetCategory = () => { activeCategory.value = ''; currentSubList.value = []; activeSubItem.value = ''; inspireList.value = [] }
 const resetSubItem = () => { activeSubItem.value = ''; inspireList.value = [] }
@@ -346,19 +354,53 @@ const newFolderName = ref('')
     return 'food'
   }
   
-  async function loadSwipeCards() {
+  /** 推荐卡片：每批 10 条，读完自动再取下一批（第 11 条会去查 11-20 条） */
+  const RECOMMEND_BATCH = 10
+  const recommendPage = ref(1)
+  const recommendHasMore = ref(true)
+  const recommendLoading = ref(false)
+
+  const toSwipeCard = (i) => ({
+    word: i.title,
+    type: typeFromTag(i.tag),
+    tag: i.tag,
+    inspireId: i.id,
+    img: i.img || (i.images && i.images.length > 0 ? i.images[0] : '') || ''
+  })
+
+  async function loadSwipeCards(reset = true) {
+    if (recommendLoading.value) return
+    if (!reset && !recommendHasMore.value) return
+    recommendLoading.value = true
+    const page = reset ? 1 : recommendPage.value
     try {
-      const res = await getRecommendList({ page: 1, size: 20 })
-      if (res.data && res.data.length > 0) {
-        swipeCards.value = res.data.map(function(i) {
-          return { word: i.title, type: typeFromTag(i.tag), tag: i.tag, inspireId: i.id, img: i.img || (i.images && i.images.length > 0 ? (typeof i.images[0] === "string" && !i.images[0].startsWith("http") && import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + i.images[0] : i.images[0]) : "") || "" }
-        })
+      const res = await getRecommendList({ page, size: RECOMMEND_BATCH })
+      const list = (res.data || []).map(toSwipeCard)
+      if (reset) {
+        swipeCards.value = list
         currentIndex.value = 0
-        if (res.data && res.data.length > 0) console.log('[SWIPE] raw keys:', Object.keys(res.data[0]), 'img:', res.data[0].img)      }
-    } catch (e) { console.error(e) }
+        recommendPage.value = 1
+      } else {
+        const seen = new Set(swipeCards.value.map(c => String(c.inspireId)))
+        swipeCards.value.push(...list.filter(c => !seen.has(String(c.inspireId))))
+      }
+      recommendHasMore.value = list.length >= RECOMMEND_BATCH
+      if (!reset) recommendPage.value = page + 1
+    } catch (e) {
+      console.error(e)
+    } finally {
+      recommendLoading.value = false
+    }
+  }
+
+  /** 快读完时提前把下一批拿回来，避免翻卡时等待 */
+  const prefetchCards = () => {
+    if (!recommendHasMore.value || recommendLoading.value) return
+    if (swipeCards.value.length - currentIndex.value <= 3) loadSwipeCards(false)
   }
   
   const onSwipeStart = (e) => {
+    stopAutoAdvance()
     isDragging.value = true
     startX.value = e.clientX || (e.touches && e.touches[0].clientX)
     cardTransition.value = ''
@@ -397,6 +439,7 @@ const newFolderName = ref('')
     }
     wasSwiped.value = Math.abs(offsetX.value) > 50
     offsetX.value = 0
+    scheduleAutoAdvance()
   }
   const goDetailSwipe = () => {
   if (!wasSwiped.value && currentCard.value) {
@@ -405,13 +448,38 @@ const newFolderName = ref('')
   wasSwiped.value = false
 }
 
-const nextCard = () => {
+/** 自动滑动：无操作 6 秒后自动左滑跳过下一张 */
+const AUTO_SWIPE_DELAY = 6000
+let autoSwipeTimer = null
+
+const stopAutoAdvance = () => {
+  if (autoSwipeTimer) { clearTimeout(autoSwipeTimer); autoSwipeTimer = null }
+}
+
+const scheduleAutoAdvance = () => {
+  stopAutoAdvance()
+  if (activeTab.value !== 'recommend' || !currentCard.value) return
+  autoSwipeTimer = setTimeout(() => {
+    if (activeTab.value === 'recommend' && currentCard.value) swipeLeft()
+  }, AUTO_SWIPE_DELAY)
+}
+
+const nextCard = async () => {
     wasSwiped.value = false
-    currentIndex.value++
-    if (currentIndex.value >= swipeCards.value.length) currentIndex.value = 0
+    const nextIndex = currentIndex.value + 1
+    // 已经翻到本批最后一张时，先补充下一批再继续
+    if (nextIndex >= swipeCards.value.length && recommendHasMore.value) {
+      await loadSwipeCards(false)
+    }
+    currentIndex.value = nextIndex < swipeCards.value.length ? nextIndex : 0
+    // 关键修复：重置位移，否则新卡片会带着上一张的 translateX 直接飞在屏幕外
+    offsetX.value = 0
+    cardTransition.value = ''
     const c = document.querySelector('.card')
     if (c) { c.style.transition = 'none'; c.style.transform = 'translateX(0) rotate(0)' }
     likeOpacity.value = 0; passOpacity.value = 0
+    prefetchCards()
+    scheduleAutoAdvance()
   }
   const goToCardDetail = () => {
     const c = currentCard.value
@@ -420,11 +488,13 @@ const nextCard = () => {
     }
   }
   const swipeLeft = () => {
+    stopAutoAdvance()
     cardTransition.value = 'transform 0.3s ease'
     offsetX.value = -450
     setTimeout(nextCard, 300)
   }
   const swipeRight = async () => {
+    stopAutoAdvance()
     if (currentCard.value && currentCard.value.inspireId) {
       try {
         await loadCollectFolders()
@@ -440,6 +510,10 @@ const nextCard = () => {
         }
       } catch (e) { ElMessage.error('收藏失败') }
     }
+    // 右滑收藏后同样翻到下一张
+    cardTransition.value = 'transform 0.3s ease'
+    offsetX.value = 450
+    setTimeout(nextCard, 300)
   }
 
 const handleMsgFromFollow = async (u) => {

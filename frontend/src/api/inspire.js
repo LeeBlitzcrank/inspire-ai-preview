@@ -104,3 +104,28 @@ export const getCollectListByFolder = (folderId) => request.get('/inspire/collec
 
 export const moveCollectToFolder = (inspireId, folderId) => request.put(`/inspire/collect/${inspireId}/move`, { folderId })
 export const uploadFromUrl = (url) => request.post('/file/upload-from-url', { url })
+
+// ===== 分类（两级）与 AI 探索词云 =====
+export const getCategoryTree = () => request.get('/inspire/public/categories')
+export const getWordCloud = () => request.get('/inspire/public/word-cloud')
+
+export const adminCategoryList = () => request.get('/admin/category/list')
+export const adminCreateCategory = (data) => request.post('/admin/category', data)
+export const adminUpdateCategory = (data) => request.put('/admin/category', data)
+export const adminDeleteCategory = (id) => request.delete(`/admin/category/${id}`)
+
+export const adminWordCloudList = () => request.get('/admin/word-cloud/list')
+export const adminCreateWord = (data) => request.post('/admin/word-cloud', data)
+export const adminUpdateWord = (data) => request.put('/admin/word-cloud', data)
+export const adminDeleteWord = (id) => request.delete(`/admin/word-cloud/${id}`)
+
+// ===== 视频处理（ffmpeg） =====
+export const probeVideo = (url) => request.post('/file/video/probe', { url })
+export const compressVideo = (url, crf, keepOriginal = true) =>
+  request.post('/file/video/compress', { url, crf, keepOriginal: String(keepOriginal) })
+export const trimVideo = (url, start, duration, keepOriginal = true) => request.post('/file/video/trim', {
+  url,
+  start: String(start),
+  duration: String(duration),
+  keepOriginal: String(keepOriginal)
+})

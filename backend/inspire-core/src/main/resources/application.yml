@@ -12,8 +12,12 @@ spring:
       continue-on-error: true
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      # 图片 5MB / 视频 50MB，这里放宽到 100MB：超过业务限制时由业务层返回友好提示，
+      # 而不是让 Tomcat 直接断开连接（浏览器会显示 ERR_CONNECTION_RESET）
+      max-file-size: 100MB
+      max-request-size: 120MB
+      # 超过限制时不要直接断开连接，否则浏览器会看到 ERR_CONNECTION_RESET
+      resolve-lazily: true
   web:
     resources:
       cache:

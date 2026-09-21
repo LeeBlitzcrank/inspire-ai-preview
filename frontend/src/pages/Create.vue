@@ -58,6 +58,21 @@
         <div v-if="leafContent" class="leaf-notice">
           ✅ 灵感已生成，在下方编辑后发布
         </div>
+
+        <!-- 一次生成的多组风格候选，点一下切换 -->
+        <div v-if="contentVariants.length > 1" class="variant-bar">
+          <span class="variant-label">换风格</span>
+          <button
+            v-for="(v, i) in contentVariants"
+            :key="i"
+            type="button"
+            class="variant-chip"
+            :class="{ active: activeVariant === i }"
+            @click="applyVariant(i)"
+          >
+            {{ v.style || ('风格' + (i + 1)) }}
+          </button>
+        </div>
       </div>
 
       <!-- ============ 灵感标题 ============ -->
@@ -111,13 +126,21 @@
           <button type="button" class="ai-img-btn" @click="toggleSuggest">🤖 AI 配图</button>
         </div>
         <div class="image-grid">
-          <div v-for="(img, idx) in form.images" :key="img + '#' + idx" class="thumb">
-            <img loading="lazy" :src="img" alt="" />
+          <div
+            v-for="(img, idx) in form.images"
+            :key="img + '#' + idx"
+            class="thumb"
+            :class="{ picked: selectedImage === img }"
+            @click="selectedImage = img"
+          >
+            <video v-if="isVideoUrl(img)" :src="img" muted playsinline preload="metadata"></video>
+            <img v-else loading="lazy" :src="img" alt="" />
+            <span v-if="isVideoUrl(img)" class="video-badge">▶</span>
             <div v-if="imageProgress[img] !== undefined" class="thumb-mask">{{ imageProgress[img] }}%</div>
             <span class="del" @click.stop="removeImage(idx)">✕</span>
           </div>
           <div class="thumb add" @click="triggerUpload">
-            <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="handleFile" />
+            <input ref="fileInput" type="file" accept="image/*,video/*" multiple hidden @change="handleFile" />
             <template v-if="!uploading">
               <span class="plus">+</span><span>添加</span>
             </template>
@@ -125,6 +148,39 @@
               <el-progress type="circle" :percentage="uploadPercent" :width="44" />
               <span>上传中 {{ uploadingCount }} 张</span>
             </template>
+          </div>
+        </div>
+
+        <!-- 视频处理：压缩 / 裁剪（服务端 ffmpeg） -->
+        <!-- 图片滤镜：选中某张图后可一键套用预设滤镜 -->
+        <div v-if="selectedImage && !isVideoUrl(selectedImage)" class="filter-bar">
+          <span class="filter-label">滤镜</span>
+          <button
+            v-for="f in IMAGE_FILTERS"
+            :key="f.key"
+            type="button"
+            class="filter-chip"
+            :disabled="filtering"
+            @click="applyFilter(f)"
+          >
+            <img :src="filterPreviewSrc" :style="{ filter: f.css }" alt="">
+            <span>{{ f.label }}</span>
+          </button>
+          <span v-if="filtering" class="filter-tip">处理中…</span>
+        </div>
+
+        <div v-if="videoItems.length" class="video-tools">
+          <label class="video-keep">
+            <input v-model="keepOriginalOnly" type="checkbox" />
+            <span>只保留最终版（压缩/裁剪完成后自动删除原片）</span>
+          </label>
+          <div v-for="v in videoItems" :key="v.url" class="video-tool-row">
+            <span class="video-tool-name">🎬 {{ v.name || '视频' }}</span>
+            <span class="video-tool-meta">{{ v.sizeText }}<template v-if="v.duration"> · {{ v.duration }}s</template></span>
+            <button type="button" class="ghost" :disabled="!!v.processing" @click="doCompress(v)">
+              {{ v.processing === 'compress' ? '压缩中…' : '压缩' }}
+            </button>
+            <button type="button" class="ghost" :disabled="!!v.processing" @click="openTrim(v)">裁剪</button>
           </div>
         </div>
 
@@ -157,6 +213,19 @@
         <button type="button" class="btn publish" :disabled="loading" @click="submit(1)">发布</button>
       </div>
     </div>
+
+    <!-- 视频裁剪：按秒指定开始时间与保留时长 -->
+    <el-dialog v-model="trimDialogVisible" title="裁剪视频" width="320px">
+      <div class="trim-tip">
+        {{ trimTarget?.name || '视频' }}<template v-if="trimTarget?.duration"> · 总时长 {{ trimTarget.duration }} 秒</template>
+      </div>
+      <el-input v-model="trimStart" placeholder="开始时间（秒）" />
+      <el-input v-model="trimDuration" placeholder="保留时长（秒）" style="margin-top:10px" />
+      <template #footer>
+        <el-button @click="trimDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="trimming" @click="doTrim">确定裁剪</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -164,13 +233,27 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo, suggestImages as suggestImagesApi } from '@/api/inspire.js'
+import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo, suggestImages as suggestImagesApi, compressVideo, trimVideo, getWordCloud, getCategoryTree } from '@/api/inspire.js'
 import { autoFormatHtml } from '@/utils/autoFormat.js'
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)
 
-const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
+// 分类由后台维护，改成读接口；接口异常时退回一份默认值
+const DEFAULT_TAGS = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
+const tags = ref([...DEFAULT_TAGS])
+
+const loadTags = async () => {
+  try {
+    const res = await getCategoryTree()
+    const names = (res.data || []).map(c => c.name).filter(Boolean)
+    if (names.length) {
+      tags.value = names.includes('其他') ? names : [...names, '其他']
+    }
+  } catch (e) {
+    console.error('[tags]', e)
+  }
+}
 const loading = ref(false)
 const form = ref({ title: '', tag: '', content: '', images: [], publishCity: '' })
 
@@ -247,19 +330,39 @@ const summary = ref('')
 const path = ref([])
 const pathLabels = ref([])
 const leafContent = ref(null)
+const contentVariants = ref([])
+const activeVariant = ref(0)
 
 // —— AI 探索 · 词云（把当前层的选项渲染成流动的书法词） ——
 const pickedWordId = ref(null)
 const CLOUD_SIZES = ['main', 'mid', 'small', 'mid']
 // 词云固定展示的一级方向词：点词只更新下方选项，词云本身永不变化
-const DEFAULT_CLOUD_WORDS = ['灵感', '生活', '旅行', '美食', '摄影', '家居', '手作', '穿搭']
+// 词云是「推荐词/探索方向」，不是分类；这里是接口不可用时的兜底词
+const DEFAULT_CLOUD_WORDS = ['小户型收纳', '一人食', '秋日露营', '通勤穿搭', '手机摄影', '周末短途', '手冲咖啡', '情绪管理']
+// 后台可配置：优先读取 sys_word_cloud，接口不可用时退回默认词
+const cloudWords = ref(DEFAULT_CLOUD_WORDS.map(w => ({ word: w, weight: 0 })))
+
+const loadCloudWords = async () => {
+  try {
+    const res = await getWordCloud()
+    const words = (res.data || [])
+      .map(w => ({ word: w.word, weight: Number(w.weight || 0) }))
+      .filter(w => w.word)
+    if (words.length) cloudWords.value = words
+  } catch (e) {
+    console.error('[word-cloud]', e)
+  }
+}
 
 const cloudLanes = computed(() => {
-  const src = DEFAULT_CLOUD_WORDS.map((label, i) => ({
+  const src = cloudWords.value.map((item, i) => ({
     id: 'd' + i,
-    label,
+    label: item.word,
     deco: true,
-    size: CLOUD_SIZES[i % CLOUD_SIZES.length],
+    size: item.weight >= 5 ? 'main'
+      : item.weight >= 3 ? 'mid'
+      : item.weight > 0 ? 'small'
+      : CLOUD_SIZES[i % CLOUD_SIZES.length],
     rot: ((i * 37) % 13) - 6
   }))
   const laneCount = src.length <= 4 ? 1 : (src.length <= 8 ? 2 : 3)
@@ -341,11 +444,24 @@ const selectOption = async (opt) => {
 const applyContent = (c) => {
   leafContent.value = c
   options.value = []
+  // 一次生成的多组风格候选（后端 content.variants）
+  contentVariants.value = Array.isArray(c.variants) ? c.variants.filter(v => v && v.text) : []
+  activeVariant.value = 0
   form.value.title = c.title || form.value.title
   form.value.tag = c.tag || form.value.tag
   // 编辑器以 HTML 存储：AI 返回的纯文本先自动排版（段落/编号/清单）再追加
   const add = c.text ? autoFormatHtml(c.text) : ''
   setContent((form.value.content || '') + add)
+}
+
+/** 切换风格：直接替换标题与正文（避免和上一组内容叠加） */
+const applyVariant = (index) => {
+  const v = contentVariants.value[index]
+  if (!v) return
+  activeVariant.value = index
+  if (v.title) form.value.title = v.title
+  if (v.text) setContent(autoFormatHtml(v.text))
+  ElMessage.success('已切换到「' + (v.style || ('风格' + (index + 1))) + '」')
 }
 
 const reshuffle = async () => {
@@ -450,6 +566,204 @@ const uploadPercent = computed(() => {
 })
 const triggerUpload = () => { fileInput.value?.click() }
 
+// ===== 图片滤镜（纯前端 Canvas 烘焙，不需要后端） =====
+const IMAGE_FILTERS = [
+  { key: 'none', label: '原图', css: 'none' },
+  { key: 'fresh', label: '清新', css: 'saturate(1.18) brightness(1.06) contrast(0.98)' },
+  { key: 'warm', label: '暖阳', css: 'sepia(0.28) saturate(1.22) brightness(1.05)' },
+  { key: 'film', label: '胶片', css: 'contrast(1.18) saturate(0.82) sepia(0.18)' },
+  { key: 'cool', label: '冷调', css: 'hue-rotate(-14deg) saturate(1.08) brightness(1.02)' },
+  { key: 'mono', label: '黑白', css: 'grayscale(1) contrast(1.06)' }
+]
+const selectedImage = ref('')
+const filtering = ref(false)
+// 记录「当前图 -> 原图」，保证每次滤镜都是从原图重新烘焙，不会叠加
+const imageOrigin = ref({})
+const originOf = (url) => imageOrigin.value[url] || url
+/** 滤镜预览与烘焙都以原图为准 */
+const filterPreviewSrc = computed(() => originOf(selectedImage.value))
+
+/** 把 CSS 滤镜烘焙进图片，返回处理后的 Blob */
+const bakeFilter = (src, css) => new Promise((resolve, reject) => {
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
+      const ctx = canvas.getContext('2d')
+      // Canvas filter：Chrome 52+ / Firefox 49+ / Safari 17+
+      if ('filter' in ctx) ctx.filter = css
+      ctx.drawImage(img, 0, 0)
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('导出失败')), 'image/jpeg', 0.92)
+    } catch (e) {
+      reject(e)
+    }
+  }
+  img.onerror = () => reject(new Error('图片加载失败'))
+  img.src = src
+})
+
+const applyFilter = async (preset) => {
+  const url = selectedImage.value
+  if (!url || filtering.value) return
+  if (/\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(url))) return ElMessage.warning('视频不支持滤镜')
+  const origin = originOf(url)
+
+  // 选「原图」= 还原成最初上传的那张
+  if (preset.key === 'none') {
+    if (origin !== url) {
+      replaceMediaUrl(url, origin)
+      imageOrigin.value[origin] = origin
+      delete imageOrigin.value[url]
+      selectedImage.value = origin
+      ElMessage.success('已还原为原图')
+    }
+    return
+  }
+
+  filtering.value = true
+  try {
+    // 始终基于原图烘焙，避免「黑白 + 暖阳」这种叠加
+    const blob = await bakeFilter(origin, preset.css)
+    const fd = new FormData()
+    fd.append('file', blob, 'filtered.jpg')
+    const res = await uploadFile(fd)
+    if (res.code === 200 && res.data?.url) {
+      imageOrigin.value[res.data.url] = origin
+      delete imageOrigin.value[url]
+      replaceMediaUrl(url, res.data.url)
+      selectedImage.value = res.data.url
+      ElMessage.success('已应用「' + preset.label + '」')
+    } else {
+      ElMessage.error(res.msg || '滤镜应用失败')
+    }
+  } catch (e) {
+    ElMessage.error('滤镜应用失败：' + (e.message || '未知错误'))
+  } finally {
+    filtering.value = false
+  }
+}
+
+// ===== 视频 =====
+const VIDEO_MAX_SIZE = 50 * 1024 * 1024
+const videoMeta = ref({})                 // 服务端 url -> { name, sizeText, duration, processing }
+const keepOriginalOnly = ref(false)       // 只保留最终版：处理后删掉原片
+const isVideoUrl = (u) => /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(u || ''))
+const videoItems = computed(() => form.value.images
+  .filter(isVideoUrl)
+  .map(url => ({ url, ...(videoMeta.value[url] || {}) })))
+
+const replaceMediaUrl = (oldUrl, newUrl) => {
+  const idx = form.value.images.indexOf(oldUrl)
+  if (idx >= 0) form.value.images.splice(idx, 1, newUrl)
+}
+
+// 视频不做前端压缩，原样上传，压缩/裁剪交给服务端 ffmpeg
+const uploadVideoOne = async (raw) => {
+  if (raw.size > VIDEO_MAX_SIZE) { ElMessage.warning('视频不能超过 50MB'); return }
+  const localUrl = URL.createObjectURL(raw)
+  form.value.images.push(localUrl)
+  imageProgress.value[localUrl] = 0
+  uploadingCount.value++
+  try {
+    const fd = new FormData()
+    fd.append('file', raw, raw.name)
+    const res = await uploadFile(fd, (evt) => {
+      const total = evt.total || evt.loaded || 1
+      imageProgress.value[localUrl] = Math.min(99, Math.round(evt.loaded * 100 / total))
+    })
+    const idx = form.value.images.indexOf(localUrl)
+    if (res.code === 200 && res.data?.url) {
+      if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
+      videoMeta.value[res.data.url] = {
+        name: res.data.name || raw.name,
+        sizeText: (raw.size / 1024 / 1024).toFixed(1) + 'MB',
+        duration: Number(res.data.duration || 0),
+        processing: ''
+      }
+    } else {
+      if (idx >= 0) form.value.images.splice(idx, 1)
+      ElMessage.error(res.msg || '视频上传失败')
+    }
+  } catch (e) {
+    const idx = form.value.images.indexOf(localUrl)
+    if (idx >= 0) form.value.images.splice(idx, 1)
+    ElMessage.error('视频上传失败')
+  } finally {
+    URL.revokeObjectURL(localUrl)
+    delete imageProgress.value[localUrl]
+    uploadingCount.value = Math.max(0, uploadingCount.value - 1)
+  }
+}
+
+const applyProcessed = (oldUrl, data) => {
+  replaceMediaUrl(oldUrl, data.url)
+  delete videoMeta.value[oldUrl]
+  videoMeta.value[data.url] = {
+    name: data.name,
+    sizeText: data.sizeText || '',
+    duration: Number(data.duration || 0),
+    processing: ''
+  }
+}
+
+const doCompress = async (v) => {
+  if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = 'compress'
+  else videoMeta.value[v.url] = { processing: 'compress' }
+  try {
+    const res = await compressVideo(v.url, 28, !keepOriginalOnly.value)
+    if (res.code === 200 && res.data?.url) {
+      applyProcessed(v.url, res.data)
+      ElMessage.success('压缩完成，当前大小 ' + (res.data.sizeText || ''))
+    } else {
+      ElMessage.error(res.msg || '压缩失败')
+      if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = ''
+    }
+  } catch (e) {
+    ElMessage.error('压缩失败，请确认服务端已安装 ffmpeg')
+    if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = ''
+  }
+}
+
+const trimDialogVisible = ref(false)
+const trimTarget = ref(null)
+const trimStart = ref('0')
+const trimDuration = ref('')
+const trimming = ref(false)
+
+const openTrim = (v) => {
+  trimTarget.value = v
+  trimStart.value = '0'
+  trimDuration.value = v.duration ? String(v.duration) : ''
+  trimDialogVisible.value = true
+}
+
+const doTrim = async () => {
+  const target = trimTarget.value
+  if (!target) return
+  if (!trimDuration.value || Number(trimDuration.value) <= 0) {
+    ElMessage.warning('请填写需要保留的时长（秒）')
+    return
+  }
+  trimming.value = true
+  try {
+    const res = await trimVideo(target.url, Number(trimStart.value) || 0, Number(trimDuration.value), !keepOriginalOnly.value)
+    if (res.code === 200 && res.data?.url) {
+      applyProcessed(target.url, res.data)
+      trimDialogVisible.value = false
+      ElMessage.success('裁剪完成')
+    } else {
+      ElMessage.error(res.msg || '裁剪失败')
+    }
+  } catch (e) {
+    ElMessage.error('裁剪失败，请确认服务端已安装 ffmpeg')
+  } finally {
+    trimming.value = false
+  }
+}
+
 // C. 前端压缩：Canvas 缩到最大边 1920，输出 jpeg（质量 0.85），GIF 不处理
 const compressImage = (file) => new Promise((resolve) => {
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file)
@@ -491,6 +805,8 @@ const uploadOne = async (raw) => {
     const idx = form.value.images.indexOf(localUrl)
     if (res.code === 200 && res.data?.url) {
       if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
+      // 记录原图，滤镜始终从这张开始烘焙
+      imageOrigin.value[res.data.url] = res.data.url
     } else {
       if (idx >= 0) form.value.images.splice(idx, 1)
       ElMessage.error(res.msg || '上传失败')
@@ -513,18 +829,23 @@ const handleFile = async (e) => {
   if (!files.length) return
 
   const images = files.filter(f => f.type.startsWith('image/'))
-  if (!images.length) return ElMessage.warning('请选择图片文件')
+  const videos = files.filter(f => f.type.startsWith('video/'))
+  if (!images.length && !videos.length) return ElMessage.warning('请选择图片或视频文件')
 
   const room = MAX_IMAGES - form.value.images.length
-  if (room <= 0) return ElMessage.warning(`最多上传 ${MAX_IMAGES} 张图片`)
-  if (images.length > room) ElMessage.warning(`最多 ${MAX_IMAGES} 张，已忽略多余的 ${images.length - room} 张`)
+  if (room <= 0) return ElMessage.warning(`最多上传 ${MAX_IMAGES} 个文件`)
+  const picked = [...images, ...videos]
+  if (picked.length > room) ElMessage.warning(`最多 ${MAX_IMAGES} 个，已忽略多余的 ${picked.length - room} 个`)
 
-  await Promise.all(images.slice(0, room).map(uploadOne))
+  await Promise.all(picked.slice(0, room)
+    .map(f => f.type.startsWith('video/') ? uploadVideoOne(f) : uploadOne(f)))
 }
 
 const removeImage = (idx) => { form.value.images.splice(idx, 1) }
 // 编辑模式：预填表单
 onMounted(async () => {
+  loadCloudWords()
+  loadTags()
   if (route.params.id) {
     document.title = '编辑灵感'
     try {
@@ -683,6 +1004,19 @@ const useSuggestedImages = async () => {
 .option-shuffle { color:#6b7280; background:#fafbfc; }
 .option-shuffle:hover { border-color:#b3d8ff; background:#ecf5ff; color:#409eff; }
 .leaf-notice { margin-top:12px; font-size:13px; color:#67c23a; background:#f0f9eb; border-radius:10px; padding:10px 12px; text-align:center; }
+.variant-bar {
+  margin-top:10px; padding:8px 10px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  background:#f4fbf6; border-radius:10px;
+}
+.variant-label { font-size:12.5px; color:#4f8a48; }
+.variant-chip {
+  padding:5px 14px; font-size:12.5px;
+  border:1.5px solid #cfe6cf; border-radius:999px;
+  background:#fff; color:#4f8a48; cursor:pointer;
+}
+.variant-chip:hover { border-color:#7ec07a; }
+.variant-chip.active { background:#4f8a48; border-color:#4f8a48; color:#f3faf2; font-weight:600; }
 
 /* ---------- 标题 / 分类 ---------- */
 .title-input { width:100%; border:none; outline:none; font-size:19px; font-weight:600; color:#1d1d1f; background:transparent; padding:4px 0; }
@@ -726,6 +1060,44 @@ const useSuggestedImages = async () => {
 .image-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 .thumb { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#f5f7fa; display:flex; align-items:center; justify-content:center; }
 .thumb img { width:100%; height:100%; object-fit:cover; }
+.thumb video { width:100%; height:100%; object-fit:cover; background:#000; }
+.video-badge {
+  position:absolute; left:6px; bottom:6px;
+  width:22px; height:22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55); color:#fff; font-size:11px;
+}
+.video-tools { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.thumb.picked { outline:2px solid #409eff; outline-offset:2px; }
+.filter-bar {
+  margin-top:12px; padding:10px 12px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  border-radius:12px; background:#f4f7fd;
+}
+.filter-label { font-size:12.5px; color:#6b7280; }
+.filter-chip {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:6px 8px; border:2px solid transparent; border-radius:10px;
+  background:#fff; cursor:pointer; font-size:11px; color:#6b7280;
+}
+.filter-chip:hover:not(:disabled) { border-color:#c6dcff; }
+.filter-chip:disabled { opacity:.55; cursor:not-allowed; }
+.filter-chip img { width:42px; height:42px; object-fit:cover; border-radius:6px; display:block; }
+.filter-tip { font-size:12px; color:#409eff; }
+.video-keep {
+  display:flex; align-items:center; gap:8px;
+  font-size:12.5px; color:#6b7280; cursor:pointer;
+}
+.video-keep input { width:14px; height:14px; accent-color:#409eff; }
+.video-tool-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:12px;
+  background:#f4f7fd; font-size:13px; color:#374151;
+}
+.video-tool-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.video-tool-meta { color:#8a94a6; font-size:12px; }
+.video-tool-row .ghost { padding:5px 12px; font-size:12px; }
+.trim-tip { margin-bottom:10px; font-size:13px; color:#6b7280; }
 .thumb .del { position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 .thumb.add { border:1.5px dashed #d3dce6; color:#a8abb2; flex-direction:column; gap:4px; cursor:pointer; font-size:12px; }
 .thumb.add .plus { font-size:24px; line-height:1; }

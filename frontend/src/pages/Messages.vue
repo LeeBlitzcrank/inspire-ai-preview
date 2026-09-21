@@ -165,7 +165,13 @@ const formatTime = (t) => {
 const formatTimeDetail = (t) => {
   if (!t) return ''
   const d = new Date(t)
-  return d.toTimeString().slice(0, 5)
+  const now = new Date()
+  const hhmm = d.toTimeString().slice(0, 5)
+  if (d.toDateString() === now.toDateString()) return hhmm
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return '昨天 ' + hhmm
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hhmm
 }
 
 

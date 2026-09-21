@@ -16,6 +16,8 @@ const AdminDashboard = () => import('@/pages/admin/AdminDashboard.vue')
 const AdminInspire = () => import('@/pages/admin/AdminInspire.vue')
 const AdminUser = () => import('@/pages/admin/AdminUser.vue')
 const AdminConfig = () => import('@/pages/admin/AdminConfig.vue')
+const AdminCategory = () => import('@/pages/admin/AdminCategory.vue')
+const AdminWordCloud = () => import('@/pages/admin/AdminWordCloud.vue')
 const NotFound = () => import('@/pages/NotFound.vue')
 const Notifications = () => import("@/pages/Notifications.vue")
 const Forbidden = () => import('@/pages/Forbidden.vue')
@@ -47,6 +49,8 @@ const routes = [
       { path: 'dashboard', component: AdminDashboard },
       { path: 'inspire', component: AdminInspire },
       { path: 'user', component: AdminUser },
+      { path: 'category', component: AdminCategory },
+      { path: 'word-cloud', component: AdminWordCloud },
       { path: 'config', component: AdminConfig },
     ]
   },

@@ -216,3 +216,71 @@ CREATE TABLE IF NOT EXISTS `sys_upload_image` (
   KEY `idx_file_key` (`file_key`),
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图片上传元数据表';
+
+-- ==================== 分类（两级）与 AI 探索词云 ====================
+SET NAMES utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `sys_category` (
+  `id` BIGINT NOT NULL COMMENT '主键ID',
+  `parent_id` BIGINT NOT NULL DEFAULT 0 COMMENT '父级ID，0 表示一级分类',
+  `name` VARCHAR(50) NOT NULL COMMENT '分类名称',
+  `icon` VARCHAR(20) DEFAULT '' COMMENT '图标（emoji）',
+  `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序，越小越靠前',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
+  `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0正常 1已删除',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_parent` (`parent_id`),
+  KEY `idx_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感分类（两级）';
+
+CREATE TABLE IF NOT EXISTS `sys_word_cloud` (
+  `id` BIGINT NOT NULL COMMENT '主键ID',
+  `word` VARCHAR(50) NOT NULL COMMENT '词云词条',
+  `weight` INT NOT NULL DEFAULT 1 COMMENT '权重，用于控制字号',
+  `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序，越小越靠前',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
+  `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0正常 1已删除',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_word` (`word`),
+  KEY `idx_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI探索词云词条';
+
+-- 初始化分类（与前台原来的硬编码保持一致）
+INSERT INTO `sys_category` (id, parent_id, name, icon, sort_order, status) VALUES
+  (1001, 0, '美食', '🍜', 1, 1),
+  (1002, 0, '运动', '🏃', 2, 1),
+  (1003, 0, '电影', '🎬', 3, 1),
+  (1004, 0, '穿搭', '👗', 4, 1),
+  (1005, 0, '文案', '✍️', 5, 1),
+  (1101, 1001, '鸡腿', '', 1, 1),
+  (1102, 1001, '火锅', '', 2, 1),
+  (1103, 1001, '烧烤', '', 3, 1),
+  (1201, 1002, '跑步', '', 1, 1),
+  (1202, 1002, '健身', '', 2, 1),
+  (1203, 1002, '篮球', '', 3, 1),
+  (1301, 1003, '悬疑片', '', 1, 1),
+  (1302, 1003, '纪录片', '', 2, 1),
+  (1303, 1003, '喜剧片', '', 3, 1),
+  (1401, 1004, '夏日穿搭', '', 1, 1),
+  (1402, 1004, '通勤穿搭', '', 2, 1),
+  (1501, 1005, '短视频文案', '', 1, 1),
+  (1502, 1005, '朋友圈文案', '', 2, 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+
+-- 初始化词云词条
+INSERT INTO `sys_word_cloud` (id, word, weight, sort_order, status) VALUES
+  (2001, '小户型收纳', 5, 1, 1),
+  (2002, '一人食', 4, 2, 1),
+  (2003, '秋日露营', 4, 3, 1),
+  (2004, '通勤穿搭', 3, 4, 1),
+  (2005, '手机摄影', 3, 5, 1),
+  (2006, '周末短途', 3, 6, 1),
+  (2007, '手冲咖啡', 2, 7, 1),
+  (2008, '情绪管理', 2, 8, 1),
+  (2009, '桌面改造', 2, 9, 1),
+  (2010, '胶片色调', 2, 10, 1)
+ON DUPLICATE KEY UPDATE `word` = VALUES(`word`);

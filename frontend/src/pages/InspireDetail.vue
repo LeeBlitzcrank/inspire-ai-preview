@@ -7,7 +7,15 @@
     </header>
 
     <section class="gallery">
-      <img class="gallery-main" :src="mainImage" alt="灵感配图" @error="mainImageError = true">
+      <video
+        v-if="isVideo(mainImage)"
+        class="gallery-main video-main"
+        :src="mainImage"
+        controls
+        playsinline
+        preload="metadata"
+      ></video>
+      <img v-else class="gallery-main" :src="mainImage" alt="灵感配图" @error="mainImageError = true">
       <div v-if="imageList.length > 1" class="thumbs">
         <button
           v-for="(image, index) in imageList"
@@ -17,7 +25,8 @@
           type="button"
           @click="selectImage(index)"
         >
-          <img class="thumb-item" :src="image" :alt="`图片 ${index + 1}`">
+          <video v-if="isVideo(image)" class="thumb-item" :src="image" muted playsinline preload="metadata"></video>
+          <img v-else class="thumb-item" :src="image" :alt="`图片 ${index + 1}`">
         </button>
       </div>
       <div class="image-count">{{ activeImageIndex + 1 }}/{{ imageList.length }} · 点击缩略图切换</div>
@@ -186,14 +195,29 @@
         <div class="share-header">分享灵感</div>
         <div class="share-count">已分享 {{ detail.shareCount ?? 0 }} 次</div>
         <div class="share-divider"></div>
-        <button class="share-option" type="button" @click="nativeShare">
-          <span class="share-icon">↗</span>
-          <span>分享到其他应用</span>
-        </button>
         <button class="share-option" type="button" @click="copyShareLink">
           <span class="share-icon">⌁</span>
           <span>复制链接</span>
         </button>
+        <button class="share-option" type="button" :disabled="posterBuilding" @click="makePoster">
+          <span class="share-icon">🖼</span>
+          <span>{{ posterBuilding ? '正在生成海报…' : '生成分享海报' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="posterVisible" class="overlay poster-overlay" @click.self="posterVisible = false">
+      <div class="poster-panel">
+        <img v-if="posterUrl" class="poster-img" :src="posterUrl" alt="分享海报">
+        <div class="poster-actions">
+          <a
+            v-if="posterUrl"
+            class="poster-btn primary"
+            :href="posterUrl"
+            :download="`inspire-${detail.id || 'poster'}.png`"
+          >保存图片</a>
+          <button class="poster-btn" type="button" @click="posterVisible = false">关闭</button>
+        </div>
       </div>
     </div>
   </div>
@@ -203,6 +227,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import QRCode from 'qrcode'
 import {
   collectInspire,
   createComment,
@@ -229,6 +254,9 @@ const liked = ref(false)
 const collected = ref(false)
 const isFollowing = ref(false)
 const showSharePanel = ref(false)
+const posterVisible = ref(false)
+const posterUrl = ref('')
+const posterBuilding = ref(false)
 const activeImageIndex = ref(0)
 const mainImageError = ref(false)
 const authorAvatarError = ref(false)
@@ -304,6 +332,9 @@ const commentHasMore = computed(() => !commentLoading.value && allCommentRecords
 
 const isImageAvatar = (avatar) => typeof avatar === 'string'
   && (avatar.startsWith('http') || avatar.startsWith('/') || avatar.startsWith('data:'))
+
+/** 判断媒体地址是否为视频，详情页据此渲染 <video> 播放器 */
+const isVideo = (u) => /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(u || ''))
 
 const firstGrapheme = (value) => {
   const chars = Array.from(String(value || '').trim())
@@ -631,10 +662,13 @@ const toggleCollect = async () => {
 }
 
 const handleShare = async () => {
-  try {
-    await shareInspire(detail.value.id)
-    detail.value.shareCount = (detail.value.shareCount ?? 0) + 1
-  } catch (e) {}
+  // 分享计数接口需要登录，游客只打开分享面板，不要因为 401 被弹回登录页
+  if (isLogin.value) {
+    try {
+      await shareInspire(detail.value.id)
+      detail.value.shareCount = (detail.value.shareCount ?? 0) + 1
+    } catch (e) {}
+  }
   showSharePanel.value = true
 }
 
@@ -644,11 +678,201 @@ const copyShareLink = () => {
   showSharePanel.value = false
 }
 
-const nativeShare = () => {
-  if (navigator.share) {
-    navigator.share({ title: detail.value.title, url: window.location.href }).catch(() => {})
+/* ==================== 分享海报（纯前端 Canvas 生成） ==================== */
+
+const POSTER_W = 1080
+const POSTER_H = 1440
+
+/** 以 cover 方式把图片裁切铺满目标区域 */
+const drawImageCover = (ctx, img, x, y, w, h) => {
+  const scale = Math.max(w / img.width, h / img.height)
+  const sw = w / scale
+  const sh = h / scale
+  const sx = (img.width - sw) / 2
+  const sy = (img.height - sh) / 2
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
+}
+
+const roundRectPath = (ctx, x, y, w, h, r) => {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
+
+/** 按最大宽度折行，超出 maxLines 时补省略号 */
+const wrapText = (ctx, text, maxWidth, maxLines) => {
+  const chars = Array.from(String(text || '').replace(/\s+/g, ' ').trim())
+  const lines = []
+  let current = ''
+  for (const ch of chars) {
+    const test = current + ch
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current)
+      current = ch
+      if (lines.length === maxLines) break
+    } else {
+      current = test
+    }
   }
-  showSharePanel.value = false
+  if (lines.length < maxLines && current) lines.push(current)
+  if (lines.length === maxLines) {
+    let last = lines[maxLines - 1]
+    const rest = chars.slice(lines.join('').length)
+    if (rest.length > 0) {
+      while (ctx.measureText(last + '…').width > maxWidth && last.length > 1) {
+        last = last.slice(0, -1)
+      }
+      lines[maxLines - 1] = last + '…'
+    }
+  }
+  return lines
+}
+
+const loadImage = (src) => new Promise((resolve) => {
+  if (!src) { resolve(null); return }
+  const img = new Image()
+  // 只有跨域图片才需要 crossOrigin。同源图片（例如本站 /uploads/xxx.jpg）设了反而会
+  // 触发一次 CORS 校验，服务端没回 ACAO 时图片会直接加载失败，海报里就只剩渐变底色。
+  try {
+    const abs = new URL(src, window.location.href)
+    if (abs.origin !== window.location.origin) img.crossOrigin = 'anonymous'
+  } catch (e) {
+    img.crossOrigin = 'anonymous'
+  }
+  img.onload = () => resolve(img)
+  img.onerror = () => resolve(null)
+  img.src = src
+})
+
+const makePoster = async () => {
+  if (posterBuilding.value) return
+  posterBuilding.value = true
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = POSTER_W
+    canvas.height = POSTER_H
+    const ctx = canvas.getContext('2d')
+
+    // 纸张底色 + 细边框
+    const bg = ctx.createLinearGradient(0, 0, POSTER_W, POSTER_H)
+    bg.addColorStop(0, '#fdfaf5')
+    bg.addColorStop(1, '#eef5ea')
+    ctx.fillStyle = bg
+    ctx.fillRect(0, 0, POSTER_W, POSTER_H)
+    ctx.strokeStyle = 'rgba(79,138,72,.35)'
+    ctx.lineWidth = 3
+    roundRectPath(ctx, 32, 32, POSTER_W - 64, POSTER_H - 64, 36)
+    ctx.stroke()
+
+    const pad = 84
+    const contentW = POSTER_W - pad * 2
+
+    // 顶部标识
+    ctx.fillStyle = '#4f8a48'
+    ctx.font = '600 30px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    ctx.fillText('灵感手账 · INSPIRE DAILY', pad, 140)
+
+    // 主图
+    const imgY = 180
+    const imgH = 560
+    // 海报封面优先取图片，避免视频首帧取不到
+    const coverSrc = imageList.value.find(u => !isVideo(u)) || ''
+    const cover = await loadImage(coverSrc)
+    ctx.save()
+    roundRectPath(ctx, pad, imgY, contentW, imgH, 32)
+    ctx.clip()
+    if (cover) {
+      drawImageCover(ctx, cover, pad, imgY, contentW, imgH)
+    } else {
+      const g = ctx.createLinearGradient(pad, imgY, pad + contentW, imgY + imgH)
+      g.addColorStop(0, '#cfe4c8')
+      g.addColorStop(1, '#f3ddc4')
+      ctx.fillStyle = g
+      ctx.fillRect(pad, imgY, contentW, imgH)
+    }
+    ctx.restore()
+
+    // 标签
+    let cursorY = imgY + imgH + 76
+    const tag = tagList.value[0]
+    if (tag) {
+      ctx.font = '600 26px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      const tagW = ctx.measureText('#' + tag).width + 44
+      ctx.fillStyle = '#e6f2e4'
+      roundRectPath(ctx, pad, cursorY - 34, tagW, 52, 26)
+      ctx.fill()
+      ctx.fillStyle = '#4f8a48'
+      ctx.fillText('#' + tag, pad + 22, cursorY + 2)
+    }
+
+    // 标题
+    cursorY += 96
+    ctx.fillStyle = '#3f362c'
+    ctx.font = '700 54px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    const titleLines = wrapText(ctx, detail.value.title || '未命名灵感', contentW, 2)
+    titleLines.forEach((line, i) => ctx.fillText(line, pad, cursorY + i * 72))
+    cursorY += titleLines.length * 72 + 26
+
+    // 正文摘要
+    ctx.fillStyle = '#6b5c4c'
+    ctx.font = '400 30px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    const plain = String(detail.value.content || DEFAULT_DESC).replace(/\s+/g, ' ')
+    const descLines = wrapText(ctx, plain, contentW, 2)
+    descLines.forEach((line, i) => ctx.fillText(line, pad, cursorY + i * 46))
+
+    // 底部：作者 + 二维码
+    const footY = POSTER_H - 250
+    ctx.strokeStyle = 'rgba(79,138,72,.28)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(pad, footY - 50)
+    ctx.lineTo(POSTER_W - pad, footY - 50)
+    ctx.stroke()
+
+    const authorName = detail.value.nickname || detail.value.username || '灵感创作者'
+    ctx.fillStyle = '#3f362c'
+    ctx.font = '600 34px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    ctx.fillText(authorName, pad, footY + 20)
+    ctx.fillStyle = '#93826f'
+    ctx.font = '400 26px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    ctx.fillText(publishText.value, pad, footY + 68)
+
+    // 二维码
+    const shareUrl = `${window.location.origin}/#/detail/${detail.value.id}`
+    const qrDataUrl = await QRCode.toDataURL(shareUrl, {
+      width: 300,
+      margin: 0,
+      color: { dark: '#3f362c', light: '#ffffff' }
+    })
+    const qrImg = await loadImage(qrDataUrl)
+    const qrSize = 180
+    const qrX = POSTER_W - pad - qrSize
+    const qrY = footY - 30
+    if (qrImg) {
+      ctx.fillStyle = '#ffffff'
+      roundRectPath(ctx, qrX - 14, qrY - 14, qrSize + 28, qrSize + 28, 18)
+      ctx.fill()
+      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+    }
+    ctx.fillStyle = '#93826f'
+    ctx.font = '400 24px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('扫码查看灵感', qrX + qrSize / 2, qrY + qrSize + 46)
+    ctx.textAlign = 'left'
+
+    posterUrl.value = canvas.toDataURL('image/png')
+    posterVisible.value = true
+    showSharePanel.value = false
+  } catch (e) {
+    ElMessage.error('海报生成失败，请稍后再试')
+    console.error('[poster]', e)
+  } finally {
+    posterBuilding.value = false
+  }
 }
 
 const handleEdit = () => router.push({ name: 'Edit', params: { id: detail.value.id } })
@@ -743,6 +967,12 @@ const handleToggleFollow = async () => {
   object-fit: cover;
   border-radius: 19px;
   box-shadow: 5px 6px 0 rgba(230, 120, 51, .16);
+}
+
+/* 视频不裁切，保留完整画面 */
+.gallery-main.video-main {
+  object-fit: contain;
+  background: #000;
 }
 
 .thumbs {
@@ -1170,6 +1400,43 @@ h1 {
   background: #e67833;
   font-size: 18px;
 }
+
+/* 分享海报预览 */
+.poster-overlay { align-items: flex-start; }
+.poster-panel {
+  width: min(92vw, 420px);
+  max-height: 88vh;
+  margin: auto;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 249, 240, .96);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.poster-img {
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #fdfaf5;
+}
+.poster-actions { display: flex; gap: 10px; justify-content: center; }
+.poster-btn {
+  flex: 1;
+  padding: 11px 0;
+  border: 0;
+  border-radius: 999px;
+  background: #f0e6d8;
+  color: #6b5745;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.poster-btn.primary { background: #4f8a48; color: #f3faf2; }
 
 @media (max-width: 640px) {
   .detail-page { max-width: none; box-shadow: none; }

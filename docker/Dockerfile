@@ -2,6 +2,9 @@
 # 通过 BUILD_MODULE 构建参数指定模块名称
 ARG BUILD_MODULE
 
+# 静态编译的 ffmpeg/ffprobe 阶段（仅用于 COPY 二进制）
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg-bin
+
 # === Stage 1: 编译 ===
 FROM maven:3.9-eclipse-temurin-21 AS build
 COPY settings.xml /root/.m2/settings.xml
@@ -28,6 +31,9 @@ RUN mvn package -DskipTests -pl ${BUILD_MODULE} -am -q
 FROM eclipse-temurin:21-jre
 ARG BUILD_MODULE
 WORKDIR /app
+# 视频压缩 / 裁剪需要 ffmpeg（静态二进制，来自 ffmpeg-bin 阶段）
+COPY --from=ffmpeg-bin /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg-bin /ffprobe /usr/local/bin/ffprobe
 COPY --from=build /build/${BUILD_MODULE}/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "rm -f ${LOGGING_FILE_NAME:-/logs/app.log} 2>/dev/null && exec java -jar app.jar"]

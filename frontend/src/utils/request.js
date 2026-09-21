@@ -39,8 +39,26 @@ function fixImageUrls(obj) {
 
 // ===== 请求拦截器：无 token 时自动用 refreshToken 续期 =====
 service.interceptors.request.use(async config => {
+  // 后台管理接口走独立的管理员令牌，不参与前台登录态的过期判断
+  const reqUrl = config.url || ''
+  if (reqUrl.startsWith('/admin/') && !reqUrl.startsWith('/admin/public/')) {
+    const adminToken = localStorage.getItem('adminToken')
+    if (adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`
+      return config
+    }
+  }
+
+  // 登录/注册等接口本身不需要登录态，跳过「15 分钟无操作过期」检查，
+  // 否则长时间未操作后第一次点登录会被先清空会话并跳回登录页
+  const AUTH_FREE_PATHS = [
+    '/auth/login', '/auth/register', '/auth/refresh',
+    '/auth/forgot-password', '/auth/reset-password'
+  ]
+  const isAuthRequest = AUTH_FREE_PATHS.some(p => reqUrl.startsWith(p))
+
   // 检查 15 分钟无操作过期
-  if (isSessionExpired()) {
+  if (!isAuthRequest && isSessionExpired()) {
     clearAllTokens()
     window.location.href = '/#/login'
     return Promise.reject(new Error('Session expired'))

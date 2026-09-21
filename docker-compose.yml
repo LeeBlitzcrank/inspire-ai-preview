@@ -43,6 +43,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: inspire_ai_preview
+      # 容器时区固定为北京时间，避免 CURRENT_TIMESTAMP 写入 UTC 导致前后端时间差 8 小时
+      TZ: Asia/Shanghai
+    command: [ "--default-time-zone=+08:00" ]
     volumes:
       - mysql-data:/var/lib/mysql
       - ./docker/init/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -168,7 +171,8 @@ services:
       INSPIRE_DEMO_SEED: ${INSPIRE_DEMO_SEED:-false}
     volumes:
       - ./log/inspire-core:/logs
-      - /tmp/inspire-uploads:/tmp/inspire-uploads
+      # 上传文件放在项目目录内，避免 macOS 定期清理 /tmp 导致图片/视频丢失
+      - ./data/uploads:/tmp/inspire-uploads
 
   inspire-admin:
     build:

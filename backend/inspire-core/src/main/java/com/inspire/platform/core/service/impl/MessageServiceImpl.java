@@ -15,12 +15,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
+
+    /** 统一使用北京时间写入时间字段，避免依赖 MySQL 的 CURRENT_TIMESTAMP（容器时区可能是 UTC） */
+    private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
 
     private final MessageMapper messageMapper;
     private final MessageConversationMapper conversationMapper;
@@ -47,20 +51,26 @@ public class MessageServiceImpl implements MessageService {
             conv.setUser2Id(uid2);
             conv.setUnreadUser1(0);
             conv.setUnreadUser2(0);
+            LocalDateTime created = LocalDateTime.now(ZONE);
+            conv.setCreateTime(created);
+            conv.setUpdateTime(created);
             conversationMapper.insert(conv);
         }
-        
+
+        LocalDateTime now = LocalDateTime.now(ZONE);
         Message msg = new Message();
         msg.setId(nextId());
         msg.setConversationId(conv.getId());
         msg.setFromUserId(fromUserId);
         msg.setToUserId(toUserId);
         msg.setContent(content);
+        msg.setCreateTime(now);
         messageMapper.insert(msg);
         
         // 更新会话
         conv.setLastContent(content);
-        conv.setLastTime(msg.getCreateTime() != null ? msg.getCreateTime() : LocalDateTime.now());
+        conv.setLastTime(now);
+        conv.setUpdateTime(now);
         if (fromUserId == uid1) {
             conv.setUnreadUser2(conv.getUnreadUser2() + 1);
         } else {

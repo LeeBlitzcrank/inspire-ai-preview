@@ -11,4 +11,6 @@ public class AiExploreRequest {
     private String path;
     @Schema(description = "是否刷新（跳过缓存重新生成）", example = "false")
     private boolean refresh;
+    @Schema(description = "期望生成的风格数量（1-5，默认 3）", example = "3")
+    private Integer variants;
 }

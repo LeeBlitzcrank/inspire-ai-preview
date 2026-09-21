@@ -32,6 +32,8 @@ const navs = [
   { path: '/admin/dashboard', label: '监控大屏', icon: '📊' },
   { path: '/admin/inspire', label: '灵感管理', icon: '💡' },
   { path: '/admin/user', label: '用户查询', icon: '👤' },
+  { path: '/admin/category', label: '分类管理', icon: '🗂' },
+  { path: '/admin/word-cloud', label: '词云管理', icon: '☁️' },
   { path: '/admin/config', label: '推送配置', icon: '⚙️' },
 ]
 const go = (path) => { router.push(path); if (window.innerWidth <= 768) showSidebar.value = false }

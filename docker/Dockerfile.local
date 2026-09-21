@@ -6,9 +6,15 @@
 
 ARG BUILD_MODULE
 
+# 静态编译的 ffmpeg/ffprobe，直接 COPY 进运行镜像，避免依赖 apt 源
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg-bin
+
 FROM eclipse-temurin:21-jre
 ARG BUILD_MODULE
 WORKDIR /app
+# 视频压缩 / 裁剪需要 ffmpeg（本地演示环境）
+COPY --from=ffmpeg-bin /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg-bin /ffprobe /usr/local/bin/ffprobe
 COPY backend/${BUILD_MODULE}/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "rm -f ${LOGGING_FILE_NAME:-/logs/app.log} 2>/dev/null && exec java -jar app.jar"]

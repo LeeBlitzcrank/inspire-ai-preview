@@ -16,8 +16,11 @@ import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.Arrays;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.Graphics2D;
@@ -28,6 +31,12 @@ import java.awt.RenderingHints;
 @RequestMapping("/file")
 @Slf4j
 public class FileController {
+
+    /** 视频：单文件最大 50MB */
+    private static final long MAX_VIDEO_SIZE = 50 * 1024 * 1024L;
+    private static final Set<String> VIDEO_EXTENSIONS = Set.of(".mp4", ".webm", ".mov", ".m4v");
+    private static final Set<String> VIDEO_MIME_TYPES = Set.of(
+            "video/mp4", "video/webm", "video/quicktime", "video/x-m4v");
 
     @Value("${inspire.upload.dir:/tmp/inspire-uploads}")
     private String uploadDir;
@@ -66,6 +75,10 @@ public class FileController {
         String name = file.getOriginalFilename();
         String rawExt = name != null && name.contains(".")
                 ? name.substring(name.lastIndexOf(".")).toLowerCase() : ".jpg";
+        // 视频走独立分支：不做图片重绘，仅做大小/MIME/魔数三层校验
+        if (VIDEO_EXTENSIONS.contains(rawExt)) {
+            return uploadVideo(file, rawExt, name);
+        }
         String filename = UUID.randomUUID().toString().replace("-", "") + rawExt;
         // 输出格式：png 保留透明通道，其余统一 jpg
         String format = ".png".equals(rawExt) ? "png" : "jpg";
@@ -111,6 +124,96 @@ public class FileController {
         } catch (Exception e) {
             log.error("上传失败", e);
             return Result.error("上传失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 视频上传：大小 / MIME / 魔数 三层校验，落盘后尝试用 ffmpeg 截首帧做封面。
+     * 不做转码，保持原始画质，压缩/裁剪由用户在上传后按需触发。
+     */
+    private Result<Map<String, String>> uploadVideo(MultipartFile file, String rawExt, String originName) {
+        if (file.getSize() > MAX_VIDEO_SIZE) {
+            return Result.error("视频不能超过 50MB");
+        }
+        String mime = file.getContentType();
+        if (mime != null && !mime.isBlank() && !VIDEO_MIME_TYPES.contains(mime.toLowerCase())) {
+            return Result.error("仅支持 mp4 / webm / mov 格式的视频");
+        }
+        try {
+            byte[] head = new byte[16];
+            int read;
+            try (InputStream in = file.getInputStream()) {
+                read = in.read(head);
+            }
+            if (read < 12 || !isVideoMagic(head, rawExt)) {
+                return Result.error("视频文件校验失败，请确认文件未损坏");
+            }
+
+            String filename = UUID.randomUUID().toString().replace("-", "") + rawExt;
+            File dir = new File(uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            File target = new File(dir, filename);
+            try (InputStream in = file.getInputStream()) {
+                java.nio.file.Files.copy(in, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            String thumbUrl = "";
+            String poster = "thumb_" + filename + ".jpg";
+            if (runFfmpeg(List.of("-y", "-ss", "0", "-i", target.getAbsolutePath(),
+                    "-frames:v", "1", "-q:v", "3", new File(dir, poster).getAbsolutePath()))) {
+                thumbUrl = "/uploads/" + poster;
+            }
+            long duration = probeDuration(target);
+            log.info("视频上传成功: {} ({}MB, {}s)", filename, file.getSize() / 1024 / 1024, duration);
+            return Result.success(Map.of(
+                    "url", "/uploads/" + filename,
+                    "thumbUrl", thumbUrl,
+                    "name", originName == null ? filename : originName,
+                    "type", "video",
+                    "duration", String.valueOf(duration)));
+        } catch (Exception e) {
+            log.error("视频上传失败", e);
+            return Result.error("视频上传失败: " + e.getMessage());
+        }
+    }
+
+    /** 视频魔数：mp4/mov/m4v 第 4-7 字节为 "ftyp"，webm 为 EBML 头 1A45DFA3 */
+    private boolean isVideoMagic(byte[] head, String ext) {
+        if (".webm".equals(ext)) {
+            return (head[0] & 0xFF) == 0x1A && (head[1] & 0xFF) == 0x45
+                    && (head[2] & 0xFF) == 0xDF && (head[3] & 0xFF) == 0xA3;
+        }
+        return head[4] == 'f' && head[5] == 't' && head[6] == 'y' && head[7] == 'p';
+    }
+
+    /** 执行 ffmpeg，返回是否成功（未安装 ffmpeg 时返回 false，不抛异常） */
+    private boolean runFfmpeg(List<String> args) {
+        try {
+            List<String> cmd = new java.util.ArrayList<>();
+            cmd.add("ffmpeg");
+            cmd.addAll(args);
+            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            p.getInputStream().readAllBytes();
+            return p.waitFor() == 0;
+        } catch (Exception e) {
+            log.warn("ffmpeg 调用失败（可能未安装）: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private long probeDuration(File video) {
+        try {
+            Process p = new ProcessBuilder("ffprobe", "-v", "error", "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1", video.getAbsolutePath())
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
+            if (out.isEmpty()) return 0L;
+            return Math.round(Double.parseDouble(out));
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
