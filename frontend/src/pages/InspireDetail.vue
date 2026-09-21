@@ -240,7 +240,8 @@ import {
   shareInspire,
   uncollectInspire,
   unfollowUser,
-  unlikeInspire
+  unlikeInspire,
+  uploadFromUrl
 } from '@/api/inspire.js'
 import { sanitizeHtml } from '@/utils/sanitizeHtml.js'
 
@@ -748,6 +749,31 @@ const loadImage = (src) => new Promise((resolve) => {
   img.src = src
 })
 
+/**
+ * 海报封面加载：优先直连；如果图源不支持跨域（canvas 会被污染，导出会失败），
+ * 就走后端 /file/upload-from-url 把图抓成自己站内的副本再画，保证海报一定能导出。
+ */
+const loadPosterCover = async (src) => {
+  if (!src) return null
+  try {
+    const abs = new URL(src, window.location.href)
+    // 站外图源：先让后端抓成本站副本再画。
+    // 各家图源的 CORS 响应在不同网络/边缘节点上并不一致，直连会时好时坏；
+    // 抓回本站后由我们自己控制 CORS 头，海报导出才能稳定成功。
+    // 代理接口需要登录，游客直接走直连，避免 401 把游客弹去登录页
+    if (abs.origin !== window.location.origin && isLogin.value) {
+      const res = await uploadFromUrl(src)
+      if (res?.code === 200 && res.data?.url) {
+        const proxied = await loadImage(res.data.url)
+        if (proxied) return proxied
+      }
+    }
+  } catch (e) {
+    console.warn('[poster] 封面走服务端代理失败，回退直连', e)
+  }
+  return await loadImage(src)
+}
+
 const makePoster = async () => {
   if (posterBuilding.value) return
   posterBuilding.value = true
@@ -781,7 +807,7 @@ const makePoster = async () => {
     const imgH = 560
     // 海报封面优先取图片，避免视频首帧取不到
     const coverSrc = imageList.value.find(u => !isVideo(u)) || ''
-    const cover = await loadImage(coverSrc)
+    const cover = await loadPosterCover(coverSrc)
     ctx.save()
     roundRectPath(ctx, pad, imgY, contentW, imgH, 32)
     ctx.clip()
@@ -864,7 +890,14 @@ const makePoster = async () => {
     ctx.fillText('扫码查看灵感', qrX + qrSize / 2, qrY + qrSize + 46)
     ctx.textAlign = 'left'
 
-    posterUrl.value = canvas.toDataURL('image/png')
+    try {
+      posterUrl.value = canvas.toDataURL('image/png')
+    } catch (err) {
+      // 画布被跨域图片污染时无法导出，给出明确提示而不是静默失败
+      console.error('[poster] 导出失败', err)
+      ElMessage.error('这张封面图不支持导出，已跳过图片，请重试')
+      return
+    }
     posterVisible.value = true
     showSharePanel.value = false
   } catch (e) {
