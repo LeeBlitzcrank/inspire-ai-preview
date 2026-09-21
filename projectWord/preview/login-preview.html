@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  登录页（Login）美化 · 七方案对比预览
+  预览：直接双击本文件，或 open "…/login-preview.html"
+  仅为样式样机，不改动前端项目。看中哪一个告诉我「D / A / B / C / C1 / C2 / C3」，我再落成真实 Vue 组件：表单逻辑、记住账号、忘记密码、跳转注册全部保留，只换视觉。
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>登录页 · 美化方案对比</title>
+<style>
+  :root{
+    --text:#1d1d1f; --text2:#8a94a6; --line:#eceff4;
+    --blue:#4d7cfe; --blue-deep:#2f54d0; --blue-soft:#eef3ff;
+    --mint:#a8dcd2; --mint-deep:#0f766e; --mint-soft:#eef7f5;
+    --indigo:#1e1b4b; --violet:#6d28d9; --plum:#86198f;
+    --cream:#fdf6ea; --amber:#f59e0b; --slate:#0f172a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#eef1f6;color:var(--text);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+
+  .stage{max-width:1360px;margin:0 auto;padding:28px 20px 60px}
+  .stage > h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .stage > p.sub{font-size:13.5px;color:var(--text2);margin:0 0 26px;line-height:1.7}
+
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+  @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+
+  .opt-label{display:flex;align-items:baseline;gap:8px;margin:0 0 10px 4px}
+  .opt-label b{font-size:15px}
+  .opt-label span{font-size:12px;color:var(--text2)}
+
+  /* 手机外框 */
+  .phone{background:#fff;border-radius:26px;padding:10px;
+    box-shadow:0 10px 32px rgba(20,30,60,.18);border:1px solid #e6eaf2;
+    min-height:640px}
+  .phone-in{height:100%;border-radius:18px;overflow:hidden;position:relative;
+    min-height:620px;background:#fff}
+
+  /* 通用顶部导航（各方案复用，颜色随方案覆盖） */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px}
+  .topbar .brand{font-size:19px;font-weight:700;letter-spacing:0;cursor:pointer}
+  .topbar .right{display:flex;gap:8px}
+  .circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:15px;cursor:pointer;transition:transform .2s}
+  .circle:hover{transform:translateY(-2px)}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;margin-bottom:6px}
+  .f-input{width:100%;height:48px;border-radius:13px;display:flex;align-items:center;
+    padding:0 15px;font-size:15px;gap:9px;border:1.5px solid currentColor;background:#fff}
+  .f-input svg{width:16px;height:16px;flex:0 0 auto}
+  .f-input input{flex:1;border:none;outline:none;background:transparent;font-size:15px;
+    color:inherit;font-family:inherit}
+
+  .row-tip{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:4px 0 16px}
+  .check{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .box{width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;border:1.5px solid currentColor}
+  .box.on{background:currentColor}
+  .box svg{width:11px;height:11px;stroke:#fff;stroke-width:3;fill:none;display:none}
+  .box.on svg{display:block}
+  .forget{cursor:pointer;font-weight:500}
+
+  .btn{width:100%;height:50px;border:none;border-radius:14px;font-size:16px;font-weight:600;
+    color:#fff;cursor:pointer;letter-spacing:2px;transition:transform .2s,box-shadow .2s}
+  .btn:hover{transform:translateY(-2px)}
+
+  .reg{text-align:center;font-size:13.5px;margin-top:22px}
+  .reg b{cursor:pointer;font-weight:600}
+
+  /* ================= 方案 D（经典蓝） ================= */
+  .d .brand-band{
+    position: relative;
+    background: linear-gradient(120deg, #3568f0 0%, #5b8cfb 48%, #8ab6ff 100%);
+    overflow: hidden;
+    padding: 16px 22px 48px;
+  }
+  .d:after{content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 70%);}
+  .d .main{flex:1 0 auto;width:100%;max-width:460px;margin:0 auto;padding:0 22px 64px;box-sizing:border-box;margin-top: -30px;position:relative;z-index:1;}
+  .d .brand-circle{width: 64px;height: 64px;margin: 0 auto 16px;border-radius: 50%;background: #fff;display: flex;align-items: center;justify-content: center;box-shadow: 0 10px 26px rgba(59, 108, 240, 0.22);}
+  .d h2{font-size: 26px;font-weight: 700;color: #1d263b;text-align: center;margin: 0 0 8px;}
+  .d .desc{font-size: 14.5px;color: #8a94a6;text-align: center;margin: 0 0 28px;}
+  .d .form-card{background: #fff;border-radius: 20px;padding: 28px 22px;box-shadow: 0 14px 40px rgba(31, 59, 120, 0.08);}
+  .d .f-input{background: #f6f8fc;border:1.5px solid #e6ebf4;color:#33415c}
+  .d .f-input:focus-within{border-color:#5b8cfb;background:#fff;box-shadow: 0 4px 14px rgba(91, 140, 251, .12)}
+  .d .f-input svg{color:#93a3bd}
+  .d .box{border:1.5px solid #b9c6da;color:#3568f0}
+  .d .forget{color:#3568f0}
+  .d .btn{background:linear-gradient(90deg,#3568f0,#5b8cfb);box-shadow: 0 8px 20px rgba(53, 104, 240, 0.3)}
+  .d .reg{color:#8a94a6}
+  .d .reg b{color:#3568f0}
+  /* ================= 方案 A（云境） ================= */
+  .a{background:linear-gradient(150deg,#eaf3ff 0%,#eef9f6 52%,#f3effd 100%)}
+  .a .topbar .brand{color:#3f4a5f}
+  .a .circle{background:rgba(255,255,255,.72);box-shadow:0 2px 10px rgba(30,60,120,.06);
+    color:#5b6b85;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.8)}
+  .a .wrap{padding:18px 22px 30px}
+  .a .logo{width:58px;height:58px;border-radius:18px;margin:14px auto 16px;
+    background:linear-gradient(135deg,#7fb6ff,#8b7bf7);color:#fff;display:flex;align-items:center;
+    justify-content:center;font-size:26px;box-shadow:0 10px 24px rgba(96,120,247,.30);
+    transform:rotate(-4deg)}
+  .a h2{margin:0 0 6px;font-size:25px;font-weight:700;text-align:center;color:#26304a}
+  .a .desc{margin:0 0 28px;text-align:center;font-size:13.5px;color:#94a0b5}
+  .a .card{background:rgba(255,255,255,.82);border-radius:26px;padding:26px 22px;
+    box-shadow:0 14px 44px rgba(40,70,140,.10);border:1px solid rgba(255,255,255,.9);
+    backdrop-filter:blur(10px)}
+  .a .f-input{background:#f4f7fc;border:1.5px solid #e9eef7;color:#33415c}
+  .a .f-input:focus-within{border-color:#8fb1ff;background:#fff}
+  .a .f-input svg{color:#93a3bd}
+  .a label{color:#5b6b85}
+  .a .box{border:1.5px solid #b9c6da;color:#4d7cfe}
+  .a .forget{color:#4d7cfe}
+  .a .btn{background:linear-gradient(90deg,#5a96ff,#7b6bf6);
+    box-shadow:0 10px 22px rgba(93,120,246,.32)}
+  .a .reg{color:#94a0b5}
+  .a .reg b{color:#4d7cfe}
+  .a .foot{text-align:center;margin-top:20px;font-size:12px;color:#aeb8c9}
+
+  /* ================= 方案 B（暮色） ================= */
+  .b{background:radial-gradient(120% 90% at 12% 4%,#2c2a6b 0%,#19163f 46%,#2b0f3c 100%)}
+  .b:before{content:"";position:absolute;inset:0;opacity:.35;
+    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+    background-size:44px 44px;pointer-events:none}
+  .b .topbar .brand{color:#f4f1ff}
+  .b .circle{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    color:#e4ddff;backdrop-filter:blur(8px)}
+  .b .wrap{padding:20px 22px 30px;position:relative}
+  .b .logo{width:60px;height:60px;border-radius:20px;margin:18px auto 16px;position:relative;
+    background:linear-gradient(135deg,#22d3ee,#818cf8);color:#0b0b23;display:flex;align-items:center;
+    justify-content:center;font-size:27px;box-shadow:0 0 0 1px rgba(255,255,255,.18),
+      0 12px 30px rgba(56,189,248,.35);transform:rotate(4deg)}
+  .b h2{margin:0 0 6px;font-size:25px;font-weight:700;text-align:center;color:#f6f3ff}
+  .b .desc{margin:0 0 26px;text-align:center;font-size:13.5px;color:#a99fd8}
+  .b .card{background:rgba(255,255,255,.07);border-radius:24px;padding:24px 20px;
+    border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);
+    box-shadow:0 18px 44px rgba(0,0,0,.35)}
+  .b label{color:#c9c1ef}
+  .b .f-input{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);color:#fff}
+  .b .f-input:focus-within{border-color:rgba(129,140,248,.85);box-shadow:0 0 0 3px rgba(129,140,248,.18)}
+  .b .f-input svg{color:#9a8fd6}
+  .b .box{border:1.5px solid rgba(255,255,255,.4);color:#818cf8}
+  .b .forget{color:#a5b4fc}
+  .b .btn{background:linear-gradient(90deg,#22d3ee,#818cf8);color:#0b0b23;
+    box-shadow:0 10px 26px rgba(56,189,248,.38)}
+  .b .reg{color:#a99fd8}
+  .b .reg b{color:#a5b4fc}
+  .b .foot{text-align:center;margin-top:20px;font-size:12px;color:#6d6591}
+
+  /* ================= 方案 C（杂志） ================= */
+  .c{background:#f6efe3}
+  .c .brandband{position:relative;background:linear-gradient(150deg,#1c2333 0%,#2d3a55 55%,#41536f 100%);
+    padding:20px 22px 34px;overflow:hidden}
+  .c .brandband:before{content:"";position:absolute;right:-46px;top:-56px;width:190px;height:190px;
+    border-radius:50%;border:34px solid rgba(255,255,255,.06)}
+  .c .brandband:after{content:"";position:absolute;right:18px;bottom:-40px;width:120px;height:120px;
+    border-radius:50%;background:rgba(245,158,11,.14)}
+  .c .topbar{position:relative;z-index:1}
+  .c .topbar .brand{color:#fff}
+  .c .circle{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);color:#fff}
+  .c .mast{position:relative;z-index:1;padding:14px 6px 0}
+  .c .mast .kicker{font-size:12px;letter-spacing:3px;color:#f5b04c;font-weight:600}
+  .c .mast h1{margin:6px 0 8px;font-size:36px;font-weight:800;color:#fff;letter-spacing:0}
+  .c .mast p{margin:0;font-size:13.5px;color:#b9c4d6;line-height:1.6}
+  .c .wrap{padding:0 22px 30px;margin-top:-22px;position:relative;z-index:2}
+  .c .card{background:#fffdf8;border-radius:22px;padding:26px 22px;box-shadow:0 18px 44px rgba(30,40,70,.18)}
+  .c .card .hi{font-size:20px;font-weight:700;color:#1c2333;margin:0 0 4px}
+  .c .card .sub{margin:0 0 22px;font-size:13px;color:#98a2b3}
+  .c label{color:#66718a;font-weight:600}
+  .c .f-input{background:#fbf7ef;border:1.5px solid #ece3d2;color:#2b3346}
+  .c .f-input:focus-within{border-color:#f0b95c;background:#fff;box-shadow:0 0 0 3px rgba(240,185,92,.18)}
+  .c .f-input svg{color:#b9a88a}
+  .c .box{border:1.5px solid #cfc0a4;color:#1c2333}
+  .c .forget{color:#b57e1a}
+  .c .btn{background:#1c2333;color:#fff;border-radius:999px;
+    box-shadow:0 10px 22px rgba(28,35,51,.28)}
+  .c .reg{color:#98a2b3}
+  .c .reg b{color:#b57e1a}
+
+  /* ================= 方案 C1（薄荷清新） ================= */
+  .c1 .login-page{background:#fff}
+  .c1 .brand-band{
+    position: relative;
+    background: linear-gradient(140deg,#a8dcd2 0%,#d9f0eb 50%,#ffffff 100%);
+    overflow: hidden;
+    padding: 16px 22px 48px;
+  }
+  .c1 .topbar .brand{color:#0f4e49}
+  .c1 .circle{background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.48);
+    color:#0f4e49}
+  .c1 .mast{position:relative;z-index:1;padding:14px 6px 0}
+  .c1 .mast .kicker{font-size:12px;letter-spacing:3px;color:#0f766e;font-weight:600}
+  .c1 .mast h1{margin:6px 0 8px;font-size:36px;font-weight:800;color:#111827;letter-spacing:0}
+  .c1 .mast p{margin:0;font-size:13.5px;color:#5f857f;line-height:1.6}
+  .c1 .wrap{padding:0 22px 30px;margin-top:-22px;position:relative;z-index:2}
+  .c1 .card{background:#ffffff;border-radius:22px;padding:26px 22px;box-shadow:0 18px 44px rgba(15, 118, 110,.12)}
+  .c1 .card .hi{font-size:20px;font-weight:700;color:#1f2937;margin:0 0 4px}
+  .c1 .card .sub{margin:0 0 22px;font-size:13px;color:#6b7280}
+  .c1 label{color:#374151;font-weight:600}
+  .c1 .f-input{background:#ffffff;border:1.5px solid #d1fae5;color:#1f2937}
+  .c1 .f-input:focus-within{border-color:#34d399;background:#ffffff;box-shadow:0 0 0 3px rgba(16, 185, 129,.12)}
+  .c1 .f-input svg{color:#6ee7b7}
+  .c1 .box{border:1.5px solid #94a3b8;color:#0f766e}
+  .c1 .forget{color:#0f766e}
+  .c1 .btn{background:#0f766e !important;color:#fff;border-radius:999px;
+    box-shadow:0 10px 22px rgba(15, 118, 110,.28)}
+  .c1 .reg{color:#6b7280}
+  .c1 .reg b{color:#0f766e}
+
+  /* ================= 方案 C2（蓝白渐变） ================= */
+  .c2 .login-page{background:#fff}
+  .c2 .brand-band{
+    position: relative;
+    background: linear-gradient(140deg,#cce7ff 0%,#e6f1ff 50%,#ffffff 100%);
+    overflow: hidden;
+    padding: 16px 22px 48px;
+  }
+  .c2 .topbar .brand{color:#0f3a7a}
+  .c2 .circle{background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.48);
+    color:#0f3a7a}
+  .c2 .mast{position:relative;z-index:1;padding:14px 6px 0}
+  .c2 .mast .kicker{font-size:12px;letter-spacing:3px;color:#2563eb;font-weight:600}
+  .c2 .mast h1{margin:6px 0 8px;font-size:36px;font-weight:800;color:#111827;letter-spacing:0}
+  .c2 .mast p{margin:0;font-size:13.5px;color:#64748b;line-height:1.6}
+  .c2 .wrap{padding:0 22px 30px;margin-top:-22px;position:relative;z-index:2}
+  .c2 .card{background:#ffffff;border-radius:22px;padding:26px 22px;box-shadow:0 18px 44px rgba(37, 99, 235,.10)}
+  .c2 .card .hi{font-size:20px;font-weight:700;color:#1f2937;margin:0 0 4px}
+  .c2 .card .sub{margin:0 0 22px;font-size:13px;color:#6b7280}
+  .c2 label{color:#374151;font-weight:600}
+  .c2 .f-input{background:#ffffff;border:1.5px solid #dbeafe;color:#1f2937}
+  .c2 .f-input:focus-within{border-color:#3b82f6;background:#ffffff;box-shadow:0 0 0 3px rgba(59, 130, 246,.12)}
+  .c2 .f-input svg{color:#93c5fd}
+  .c2 .box{border:1.5px solid #94a3b8;color:#2563eb}
+  .c2 .forget{color:#2563eb}
+  .c2 .btn{background:#2563eb !important;color:#fff;border-radius:999px;
+    box-shadow:0 10px 22px rgba(37, 99, 235,.28)}
+  .c2 .reg{color:#6b7280}
+  .c2 .reg b{color:#2563eb}
+
+  /* ================= 方案 C3（浅灰高级） ================= */
+  .c3 .login-page{background:#fff}
+  .c3 .brand-band{
+    position: relative;
+    background: linear-gradient(140deg,#e5e7eb 0%,#f3f4f6 50%,#ffffff 100%);
+    overflow: hidden;
+    padding: 16px 22px 48px;
+  }
+  .c3 .topbar .brand{color:#374151}
+  .c3 .circle{background:rgba(255,255,255,.42);border:1px solid rgba(107, 114, 128,.28);
+    color:#374151}
+  .c3 .mast{position:relative;z-index:1;padding:14px 6px 0}
+  .c3 .mast .kicker{font-size:12px;letter-spacing:3px;color:#4b5563;font-weight:600}
+  .c3 .mast h1{margin:6px 0 8px;font-size:36px;font-weight:800;color:#111827;letter-spacing:0}
+  .c3 .mast p{margin:0;font-size:13.5px;color:#6b7280;line-height:1.6}
+  .c3 .wrap{padding:0 22px 30px;margin-top:-22px;position:relative;z-index:2}
+  .c3 .card{background:#ffffff;border-radius:22px;padding:26px 22px;box-shadow:0 18px 44px rgba(75, 85, 99,.12)}
+  .c3 .card .hi{font-size:20px;font-weight:700;color:#1f2937;margin:0 0 4px}
+  .c3 .card .sub{margin:0 0 22px;font-size:13px;color:#6b7280}
+  .c3 label{color:#374151;font-weight:600}
+  .c3 .f-input{background:#ffffff;border:1.5px solid #e5e7eb;color:#1f2937}
+  .c3 .f-input:focus-within{border-color:#9ca3af;background:#ffffff;box-shadow:0 0 0 3px rgba(107, 114, 128,.12)}
+  .c3 .f-input svg{color:#9ca3af}
+  .c3 .box{border:1.5px solid #94a3b8;color:#4b5563}
+  .c3 .forget{color:#4b5563}
+  .c3 .btn{background:#1f2937 !important;color:#fff;border-radius:999px;
+    box-shadow:0 10px 22px rgba(31, 41, 55,.28)}
+  .c3 .reg{color:#6b7280}
+  .c3 .reg b{color:#4b5563}
+
+  .opt-actions{display:flex;gap:8px;margin-top:12px;justify-content:center}
+  .mini{font-size:12px;color:#6b7280;background:#fff;border:1px solid #e2e8f0;border-radius:999px;
+    padding:6px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <h1>登录页 · 美化方案对比</h1>
+    <p class="sub">七个方向都是完整可点选的形式样机（仅样式预览，不改动前端项目）。看中哪一个告诉我「D / A / B / C / C1 / C2 / C3」，我再落成真实 Vue 组件：表单逻辑、记住账号、忘记密码、跳转注册全部保留，只换视觉。</p>
+
+    <div class="grid">
+      <!-- ============ 方案 D：经典蓝 ============ -->
+      <div>
+        <div class="opt-label"><b>D · 经典蓝</b><span>蓝色横幅 / 白底表单 / 实心蓝钮</span></div>
+        <div class="phone"><div class="phone-in d" style="display:flex;flex-direction:column">
+          <div class="brand-band">
+            <div class="topbar">
+              <div class="brand">灵感集</div>
+              <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+            </div>
+            <div class="mast">
+              <div class="kicker">INSPIRE DAILY</div>
+              <h1>灵感集</h1>
+              <p>把每天路过脑海的闪光，<br>收藏成属于你的灵感宇宙。</p>
+            </div>
+          </div>
+          <div class="wrap">
+            <div class="card">
+              <p class="hi">欢迎回来 👋</p>
+              <p class="sub">登录继续你的创作</p>
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">蓝色横幅</span><span class="mini">白底表单</span><span class="mini">实心蓝钮</span></div>
+      </div>
+
+      <!-- ============ 方案 A ============ -->
+      <div>
+        <div class="opt-label"><b>A · 云境</b><span>轻盈极简 / 浅色留白 / 克制蓝</span></div>
+        <div class="phone"><div class="phone-in a">
+          <div class="top-nav">
+            <div class="left-logo" @click="$router.push('/')">
+              <svg viewBox="0 0 24 24" width="22" height="22">
+                <path fill="#3b3b3b" d="M16.4 12.6c-.1-2.4 2-3.6 2.1-3.7-.9-1.3-2.3-1.5-2.8-1.5-1.2-.1-2.3.7-2.9.7-.6 0-1.5-.7-2.5-.7-1.3 0-2.5.8-3.2 2-1.4 2.4-.4 5.9 1 7.8.7 1 1.5 2.1 2.6 2.1 1 0 1.4-.7 2.6-.7 1.2 0 1.6.7 2.6.7 1.1 0 1.8-1 2.5-2 1.1-1.7 1.6-3.3 1.6-3.4-.1 0-2.4-.9-2.5-3.3zM14.4 5.6c.5-.6.8-1.4.7-2.2-.7 0-1.5.5-2 1.1-.4.5-.8 1.3-.7 2.1.8.1 1.6-.4 2-1z"/>
+              </svg>
+            </div>
+            <div class="right-icons">
+              <div class="icon-item search-icon" @click="$router.push('/search')">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path fill="#3b3b3b" d="M10 2a8 8 0 1 0 5.3 14l4.4 4.3 1.4-1.4-4.3-4.4A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/>
+                </svg>
+              </div>
+              <div class="icon-item user-icon" @click="$router.push('/register')">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <path fill="#3b3b3b" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-8 2-8 6v2h16v-2c0-4-4-6-8-6z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="login-card">
+            <div class="login-logo">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                <path d="M9 18H15V20H9V18ZM12 2C8.13 2 5 5.13 5 9C5 11.38 6.19 13.47 8 14.74V17H16V14.74C17.81 13.47 19 11.38 19 9C19 5.13 15.87 2 12 2Z" fill="#333333"/>
+              </svg>
+            </div>
+            <h2 class="login-title">灵感集 登录</h2>
+            <p class="login-desc">登录查看、收藏全部创意灵感</p>
+
+            <div class="input-group">
+              <el-input v-model="form.account" placeholder="请输入账号" clearable></el-input>
+            </div>
+
+            <div class="input-group">
+              <el-input v-model="form.password" placeholder="请输入密码" show-password></el-input>
+            </div>
+
+            <div class="tip-row">
+              <el-checkbox v-model="remember">记住账号</el-checkbox>
+              <span class="forget-pwd" @click="goForgot">忘记密码</span>
+            </div>
+
+            <el-button class="login-btn" :loading="loading" @click="handleLogin">
+              立即登录
+            </el-button>
+
+            <div class="register-tip">
+              暂无账号？
+              <span class="register-text" @click="$router.push('/register')">前往注册</span>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">柔和底色</span><span class="mini">磨砂卡片</span><span class="mini">圆角输入框</span></div>
+      </div>
+
+      <!-- ============ 方案 B ============ -->
+      <div>
+        <div class="opt-label"><b>B · 暮色</b><span>深色沉浸 / 磨砂玻璃 / 高质感</span></div>
+        <div class="phone"><div class="phone-in b">
+          <div class="topbar">
+            <div class="brand">灵感集</div>
+            <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+          </div>
+          <div class="wrap">
+            <div class="logo">✦</div>
+            <h2>欢迎回来</h2>
+            <p class="desc">在灵感之夜，遇见下一个好创意</p>
+            <div class="card">
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+            <div class="foot">每天一点灵感 · 让创意发生</div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">深色氛围</span><span class="mini">玻璃卡片</span><span class="mini">霓虹点缀</span></div>
+      </div>
+
+      <!-- ============ 方案 C ============ -->
+      <div>
+        <div class="opt-label"><b>C · 杂志</b><span>暖色编辑风 / 大标题 / 胶囊按钮</span></div>
+        <div class="phone"><div class="phone-in c">
+          <div class="brandband">
+            <div class="topbar">
+              <div class="brand">灵感集</div>
+              <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+            </div>
+            <div class="mast">
+              <div class="kicker">INSPIRE DAILY</div>
+              <h1>灵感集</h1>
+              <p>把每天路过脑海的闪光，<br>收藏成属于你的灵感宇宙。</p>
+            </div>
+          </div>
+          <div class="wrap">
+            <div class="card">
+              <p class="hi">欢迎回来 👋</p>
+              <p class="sub">登录继续你的创作</p>
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">品牌头条</span><span class="mini">暖色卡片</span><span class="mini">深色按钮</span></div>
+      </div>
+
+      <!-- ============ 方案 C1：薄荷清新 ============ -->
+      <div>
+        <div class="opt-label"><b>C1 · 薄荷清新</b><span>适配项目薄荷主题 / 干净柔和</span></div>
+        <div class="phone"><div class="phone-in c1" style="display:flex;flex-direction:column">
+          <div class="brand-band">
+            <div class="topbar">
+              <div class="brand">灵感集</div>
+              <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+            </div>
+            <div class="mast">
+              <div class="kicker">INSPIRE DAILY</div>
+              <h1>灵感集</h1>
+              <p>把每天路过脑海的闪光，<br>收藏成属于你的灵感宇宙。</p>
+            </div>
+          </div>
+          <div class="wrap">
+            <div class="card">
+              <p class="hi">欢迎回来 👋</p>
+              <p class="sub">登录继续你的创作</p>
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">适配薄荷主题</span><span class="mini">浅绿渐变</span><span class="mini">干净清新</span></div>
+      </div>
+
+      <!-- ============ 方案 C2：蓝白渐变 ============ -->
+      <div>
+        <div class="opt-label"><b>C2 · 蓝白渐变</b><span>清爽极简 / 低饱和度</span></div>
+        <div class="phone"><div class="phone-in c2" style="display:flex;flex-direction:column">
+          <div class="brand-band">
+            <div class="topbar">
+              <div class="brand">灵感集</div>
+              <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+            </div>
+            <div class="mast">
+              <div class="kicker">INSPIRE DAILY</div>
+              <h1>灵感集</h1>
+              <p>把每天路过脑海的闪光，<br>收藏成属于你的灵感宇宙。</p>
+            </div>
+          </div>
+          <div class="wrap">
+            <div class="card">
+              <p class="hi">欢迎回来 👋</p>
+              <p class="sub">登录继续你的创作</p>
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">蓝白渐变</span><span class="mini">低饱和</span><span class="mini">极简清爽</span></div>
+      </div>
+
+      <!-- ============ 方案 C3：浅灰高级 ============ -->
+      <div>
+        <div class="opt-label"><b>C3 · 浅灰高级</b><span>高级冷调 / 极简稳重</span></div>
+        <div class="phone"><div class="phone-in c3" style="display:flex;flex-direction:column">
+          <div class="brand-band">
+            <div class="topbar">
+              <div class="brand">灵感集</div>
+              <div class="right"><div class="circle">⌕</div><div class="circle">＋</div></div>
+            </div>
+            <div class="mast">
+              <div class="kicker">INSPIRE DAILY</div>
+              <h1>灵感集</h1>
+              <p>把每天路过脑海的闪光，<br>收藏成属于你的灵感宇宙。</p>
+            </div>
+          </div>
+          <div class="wrap">
+            <div class="card">
+              <p class="hi">欢迎回来 👋</p>
+              <p class="sub">登录继续你的创作</p>
+              <div class="field"><label>账号</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><input placeholder="请输入账号" value="45257209@qq.com"></div>
+              </div>
+              <div class="field"><label>密码</label>
+                <div class="f-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input placeholder="请输入密码" value="••••••••"></div>
+              </div>
+              <div class="row-tip">
+                <div class="check"><span class="box on"><svg viewBox="0 0 24 24"><path d="M4 12l5 5 11-11"/></svg></span>记住账号</div>
+                <span class="forget">忘记密码</span>
+              </div>
+              <button class="btn">立即登录</button>
+              <div class="reg">暂无账号？<b>前往注册</b></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="opt-actions"><span class="mini">浅灰冷调</span><span class="mini">高级稳重</span><span class="mini">极简不抢戏</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

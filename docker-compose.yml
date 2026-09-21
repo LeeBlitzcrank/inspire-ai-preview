@@ -163,6 +163,9 @@ services:
     environment:
       <<: *common-env
       INSPIRE_UNSPLASH_ACCESS_KEY: ${INSPIRE_UNSPLASH_ACCESS_KEY:-}
+      # 演示数据生成开关（幂等：目标用户已有数据会自动跳过）
+      # 需要灌数据时：INSPIRE_DEMO_SEED=true docker compose up -d --force-recreate inspire-core
+      INSPIRE_DEMO_SEED: ${INSPIRE_DEMO_SEED:-false}
     volumes:
       - ./log/inspire-core:/logs
       - /tmp/inspire-uploads:/tmp/inspire-uploads
