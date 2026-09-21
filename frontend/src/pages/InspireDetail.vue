@@ -53,7 +53,7 @@
         <button v-else class="follow-button" type="button" @click="requireLogin">关注</button>
       </div>
 
-      <button v-if="!isLogin" class="comment-gate" type="button" @click="goLoginForComments">
+      <button v-if="!isLogin" class="comment-gate" type="button" @click="requireLogin">
         <span class="comment-gate-title">登录后显示评论</span>
         <span class="comment-gate-desc">登录即可查看全部评论、回复与点赞</span>
         <span class="comment-gate-btn">去登录</span>
@@ -202,7 +202,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   collectInspire,
   createComment,
@@ -330,19 +330,11 @@ const formatRelativeTime = (value) => {
   return `${date.getFullYear()}年${month}月${day}日`
 }
 
+/**
+ * 游客触发需要登录的操作时统一处理：直接跳登录页，
+ * 并把当前灵感写入 redirectPath，登录成功后自动回到这里。
+ */
 const requireLogin = () => {
-  ElMessageBox.alert('请先登录后进行操作', '提示', {
-    confirmButtonText: '去登录',
-    type: 'warning',
-    closeOnClickModal: false
-  }).then(() => {
-    localStorage.setItem('redirectPath', detail.value.id ? `/detail/${detail.value.id}` : '/')
-    router.push('/login')
-  }).catch(() => {})
-}
-
-/** 游客点击评论区占位块：直接跳登录页，登录后回到当前灵感详情 */
-const goLoginForComments = () => {
   localStorage.setItem('redirectPath', detail.value.id ? `/detail/${detail.value.id}` : '/')
   router.push('/login')
 }
