@@ -85,38 +85,54 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
+    // 必须在发起登录前设置记住账号状态，login() 内部才能按约定持久化 AccessToken。
+    setRememberMe(remember.value)
+
     const res = await login({
       username: form.value.account,
       password: form.value.password
     })
 
-    if (res.code === 200) {
-      setRememberMe(remember.value)
-      auth.setLoggedIn()
-
+    const data = res?.data || {}
+    if (res?.code === 200 && data.accessToken) {
+      // 先写本地登录信息，再更新 Pinia 状态，确保首页首次挂载时能同步读取到用户 ID。
       localStorage.removeItem('adminToken')
       localStorage.removeItem('adminUser')
-      localStorage.setItem('token', res.data.accessToken)
+      localStorage.setItem('token', data.accessToken)
       localStorage.setItem('isLogin', '1')
-      localStorage.setItem('userAccount', res.data.username)
-      localStorage.setItem('userNickname', res.data.nickname)
-      if (res.data.avatar) localStorage.setItem('userAvatar', res.data.avatar)
+      localStorage.setItem('userAccount', data.username || form.value.account)
+      localStorage.setItem('userNickname', data.nickname || data.username || form.value.account)
+      if (data.avatar) localStorage.setItem('userAvatar', data.avatar)
 
-      const _payload = JSON.parse(atob(res.data.accessToken.split('.')[1]))
-      localStorage.setItem('userId', _payload.sub)
+      const userId = data.userId || parseJwtUserId(data.accessToken)
+      if (userId) localStorage.setItem('userId', String(userId))
 
+      auth.setLoggedIn()
       ElMessage.success('登录成功')
 
       const redirect = localStorage.getItem('redirectPath')
       localStorage.removeItem('redirectPath')
-      router.push(redirect || '/')
+      await router.replace(redirect || '/')
     } else {
-      ElMessage.error(res.msg || '登录失败')
+      ElMessage.error(res?.msg || '登录失败')
     }
   } catch (e) {
     // 错误已由 request.js 拦截器处理
+    console.error('[登录异常]', e)
   } finally {
     loading.value = false
+  }
+}
+
+const parseJwtUserId = (token) => {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    return JSON.parse(atob(padded))?.sub || null
+  } catch (e) {
+    return null
   }
 }
 </script>

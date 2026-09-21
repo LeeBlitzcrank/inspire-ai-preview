@@ -4,11 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): AI探索薄荷绿书法词云">
-      <change afterPath="$PROJECT_DIR$/frontend/src/pages/Login.vue.bak" afterDir="false" />
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 灵感详情薄荷绿书法词云">
+      <change afterPath="$PROJECT_DIR$/projectWord/preview/avatar-preview.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/projectWord/preview/detail-d3-family-preview.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/projectWord/preview/detail-preview.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/projectWord/preview/register-preview.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/config/CorsConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/config/CorsConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Register.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Register.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -33,7 +41,7 @@
   &quot;isMigrated&quot;: true
 }</component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1,
@@ -179,15 +187,7 @@
       <workItem from="1789620850875" duration="252000" />
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
-      <workItem from="1789909706268" duration="7566000" />
-    </task>
-    <task id="LOCAL-00012" summary="init 灵感创建引入deepseek&amp;引入redis缓存">
-      <option name="closed" value="true" />
-      <created>1782809643745</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1782809643745</updated>
+      <workItem from="1789909706268" duration="12304000" />
     </task>
     <task id="LOCAL-00013" summary="init 灵感创建引入deepseek&amp;引入redis缓存">
       <option name="closed" value="true" />
@@ -573,7 +573,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789909919100</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="feat(create): AI探索薄荷绿书法词云">
+      <option name="closed" value="true" />
+      <created>1789959609790</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1789959609790</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -606,7 +614,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="init 前端联调。引入Email重置密码。前端功能实现用户注册，登陆，重置密码。灵感收藏、点赞、查询" />
     <MESSAGE value="init 引入rocketMq，实现注册、发送灵感通过mq服务" />
     <MESSAGE value="init 管理员后台开发，监控大屏，灵感管理，推送配置" />
     <MESSAGE value="init 引入Flink接入RocketMQ" />
@@ -631,7 +638,8 @@
     <MESSAGE value="init JWT 双Token 认证" />
     <MESSAGE value="代码修复" />
     <MESSAGE value="feat(create): AI探索薄荷绿书法词云" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(create): AI探索薄荷绿书法词云" />
+    <MESSAGE value="feat(create): 灵感详情薄荷绿书法词云" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 灵感详情薄荷绿书法词云" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

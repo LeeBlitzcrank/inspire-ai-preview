@@ -20,7 +20,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${inspire.cors.allowed-origins:https://ai.20sherry.com,http://localhost:5173}")
+    @Value("${inspire.cors.allowed-origins:https://ai.20sherry.com,http://localhost:5173,http://127.0.0.1:5173}")
     private String allowedOrigins;
 
     @Bean

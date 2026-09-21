@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>灵感详情页 · 可操作样机</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:#e9edf3;color:#182033;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",Arial,sans-serif}
+.stage{max-width:1380px;margin:0 auto;padding:30px 22px 60px}
+.stage h1{font-size:23px;margin:0 0 8px}
+.sub{font-size:14px;line-height:1.7;color:#667085;margin:0 0 26px}
+#grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+@media(max-width:1120px){#grid{grid-template-columns:1fr}}
+.option-label{display:flex;align-items:baseline;gap:8px;margin:0 0 10px 3px}
+.option-label b{font-size:16px}
+.option-label span{font-size:12.5px;color:#667085}
+.phone{padding:10px;border-radius:28px;background:#fff;border:1px solid #dce2ec;
+  box-shadow:0 14px 38px rgba(20,35,70,.16)}
+.screen{position:relative;height:760px;border-radius:20px;overflow:hidden;
+  display:flex;flex-direction:column}
+.topbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 10px}
+.round{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:20px;line-height:1;cursor:pointer}
+.gallery{flex:0 0 auto;padding:0 20px}
+.gallery-main{width:100%;height:220px;object-fit:cover;border-radius:13px;display:block}
+.thumbs{display:flex;gap:7px;margin-top:9px;overflow-x:auto;padding-bottom:2px}
+.thumb-item{width:48px;height:48px;border-radius:10px;object-fit:cover;cursor:pointer;
+  opacity:.56;border:2px solid transparent;flex:0 0 auto}
+.thumb-item.active{opacity:1;border-color:currentColor}
+.image-count{font-size:11.5px;margin-top:7px;opacity:.72}
+.article{flex:1;min-height:0;overflow-y:auto;padding:20px 23px 92px}
+.kicker{font-size:12px;letter-spacing:3px;margin-bottom:9px}
+h2{font-size:27px;line-height:1.32;margin:0 0 12px}
+.lead{font-size:14.5px;line-height:1.85;margin:0 0 16px}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.tag{display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:999px;
+  font-size:12.5px}
+.author{display:flex;align-items:center;gap:11px;padding:14px;border-radius:16px}
+.author-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:14px;font-weight:700}
+.author b{display:block;font-size:14px;margin-bottom:2px}
+.author small{font-size:12px}
+.follow{margin-left:auto;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}
+.comments-title{margin:24px 0 0;font-size:15px;font-weight:700}
+.comment{padding:14px 0;border-top:1px solid currentColor}
+.comment-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.comment-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700}
+.comment-head b{font-size:13.5px}
+.comment-head span{margin-left:auto;font-size:12px;opacity:.68}
+.comment-text{margin:0;font-size:13.8px;line-height:1.65}
+.comment-tools{display:flex;gap:14px;align-items:center;margin-top:8px;font-size:12px;opacity:.76}
+.comment-tools span{cursor:pointer}
+.comment-like.liked{font-weight:700;opacity:1}
+.comment-box{display:flex;gap:8px;margin:16px 0 4px}
+.comment-box input{flex:1;height:38px;border-radius:11px;border:1px solid currentColor;
+  background:transparent;padding:0 12px;outline:none;font-family:inherit;font-size:13px;color:inherit}
+.comment-box button{border:none;border-radius:11px;padding:0 13px;font-size:12.5px;
+  color:#fff;cursor:pointer}
+.comment-box button:disabled{opacity:.4}
+.refresh-comments{display:inline-block;margin-top:10px;font-size:12.5px;cursor:pointer}
+.bottom{position:absolute;left:0;right:0;bottom:0;height:72px;z-index:5;display:flex;
+  align-items:center;gap:12px;padding:10px 16px}
+.fake{flex:1;height:42px;border-radius:999px;display:flex;align-items:center;
+  padding:0 15px;font-size:13.5px}
+.actions{display:flex;gap:11px}
+.action{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:34px;
+  font-size:11px;cursor:pointer}
+
+.d1{background:#f7f1e6;color:#25312c}
+.d1 .round,.d1 .comment-box button{background:#26332e;color:#f7f1e6}
+.d1 h2,.d1 .lead{font-family:Georgia,"Songti SC","SimSun",serif}
+.d1 .tag{border:1px solid #9b8668;color:#6e4b25}
+.d1 .author{background:#fbf7ee;border:1px solid #d8c9b2}
+.d1 .author-avatar{background:#26332e;color:#f6ecd9}
+.d1 .author small{color:#7b6a55}
+.d1 .follow{border:1px solid #26332e}
+.d1 .comment{border-color:#ded2bf}
+.d1 .comment-avatar{background:#26332e;color:#f6ecd9}
+.d1 .bottom{background:rgba(247,241,230,.96);border-top:1px solid #d8c9b2}
+.d1 .fake{background:#fff8ec;border:1px solid #cdbb9f;color:#8a7a63}
+
+.d2{background:#0d1220;color:#e8edf8}
+.d2 .round{background:rgba(255,255,255,.08);color:#fbbf24;
+  border:1px solid rgba(255,255,255,.09)}
+.d2 h2{color:#fff}.d2 .lead{color:#c4cede}
+.d2 .tag{background:rgba(251,191,36,.1);color:#fbbf24;
+  border:1px solid rgba(251,191,36,.22)}
+.d2 .author{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09)}
+.d2 .author-avatar{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#111827}
+.d2 .author small{color:#91a0b8}
+.d2 .follow{background:#fbbf24;color:#151a25;font-weight:700}
+.d2 .comment{border-color:rgba(255,255,255,.09)}
+.d2 .comment-avatar{background:#fbbf24;color:#151a25}
+.d2 .comment-head b{color:#f3f6fc}.d2 .comment-text{color:#c9d3e3}
+.d2 .comment-box button{background:#fbbf24;color:#151a25}
+.d2 .bottom{background:rgba(13,18,32,.96);border-top:1px solid rgba(255,255,255,.09)}
+.d2 .fake{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#8492aa}
+.d2 .like-main.liked{color:#fbbf24}
+
+.d3{background:#efe3cf;color:#3f2f20}
+.d3 .round{background:#fff8ec;border:2px solid #4b3828;color:#4b3828;
+  border-radius:48% 52% 47% 53%}
+.d3 .tag{background:#fff8ec;border:2px solid #4b3828;border-radius:8px 12px 7px 13px;
+  transform:rotate(-1deg)}
+.d3 .author{background:#f7eddc;border:2px dashed #9a7653}
+.d3 .author-avatar{background:#fff8ec;color:#4b3828;border:2px solid #4b3828}
+.d3 .author small{color:#8a6749}
+.d3 .follow{border:2px solid #4b3828;background:#fff8ec}
+.d3 .comment{border-color:#d4bfa2}
+.d3 .comment-avatar{background:#fff8ec;color:#4b3828;border:2px solid #4b3828}
+.d3 .comment-box button{background:#4b3828;color:#fff8ec}
+.d3 .bottom{background:rgba(239,227,207,.96);border-top:2px dashed #9a7653}
+.d3 .fake{background:#fff8ec;border:2px solid #4b3828;color:#9a7653}
+</style>
+</head>
+<body>
+<main class="stage">
+  <h1>灵感详情页 · 可操作样机</h1>
+  <p class="sub">支持多图切换、评论发表、评论点赞、换一批评论和主动作点赞。</p>
+  <div id="grid"></div>
+</main>
+<script>
+const variants = [
+  {
+    id: 'd1',
+    name: 'D1 · 墨白杂志',
+    note: '纸感 / 衬线标题 / 编辑排版',
+    kicker: '山野行记',
+    title: '晨雾穿过山脊时，城市还没有醒来',
+    city: '杭州',
+    images: [1018, 1016, 1036, 1039],
+    lead: '凌晨五点半，山谷里的风带着湿润草木气。远处的光慢慢翻过岭线，雾气像被轻轻掀开的纸页。把这一刻记录下来，适合延展成旅行灵感、自然配色或安静的生活方式选题。',
+    tags: ['自然灵感', '旅行记录'],
+    likes: 128,
+    collects: 86,
+    comments: [
+      ['茶','清爽奶茶','构图好安静，想把这个光影放进周末选题。'],
+      ['兔','温暖小兔','雾气和山脊的层次太适合做封面参考了。'],
+      ['影','文艺胶片','如果配一个米白底色，做成杂志页会很舒服。'],
+      ['星','星辰小夏','看完想早起去山里走一走，呼吸一下清晨。']
+    ]
+  },
+  {
+    id: 'd2',
+    name: 'D2 · 夜幕影院',
+    note: '深色 / 电影封面 / 琥珀光感',
+    kicker: '夜色创作',
+    title: '把山河收藏成一张电影海报',
+    city: '上海',
+    images: [1015, 1019, 1043, 1057, 1071],
+    lead: '深色页面让图片成为视觉中心，琥珀色用于互动状态和关键提示。正文保持安静，评论以卡片方式收束，适合强调封面、旅行、摄影类灵感。',
+    tags: ['摄影灵感', '电影感'],
+    likes: 156,
+    collects: 92,
+    liked: true,
+    comments: [
+      ['影','文艺胶片','深色底把图片的光感完全托出来了。'],
+      ['兔','温暖小兔','这个像电影定格画面，氛围感很强。'],
+      ['光','追光少年','琥珀色点赞状态很好看，不会太刺眼。'],
+      ['河','河谷笔记','图片切换手感不错，适合摄影类内容。'],
+      ['月','月色胶片','评论区和正文层级清晰，重点都在图上。']
+    ]
+  },
+  {
+    id: 'd3',
+    name: 'D3 · 手作纸感',
+    note: '暖色纸张 / 手绘边框 / 贴纸标签',
+    kicker: '手作日常',
+    title: '把普通午后做成一页手感笔记',
+    city: '成都',
+    images: [1080, 1081, 1082, 1084],
+    lead: '纸张底色、虚线作者卡和轻微倾斜的标签带来手作感。整体温暖但不幼稚，适合美食、家居、手账、穿搭和小器物类灵感。',
+    tags: ['手作', '生活美学'],
+    likes: 94,
+    collects: 61,
+    comments: [
+      ['奶','清爽奶茶','纸张质感和美食、手作内容真的很搭。'],
+      ['鹿','温暖小鹿','虚线边框很有手账感，可爱但不夸张。'],
+      ['糖','糖果手札','标签微微倾斜，细节让页面活起来了。'],
+      ['麦','麦穗午后','适合记录餐桌、家居和小器物。']
+    ]
+  }
+]
+
+const commentBank = {
+  d1: [
+    ['鹿','林间小鹿','保存了，正好缺一组自然系配色灵感。'],
+    ['风','清风远山','正文和图片的气质很统一，阅读节奏很好。'],
+    ['云','云朵慢递','这一组图片的层次很耐看。'],
+    ['溪','溪谷笔记','安静的画面很适合周末阅读。']
+  ],
+  d2: [
+    ['山','山野镜头','这一版很适合做成系列作品展示。'],
+    ['夜','夜色记录','深色模式下图片更有质感。'],
+    ['川','河川镜头','点赞的琥珀色点缀很准确。'],
+    ['光','微光胶片','主图和评论区的层级很清楚。']
+  ],
+  d3: [
+    ['橘','橘子汽水','这个配色看着很放松，想慢慢翻完。'],
+    ['纸','纸面星光','评论像写在笔记本边上，很亲切。'],
+    ['木','木器小馆','和生活方式内容特别贴合。'],
+    ['莓','莓果午后','标签和纸张细节都很可爱。']
+  ]
+}
+
+const state = {}
+
+function img(id, size = 640) {
+  const height = size === 640 ? 420 : 120
+  return `https://picsum.photos/id/${id}/${size}/${height}`
+}
+
+function renderVariant(variant) {
+  const section = document.createElement('section')
+  section.innerHTML = `
+    <div class="option-label"><b>${variant.name}</b><span>${variant.note}</span></div>
+    <div class="phone">
+      <div class="screen ${variant.id}">
+        <div class="topbar">
+          <div class="round">‹</div>
+          <div class="round">···</div>
+        </div>
+        <div class="gallery">
+          <img class="gallery-main" src="${img(variant.images[0])}" alt="灵感主图">
+          <div class="thumbs"></div>
+          <div class="image-count">1/${variant.images.length} · 点击缩略图切换</div>
+        </div>
+        <div class="article">
+          <div class="kicker">${variant.kicker}</div>
+          <h2>${variant.title}</h2>
+          <p class="lead">${variant.lead}</p>
+          <div class="tags">
+            ${variant.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+          </div>
+          <div class="author">
+            <div class="author-avatar">${variant.id === 'd2' ? '影' : variant.id === 'd3' ? '奶' : '鹿'}</div>
+            <div>
+              <b>${variant.id === 'd2' ? '文艺胶片' : variant.id === 'd3' ? '清爽奶茶' : '温暖小鹿'}</b>
+              <small>发布于 2 小时前 · ${variant.city}</small>
+            </div>
+            <span class="follow">关注</span>
+          </div>
+          <div class="comments-title">共 <span class="comment-total"></span> 条评论</div>
+          <div class="comment-list"></div>
+          <div class="comment-box">
+            <input placeholder="写下你的评论..." maxlength="200">
+            <button disabled>发送</button>
+          </div>
+          <span class="refresh-comments">换一批评论</span>
+        </div>
+        <div class="bottom">
+          <div class="fake">说点什么...</div>
+          <div class="actions">
+            <div class="action like-main ${variant.liked ? 'liked' : ''}">♡<span>${variant.likes}</span></div>
+            <div class="action">☆<span>${variant.collects}</span></div>
+            <div class="action">评<span class="bottom-comment-count"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  section.dataset.variant = variant.id
+  document.getElementById('grid').appendChild(section)
+}
+
+function initGallery(variant, section) {
+  const main = section.querySelector('.gallery-main')
+  const thumbs = section.querySelector('.thumbs')
+  const count = section.querySelector('.image-count')
+  variant.images.forEach((id, index) => {
+    const item = document.createElement('img')
+    item.className = `thumb-item${index === 0 ? ' active' : ''}`
+    item.src = img(id, 120)
+    item.alt = `图片 ${index + 1}`
+    item.addEventListener('click', () => {
+      main.src = img(id)
+      count.textContent = `${index + 1}/${variant.images.length} · 点击缩略图切换`
+      thumbs.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'))
+      item.classList.add('active')
+    })
+    thumbs.appendChild(item)
+  })
+}
+
+function renderComments(id, section) {
+  const list = section.querySelector('.comment-list')
+  list.innerHTML = ''
+  state[id].comments.forEach(item => {
+    const comment = document.createElement('div')
+    comment.className = 'comment'
+    comment.innerHTML = `
+      <div class="comment-head">
+        <span class="comment-avatar">${item.avatarMark}</span>
+        <b>${item.name}</b><span>${item.time}</span>
+      </div>
+      <p class="comment-text">${item.text}</p>
+      <div class="comment-tools">
+        <span class="comment-like ${item.liked ? 'liked' : ''}">${item.liked ? '已赞' : '赞'} ${item.likes}</span>
+        <span>回复</span>
+      </div>`
+    comment.querySelector('.comment-like').addEventListener('click', () => {
+      item.liked = !item.liked
+      item.likes += item.liked ? 1 : -1
+      renderComments(id, section)
+    })
+    list.appendChild(comment)
+  })
+  section.querySelector('.comment-total').textContent = state[id].comments.length
+  section.querySelector('.bottom-comment-count').textContent = state[id].comments.length
+}
+
+function initState(variant, section) {
+  state[variant.id] = {
+    comments: variant.comments.map(([avatarMark, name, text], index) => ({
+      avatarMark, name, text, likes: index + 2,
+      liked: index === 0, time: `${index + 3} 分钟前`
+    }))
+  }
+  renderComments(variant.id, section)
+}
+
+variants.forEach(variant => {
+  renderVariant(variant)
+  const section = document.querySelector(`[data-variant="${variant.id}"]`)
+  initGallery(variant, section)
+  initState(variant, section)
+})
+
+document.addEventListener('input', event => {
+  const box = event.target.closest('.comment-box')
+  if (!box) return
+  box.querySelector('button').disabled = !event.target.value.trim()
+})
+
+document.addEventListener('click', event => {
+  const like = event.target.closest('.like-main')
+  if (like) {
+    const active = like.classList.toggle('liked')
+    const count = like.querySelector('span')
+    count.textContent = Number(count.textContent) + (active ? 1 : -1)
+  }
+
+  const refresh = event.target.closest('.refresh-comments')
+  if (!refresh) return
+  const section = refresh.closest('section')
+  const id = section.dataset.variant
+  state[id].comments = [...commentBank[id]]
+    .sort(() => Math.random() - 0.5)
+    .map(([avatarMark, name, text], index) => ({
+      avatarMark, name, text,
+      likes: Math.floor(Math.random() * 10) + 1,
+      liked: false,
+      time: `${index * 5 + 4} 分钟前`
+    }))
+  renderComments(id, section)
+})
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('.comment-box button')
+  if (!button || button.disabled) return
+  const section = button.closest('section')
+  const id = section.dataset.variant
+  const input = section.querySelector('.comment-box input')
+  state[id].comments.unshift({
+    avatarMark: '我',
+    name: '当前用户',
+    text: input.value.trim(),
+    likes: 0,
+    liked: false,
+    time: '刚刚'
+  })
+  input.value = ''
+  button.disabled = true
+  renderComments(id, section)
+})
+</script>
+</body>
+</html>

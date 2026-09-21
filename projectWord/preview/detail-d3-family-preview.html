@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>D3 手作详情页风格组 · 可操作样机</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  color: #352b24;
+  background: #e8e0d4;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+.stage { max-width: 1320px; margin: 0 auto; padding: 32px 24px 64px; }
+.stage h1 { margin: 0 0 8px; font-size: 25px; }
+.sub { margin: 0 0 26px; color: #75685d; font-size: 14px; line-height: 1.8; }
+#grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+@media (max-width: 1100px) { #grid { grid-template-columns: 1fr; } }
+.option-label { display: flex; align-items: baseline; gap: 10px; margin: 0 0 11px 4px; }
+.option-label b { font-size: 17px; }
+.option-label span { color: #77695e; font-size: 12.5px; }
+.phone {
+  padding: 11px;
+  border-radius: 31px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(88,68,45,.15);
+  box-shadow: 0 16px 40px rgba(74,54,31,.17);
+}
+.screen {
+  position: relative;
+  height: 720px;
+  overflow: hidden;
+  border-radius: 23px;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 18px 9px;
+}
+.round {
+  width: 37px;
+  height: 37px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  cursor: pointer;
+}
+.gallery { flex: 0 0 auto; padding: 0 19px; }
+.gallery-main {
+  width: 100%;
+  height: 215px;
+  display: block;
+  object-fit: cover;
+  border-radius: 17px;
+}
+.thumbs { display: flex; gap: 8px; margin-top: 9px; overflow-x: auto; padding-bottom: 2px; }
+.thumb-item {
+  width: 49px;
+  height: 49px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px dashed transparent;
+  cursor: pointer;
+  opacity: .62;
+}
+.thumb-item.active { opacity: 1; border-style: solid; }
+.image-count { margin-top: 7px; font-size: 11.5px; opacity: .72; }
+.article { flex: 1; min-height: 0; overflow-y: auto; padding: 19px 23px 92px; }
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  transform: rotate(-1.5deg);
+}
+h2 { margin: 0 0 12px; font-size: 26px; line-height: 1.36; }
+.lead { margin: 0 0 15px; font-size: 14px; line-height: 1.9; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 17px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 29px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  transform: rotate(-1deg);
+}
+.author {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 2px dashed currentColor;
+}
+.author-avatar {
+  width: 43px;
+  height: 43px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.author b { display: block; margin-bottom: 2px; font-size: 14px; }
+.author small { font-size: 12px; }
+.follow { margin-left: auto; padding: 7px 14px; border-radius: 999px; font-size: 12.5px; cursor: pointer; }
+.comments-title { margin: 23px 0 0; font-size: 15px; font-weight: 700; }
+.comment-list { margin-top: 2px; }
+.comment { padding: 13px 0; border-top: 1.5px dashed currentColor; }
+.comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  margin-bottom: 7px;
+  text-align: left;
+}
+.comment-avatar {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.comment-head b {
+  font-size: 13.5px;
+  text-align: left;
+}
+.comment-head > span:last-child { margin-left: auto; font-size: 12px; opacity: .68; }
+.comment-head .comment-avatar { margin-left: 0; opacity: 1; }
+.comment-text { margin: 0; font-size: 13.7px; line-height: 1.68; }
+.comment-tools { display: flex; gap: 15px; align-items: center; margin-top: 8px; font-size: 12px; opacity: .78; }
+.comment-tools span { cursor: pointer; }
+.comment-like.liked { opacity: 1; font-weight: 700; }
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 16px;
+}
+.fake {
+  flex: 1;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-radius: 999px;
+  font-size: 13.5px;
+}
+.quick-comment {
+  padding: 0;
+  overflow: hidden;
+}
+.quick-comment input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  padding: 0 15px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13.5px;
+}
+.actions { display: flex; gap: 11px; }
+.action {
+  min-width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.comment-root .comment-tools { margin-bottom: 0; }
+.replies {
+  margin: 10px 0 0 22px;
+  padding: 9px 12px;
+  border-radius: 15px;
+  border-left: 3px solid currentColor;
+  background: rgba(255,255,255,.38);
+}
+.reply { padding: 9px 0; border-top: 1px dotted currentColor; }
+.reply:first-child { padding-top: 0; border-top: none; }
+.reply .comment-head span { font-size: 11.5px; }
+.reply-to { font-weight: 700; }
+.reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.reply-toggle,
+.reply-more,
+.reply-collapse {
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reply-collapse {
+  opacity: .62;
+  font-weight: 400;
+}
+.replies.empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.reply-box {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+.reply-box[hidden] { display: none; }
+.reply-box input {
+  flex: 1;
+  height: 35px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1.5px solid currentColor;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+.reply-box button {
+  border: none;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+}
+.reply-box button:disabled { opacity: .38; }
+.comment-load-status {
+  margin: 15px 0 4px;
+  text-align: center;
+  font-size: 12.5px;
+  opacity: .72;
+}
+
+/* A · 橘糖手账 */
+.a {
+  color: #674026;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255,255,255,.7) 0 2px, transparent 3px),
+    #fff2dc;
+}
+.a .round, .a .follow { background: #e67833; color: #fff7ed; }
+.a .gallery-main, .a .author { box-shadow: 4px 5px 0 rgba(230,120,51,.16); }
+.a .thumb-item.active { border-color: #e67833; }
+.a .kicker, .a .tag { background: #ffd8ad; color: #92501f; }
+.a .author { background: rgba(255,247,235,.86); }
+.a .author-avatar { background: #e67833; color: #fff4e8; }
+.a .bottom { background: rgba(255,239,218,.96); border-top: 2px dashed #d9905d; }
+.a .fake { background: #fff9f0; border: 2px solid #e67833; }
+.a .like-main.liked { color: #e65f20; }
+.a .comment-root {
+  margin: 12px -9px 0;
+  padding: 13px 10px 2px;
+  border-radius: 16px;
+  background: rgba(255,249,240,.58);
+  border-top: 1px solid rgba(230,120,51,.24);
+}
+.a .comment-root + .comment-root { margin-top: 14px; }
+.a .replies {
+  background: rgba(255,232,203,.45);
+  border-left-color: #e67833;
+}
+.a .comment-load-status {
+  color: #a86631;
+  font-weight: 600;
+}
+
+/* B · 森野市集 */
+.b {
+  color: #40543a;
+  background:
+    linear-gradient(90deg, rgba(93,125,82,.05) 1px, transparent 1px),
+    #f3f0df;
+  background-size: 18px 18px;
+}
+.b .round, .b .follow { background: #60835a; color: #f5f8ea; }
+.b .gallery-main, .b .author { box-shadow: 4px 5px 0 rgba(96,131,90,.17); }
+.b .thumb-item.active { border-color: #60835a; }
+.b .kicker, .b .tag { background: #d9e5c8; color: #496a43; }
+.b .author { background: rgba(255,252,240,.82); }
+.b .author-avatar { background: #60835a; color: #f3f8e9; }
+.b .bottom { background: rgba(239,238,218,.96); border-top: 2px dashed #7b906b; }
+.b .fake { background: #fffdf2; border: 2px solid #60835a; }
+.b .like-main.liked { color: #4f7d3f; }
+
+/* C · 莓果信纸 */
+.c {
+  color: #6e354d;
+  background:
+    linear-gradient(0deg, transparent 31px, rgba(196,79,115,.09) 32px),
+    #fff0f4;
+  background-size: 100% 32px;
+}
+.c .round, .c .follow { background: #c65078; color: #fff5f8; }
+.c .gallery-main, .c .author { box-shadow: 4px 5px 0 rgba(198,80,120,.15); }
+.c .thumb-item.active { border-color: #c65078; }
+.c .kicker, .c .tag { background: #ffd7e3; color: #9b3e62; }
+.c .author { background: rgba(255,255,255,.72); }
+.c .author-avatar { background: #c65078; color: #fff2f6; }
+.c .bottom { background: rgba(255,237,243,.96); border-top: 2px dashed #d987a3; }
+.c .fake { background: #fffafc; border: 2px solid #c65078; }
+.c .like-main.liked { color: #c63f70; }
+
+/* D · 海盐拼贴 */
+.d {
+  color: #294b5d;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(255,255,255,.85) 0 9px, transparent 10px),
+    #edf7fa;
+}
+.d .round, .d .follow { background: #2e7f98; color: #f1fbff; }
+.d .gallery-main, .d .author { box-shadow: 4px 5px 0 rgba(46,127,152,.16); }
+.d .thumb-item.active { border-color: #2e7f98; }
+.d .kicker, .d .tag { background: #cfeaf3; color: #27677c; }
+.d .author { background: rgba(255,255,255,.78); }
+.d .author-avatar { background: #2e7f98; color: #ecfaff; }
+.d .bottom { background: rgba(235,247,251,.96); border-top: 2px dashed #7eabb9; }
+.d .fake { background: #fbfeff; border: 2px solid #2e7f98; }
+.d .like-main.liked { color: #20768e; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <h1>D3 手作详情页风格组</h1>
+  <p class="sub">保留手作纸感，但整体配色、纹样和贴纸语气全部变换。每套都支持多图切换、评论、点赞和换评论。</p>
+  <div id="grid"></div>
+</main>
+<script>
+const variants = [
+  {
+    id: 'a',
+    name: 'S1 · 橘糖手账',
+    note: '奶油纸 / 橘子糖 / 明亮贴纸',
+    kicker: '周末甜橙派',
+    title: '把烤得暖暖的橘子香，贴进今天的手账',
+    city: '杭州',
+    images: [292, 326, 431, 488],
+    lead: '橘子酱、木纹餐桌和刚出炉的小点心都适合放在这一套里。页面使用奶油底和橘色贴纸，阅读感明亮轻松，像把周末下午的好心情直接收进手账。',
+    tags: ['甜点记录', '暖色调', '手账灵感'],
+    author: { mark: '橘', name: '橘子汽水' },
+    likes: 126,
+    collects: 74,
+    liked: true,
+    comments: [
+      ['糖', '糖果手札', '这个橘色太有食欲了，看完整个人都暖了。'],
+      ['麦', '麦穗午后', '贴纸的感觉很轻，不会显得幼稚。'],
+      ['奶', '清爽奶茶', '适合放美食和周末日常，很讨喜。'],
+      ['鹿', '温暖小鹿', '图片阴影也很可爱，像贴在纸上。']
+    ]
+  },
+  {
+    id: 'b',
+    name: 'S2 · 森野市集',
+    note: '草木绿 / 格纹纸 / 自然市集',
+    kicker: '山野小集',
+    title: '在草木香气里，收集一只篮子的新鲜日常',
+    city: '昆明',
+    images: [145, 214, 287, 342, 493],
+    lead: '这一版把绿色压得更柔和，搭配浅格纹底和虚线作者卡，像郊外市集里摊开的手工小报。它适合自然、植物、露营、餐桌和慢生活主题。',
+    tags: ['自然生活', '草木绿', '市集灵感'],
+    author: { mark: '野', name: '林间小夏' },
+    likes: 153,
+    collects: 91,
+    comments: [
+      ['风', '清风远山', '绿色很舒服，没有那种很重的田园感。'],
+      ['溪', '溪谷笔记', '格纹底把自然主题衬得很细腻。'],
+      ['茶', '清爽奶茶', '这一版好适合露营和植物记录。'],
+      ['月', '月色胶片', '虚线卡片和篮子主题很搭。']
+    ]
+  },
+  {
+    id: 'c',
+    name: 'S3 · 莓果信纸',
+    note: '横格信纸 / 莓果粉 / 柔软日记',
+    kicker: '莓果来信',
+    title: '写给傍晚的一封粉色短笺，里面有浆果和晚风',
+    city: '上海',
+    images: [102, 106, 286, 365],
+    lead: '横格信纸让正文更像一封柔软的日记，莓果粉只用于标签和互动状态，整体不会甜腻。它适合穿搭、情绪记录、旅行信件和生活方式类灵感。',
+    tags: ['情绪日记', '莓果粉', '穿搭灵感'],
+    author: { mark: '莓', name: '莓果午后' },
+    likes: 118,
+    collects: 68,
+    comments: [
+      ['星', '星辰小夏', '信纸纹理好温柔，正文读起来很安静。'],
+      ['云', '云朵慢递', '粉色比例刚刚好，不会太甜。'],
+      ['影', '文艺胶片', '感觉很适合写旅行里的小情绪。'],
+      ['糖', '糖果手札', '评论分隔线像日记本，细节很喜欢。']
+    ]
+  },
+  {
+    id: 'd',
+    name: 'S4 · 海盐拼贴',
+    note: '浅海蓝 / 剪报拼贴 / 清爽旅行',
+    kicker: '海风拼贴',
+    title: '把海边捡到的蓝色碎片，拼成一页清爽简报',
+    city: '厦门',
+    images: [110, 164, 176, 235, 401],
+    lead: '这一版更像旅行剪报：海盐蓝负责清爽的秩序感，轻微偏移的贴纸和硬阴影带来拼贴手感。它适合海边旅行、城市漫步、建筑和摄影灵感。',
+    tags: ['海边旅行', '海盐蓝', '拼贴灵感'],
+    author: { mark: '海', name: '海风明信片' },
+    likes: 142,
+    collects: 83,
+    liked: true,
+    comments: [
+      ['浪', '浪花信笺', '蓝色很清爽，夏天感一下就出来了。'],
+      ['光', '追光少年', '拼贴阴影很适合旅行照片。'],
+      ['河', '河谷笔记', '图片和正文都很透气，不拥挤。'],
+      ['月', '月色胶片', '这套做城市漫步也会很好看。']
+    ]
+  }
+]
+
+const commentBank = {
+  a: [
+    ['橘', '橘子皮日记', '想照着做一页周末菜单，颜色太可爱了。'],
+    ['甜', '甜甜圈信箱', '这个风格轻松又有记忆点。'],
+    ['木', '木器小馆', '橘色和木纹图片放在一起特别和谐。'],
+    ['晴', '晴天小铺', '像打开了一颗水果糖。']
+  ],
+  b: [
+    ['林', '林木手作', '很像市集门口拿到的手绘小报。'],
+    ['谷', '山谷慢走', '绿色和图片的自然感很统一。'],
+    ['果', '果子篮子', '这一版适合放新鲜食材和野餐。'],
+    ['青', '青草记事', '阅读时心情会慢慢安静下来。']
+  ],
+  c: [
+    ['信', '来信收到', '像在看一封写得很认真的信。'],
+    ['晚', '晚风收藏', '莓果色点缀得很克制，很高级。'],
+    ['羽', '羽毛日记', '适合收藏一些柔软的小情绪。'],
+    ['桃', '桃子气泡', '横格背景让正文特别有节奏。']
+  ],
+  d: [
+    ['蓝', '蓝色码头', '清爽得像刚从海边回来。'],
+    ['船', '小船简报', '拼贴感很适合做旅行合集。'],
+    ['潮', '潮汐记录', '图片边框和蓝色文字都很干净。'],
+    ['夏', '夏天存档', '这套很适合做成系列页面。']
+  ]
+}
+
+const state = {}
+
+function img(id, width = 640) {
+  const height = width === 640 ? 420 : 120
+  return `https://picsum.photos/id/${id}/${width}/${height}`
+}
+
+function renderVariant(variant) {
+  const section = document.createElement('section')
+  section.dataset.variant = variant.id
+  section.innerHTML = `
+    <div class="option-label"><b>${variant.name}</b><span>${variant.note}</span></div>
+    <div class="phone">
+      <div class="screen ${variant.id}">
+        <div class="topbar">
+          <div class="round">‹</div>
+          <div class="round">···</div>
+        </div>
+        <div class="gallery">
+          <img class="gallery-main" src="${img(variant.images[0])}" alt="灵感主图">
+          <div class="thumbs"></div>
+          <div class="image-count">1/${variant.images.length} · 点击缩略图切换</div>
+        </div>
+        <div class="article">
+          <div class="kicker">${variant.kicker}</div>
+          <h2>${variant.title}</h2>
+          <p class="lead">${variant.lead}</p>
+          <div class="tags">
+            ${variant.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+          </div>
+          <div class="author">
+            <div class="author-avatar">${variant.author.mark}</div>
+            <div>
+              <b>${variant.author.name}</b>
+              <small>发布于 2 小时前 · ${variant.city}</small>
+            </div>
+            <span class="follow">关注</span>
+          </div>
+          <div class="comments-title">
+            共 <span class="comment-total"></span> 条主评论 ·
+            已显示 <span class="comment-shown"></span>/<span class="comment-total-copy"></span>
+          </div>
+          <div class="comment-list"></div>
+          <div class="comment-load-status"></div>
+        </div>
+        <div class="bottom">
+          <form class="fake quick-comment quick-root-comment">
+            <input placeholder="说点什么..." maxlength="200" aria-label="快速评论">
+          </form>
+          <div class="actions">
+            <div class="action like-main ${variant.liked ? 'liked' : ''}">♡<span>${variant.likes}</span></div>
+            <div class="action">☆<span>${variant.collects}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  document.getElementById('grid').appendChild(section)
+}
+
+function initGallery(variant, section) {
+  const main = section.querySelector('.gallery-main')
+  const thumbs = section.querySelector('.thumbs')
+  const count = section.querySelector('.image-count')
+  variant.images.forEach((id, index) => {
+    const item = document.createElement('img')
+    item.className = `thumb-item${index === 0 ? ' active' : ''}`
+    item.src = img(id, 120)
+    item.alt = `图片 ${index + 1}`
+    item.addEventListener('click', () => {
+      main.src = img(id)
+      count.textContent = `${index + 1}/${variant.images.length} · 点击缩略图切换`
+      thumbs.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'))
+      item.classList.add('active')
+    })
+    thumbs.appendChild(item)
+  })
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function makeRichS1Comments() {
+  const roots = [
+    {
+      id: 's1-r1',
+      avatarMark: '奶',
+      name: '清爽奶茶',
+      text: '主图这个橘色和手账纸太搭了，像一块刚切开的橙子蛋糕。',
+      likes: 36,
+      liked: false,
+      time: '18 分钟前',
+      replies: [
+        { id: 's1-r1-a1', avatarMark: '鹿', name: '温暖小鹿', replyTo: '清爽奶茶', text: '哈哈你这么一说，我都闻到橙子香气了。', likes: 12, liked: false, time: '17 分钟前' },
+        { id: 's1-r1-a2', avatarMark: '奶', name: '清爽奶茶', replyTo: '温暖小鹿', text: '是吧，尤其配这个奶油底色，特别适合做周末菜单。', likes: 9, liked: false, time: '16 分钟前' },
+        { id: 's1-r1-a3', avatarMark: '鹿', name: '温暖小鹿', replyTo: '清爽奶茶', text: '那我周末试着拍一组烘焙图，也用这个版式。', likes: 11, liked: false, time: '15 分钟前' },
+        { id: 's1-r1-a4', avatarMark: '奶', name: '清爽奶茶', replyTo: '温暖小鹿', text: '好呀，我第一个来蹲成品。', likes: 8, liked: false, time: '14 分钟前' },
+        { id: 's1-r1-a5', avatarMark: '鹿', name: '温暖小鹿', replyTo: '清爽奶茶', text: '那我拍完先给你看，帮我挑一下主图。', likes: 7, liked: false, time: '13 分钟前' },
+        { id: 's1-r1-a6', avatarMark: '奶', name: '清爽奶茶', replyTo: '温暖小鹿', text: '没问题，记得把橘子和饼干的颜色都放进来。', likes: 6, liked: false, time: '12 分钟前' }
+      ]
+    },
+    {
+      id: 's1-r2',
+      avatarMark: '糖',
+      name: '糖果手札',
+      text: '想问一下，如果评论很多，这种虚线分隔会不会显得乱？我觉得现在的节奏还挺舒服的。',
+      likes: 24,
+      liked: true,
+      time: '24 分钟前',
+      replies: [
+        { id: 's1-r2-a1', avatarMark: '橘', name: '橘子汽水', replyTo: '糖果手札', text: '主评论用虚线，回复放进浅色小卡片，层级会更清楚。', likes: 7, liked: false, time: '22 分钟前' },
+        { id: 's1-r2-a2', avatarMark: '糖', name: '糖果手札', replyTo: '橘子汽水', text: '懂了，这样即使 A 回复 B、B 再回复 A，也不会混成一团。', likes: 6, liked: false, time: '21 分钟前' },
+        { id: 's1-r2-a3', avatarMark: '橘', name: '橘子汽水', replyTo: '糖果手札', text: '对，回复里保留 @ 对象，看起来就像真实评论区。', likes: 5, liked: false, time: '20 分钟前' },
+        { id: 's1-r2-a4', avatarMark: '糖', name: '糖果手札', replyTo: '橘子汽水', text: '那如果主评论下面回复特别多，也建议先收起吧。', likes: 4, liked: false, time: '19 分钟前' },
+        { id: 's1-r2-a5', avatarMark: '橘', name: '橘子汽水', replyTo: '糖果手札', text: '对，先展示一条，再点查看全部并分页加载，阅读压力会小很多。', likes: 5, liked: false, time: '18 分钟前' }
+      ]
+    },
+    {
+      id: 's1-r3',
+      avatarMark: '麦',
+      name: '麦穗午后',
+      text: '收藏了，准备把这周做的橘子司康也整理成同样的手账风格。',
+      likes: 19,
+      liked: false,
+      time: '31 分钟前',
+      replies: [
+        { id: 's1-r3-a1', avatarMark: '莓', name: '莓果午后', replyTo: '麦穗午后', text: '橘子司康听起来好好吃，记得补一张切开的图。', likes: 4, liked: false, time: '29 分钟前' },
+        { id: 's1-r3-a2', avatarMark: '麦', name: '麦穗午后', replyTo: '莓果午后', text: '会的，我还想加一张食材平铺图，颜色应该更丰富。', likes: 3, liked: false, time: '28 分钟前' }
+      ]
+    }
+  ]
+
+  const people = [
+    ['橘', '橘子汽水'],
+    ['甜', '甜甜圈信箱'],
+    ['木', '木器小馆'],
+    ['晴', '晴天小铺'],
+    ['茶', '清爽奶茶'],
+    ['果', '果子篮子'],
+    ['云', '云朵慢递'],
+    ['星', '星辰小夏'],
+    ['鹿', '温暖小鹿'],
+    ['风', '清风远山']
+  ]
+  const texts = [
+    '这个配色看着真的很有食欲，已经开始期待下一组灵感了。',
+    '图片和贴纸的位置刚刚好，信息很多但不觉得拥挤。',
+    '我也想把周末餐桌整理成这样，暖暖的很有生活气。',
+    '橘色点亮得很准确，页面整体还是柔软的。',
+    '这套适合做美食记录，标题和正文都很耐看。',
+    '硬阴影加纸感底，真的像把照片贴进手账里。',
+    '看完想立刻烤一盘小饼干，再慢慢拍一组照片。',
+    '主图的光线和橘糖色特别配，氛围很轻松。',
+    '评论区的虚线细节很可爱，希望正式版也保留。',
+    '这一页给人的感觉很明亮，像周末上午的阳光。'
+  ]
+  const replyTexts = [
+    '我也这么觉得，这个颜色真的很适合记录甜点。',
+    '回复你一下，正式版应该会保留这些小贴纸。',
+    '哈哈，我已经准备照着这个版式做一页了。',
+    '如果再加一张近景图，氛围可能会更完整。',
+    '是的，主要是纸感底让整个页面柔和了很多。',
+    '我更喜欢这个橘色，明亮但不会刺眼。'
+  ]
+
+  for (let i = roots.length; i < 72; i++) {
+    const author = people[i % people.length]
+    const friend = people[(i + 3) % people.length]
+    const third = people[(i + 6) % people.length]
+    const root = {
+      id: `s1-r${i + 1}`,
+      avatarMark: author[0],
+      name: author[1],
+      text: texts[i % texts.length],
+      likes: (i * 7) % 42,
+      liked: i % 5 === 0,
+      time: `${i * 8 + 12} 分钟前`,
+      replies: []
+    }
+
+    if (i % 4 !== 3) {
+      root.replies.push({
+        id: `${root.id}-a1`,
+        avatarMark: friend[0],
+        name: friend[1],
+        replyTo: author[1],
+        text: replyTexts[i % replyTexts.length],
+        likes: (i * 3) % 12,
+        liked: false,
+        time: `${i * 8 + 10} 分钟前`
+      })
+      root.replies.push({
+        id: `${root.id}-a2`,
+        avatarMark: author[0],
+        name: author[1],
+        replyTo: friend[1],
+        text: '对，就是这种轻松的纸感最打动人。',
+        likes: (i * 2) % 9,
+        liked: false,
+        time: `${i * 8 + 8} 分钟前`
+      })
+      if (i % 4 === 0) {
+        root.replies.push({
+          id: `${root.id}-a3`,
+          avatarMark: friend[0],
+          name: friend[1],
+          replyTo: author[1],
+          text: '那我也收藏这一页，周末一起照着拍。',
+          likes: (i + 2) % 8,
+          liked: false,
+          time: `${i * 8 + 6} 分钟前`
+        })
+      }
+      if (i % 7 === 0) {
+        root.replies.push({
+          id: `${root.id}-a4`,
+          avatarMark: third[0],
+          name: third[1],
+          replyTo: friend[1],
+          text: '我刚好刷到，也觉得这一版很适合做成系列。',
+          likes: i % 6,
+          liked: false,
+          time: `${i * 8 + 5} 分钟前`
+        })
+      }
+    }
+
+    roots.push(root)
+  }
+
+  return roots
+}
+
+function makeSimpleRoots(variant) {
+  return variant.comments.map(([avatarMark, name, text], index) => ({
+    id: `${variant.id}-r${index + 1}`,
+    avatarMark,
+    name,
+    text,
+    likes: index + 2,
+    liked: index === 0,
+    time: `${index + 3} 分钟前`,
+    replies: []
+  }))
+}
+
+function findComment(id, rootId, replyId) {
+  const root = state[id].comments.find(item => item.id === rootId)
+  if (!root) return null
+  return replyId ? root.replies.find(item => item.id === replyId) : root
+}
+
+function renderReply(item, rootId) {
+  const reply = document.createElement('div')
+  reply.className = 'comment reply'
+  reply.dataset.replyId = item.id
+  reply.innerHTML = `
+    <div class="comment-head">
+      <span class="comment-avatar">${escapeHTML(item.avatarMark)}</span>
+      <b>${escapeHTML(item.name)}</b>
+      <span>${escapeHTML(item.time)}</span>
+    </div>
+    <p class="comment-text"><span class="reply-to">@${escapeHTML(item.replyTo)}</span> ${escapeHTML(item.text)}</p>
+    <div class="comment-tools">
+      <span class="comment-like ${item.liked ? 'liked' : ''}" data-root-id="${rootId}" data-reply-id="${item.id}">${item.liked ? '已赞' : '赞'} ${item.likes}</span>
+      <span class="comment-reply" data-root-id="${rootId}" data-reply-id="${item.id}">回复</span>
+    </div>`
+  return reply
+}
+
+function renderRoot(root) {
+  const replyList = root.replies || []
+  const expanded = Boolean(root.repliesExpanded)
+  const visibleReplyCount = expanded
+    ? Math.min(root.visibleReplyCount || 3, replyList.length)
+    : Math.min(1, replyList.length)
+  const visibleReplies = replyList.slice(0, visibleReplyCount)
+  const hasMoreReplies = visibleReplyCount < replyList.length
+  const repliesClass = replyList.length ? '' : ' empty'
+  const replyControl = replyList.length <= 1
+    ? ''
+    : !expanded
+      ? `<div class="reply-actions"><span class="reply-toggle" data-root-id="${root.id}">查看全部 ${replyList.length} 条回复</span></div>`
+      : hasMoreReplies
+        ? `<div class="reply-actions"><span class="reply-more" data-root-id="${root.id}">继续显示回复 ${visibleReplyCount}/${replyList.length}</span><span class="reply-collapse" data-root-id="${root.id}">收起</span></div>`
+        : `<div class="reply-actions"><span class="reply-collapse" data-root-id="${root.id}">收起回复</span></div>`
+
+  const comment = document.createElement('div')
+  comment.className = 'comment comment-root'
+  comment.dataset.rootId = root.id
+  comment.innerHTML = `
+    <div class="comment-head">
+      <span class="comment-avatar">${escapeHTML(root.avatarMark)}</span>
+      <b>${escapeHTML(root.name)}</b>
+      <span>${escapeHTML(root.time)}</span>
+    </div>
+    <p class="comment-text">${escapeHTML(root.text)}</p>
+    <div class="comment-tools">
+      <span class="comment-like ${root.liked ? 'liked' : ''}" data-root-id="${root.id}">${root.liked ? '已赞' : '赞'} ${root.likes}</span>
+      <span class="comment-reply" data-root-id="${root.id}">回复</span>
+    </div>
+    <div class="replies${repliesClass}">
+      ${visibleReplies.map(item => `<div class="comment reply" data-reply-id="${item.id}">
+        <div class="comment-head"><span class="comment-avatar">${escapeHTML(item.avatarMark)}</span><b>${escapeHTML(item.name)}</b><span>${escapeHTML(item.time)}</span></div>
+        <p class="comment-text"><span class="reply-to">@${escapeHTML(item.replyTo)}</span> ${escapeHTML(item.text)}</p>
+        <div class="comment-tools">
+          <span class="comment-like ${item.liked ? 'liked' : ''}" data-root-id="${root.id}" data-reply-id="${item.id}">${item.liked ? '已赞' : '赞'} ${item.likes}</span>
+          <span class="comment-reply" data-root-id="${root.id}" data-reply-id="${item.id}">回复</span>
+        </div>
+      </div>`).join('')}
+      ${replyControl}
+      <form class="reply-box" data-root-id="${root.id}" hidden>
+        <input placeholder="回复..." maxlength="200">
+        <button type="button" disabled>发送</button>
+      </form>
+    </div>`
+  return comment
+}
+
+function renderComments(id, section) {
+  const commentState = state[id]
+  const list = section.querySelector('.comment-list')
+  list.innerHTML = ''
+  commentState.comments
+    .slice(0, commentState.displayedCount)
+    .forEach(root => list.appendChild(renderRoot(root)))
+
+  const total = commentState.comments.length
+  const shown = Math.min(commentState.displayedCount, total)
+  section.querySelector('.comment-total').textContent = total
+  section.querySelector('.comment-total-copy').textContent = total
+  section.querySelector('.comment-shown').textContent = shown
+  section.querySelector('.comment-load-status').textContent = shown < total
+    ? `下滑加载 20 条 · 当前显示 ${shown}/${total}`
+    : `已显示全部 ${total} 条主评论`
+}
+
+function initState(variant, section) {
+  state[variant.id] = {
+    comments: variant.id === 'a' ? makeRichS1Comments() : makeSimpleRoots(variant),
+    displayedCount: 20
+  }
+  renderComments(variant.id, section)
+}
+
+variants.forEach(variant => {
+  renderVariant(variant)
+  const section = document.querySelector(`[data-variant="${variant.id}"]`)
+  initGallery(variant, section)
+  initState(variant, section)
+})
+
+document.addEventListener('scroll', event => {
+  const article = event.target.classList && event.target.classList.contains('article')
+    ? event.target
+    : null
+  if (!article) return
+  const section = article.closest('section')
+  const commentState = state[section.dataset.variant]
+  const nearBottom = article.scrollTop + article.clientHeight >= article.scrollHeight - 28
+  if (!nearBottom || commentState.displayedCount >= commentState.comments.length) return
+  commentState.displayedCount = Math.min(
+    commentState.displayedCount + 20,
+    commentState.comments.length
+  )
+  renderComments(section.dataset.variant, section)
+}, true)
+
+document.addEventListener('input', event => {
+  const replyBox = event.target.closest('.reply-box')
+  if (replyBox) {
+    replyBox.querySelector('button').disabled = !event.target.value.trim()
+  }
+})
+
+document.addEventListener('keydown', event => {
+  const input = event.target.closest('.quick-root-comment input')
+  if (!input || event.key !== 'Enter' || event.isComposing) return
+  const text = input.value.trim()
+  if (!text) return
+  event.preventDefault()
+
+  const section = input.closest('section')
+  const id = section.dataset.variant
+  state[id].comments.unshift({
+    id: `${id}-new-${Date.now()}`,
+    avatarMark: '我',
+    name: '当前用户',
+    text,
+    likes: 0,
+    liked: false,
+    time: '刚刚',
+    replies: []
+  })
+  input.value = ''
+  renderComments(id, section)
+  const article = section.querySelector('.article')
+  const title = section.querySelector('.comments-title')
+  const targetTop = title.getBoundingClientRect().top
+    - article.getBoundingClientRect().top
+    + article.scrollTop
+    - 12
+  article.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+})
+
+document.addEventListener('click', event => {
+  const mainLike = event.target.closest('.like-main')
+  if (mainLike) {
+    const active = mainLike.classList.toggle('liked')
+    const count = mainLike.querySelector('span')
+    count.textContent = Number(count.textContent) + (active ? 1 : -1)
+  }
+
+  const replyControl = event.target.closest('.reply-toggle, .reply-more, .reply-collapse')
+  if (replyControl) {
+    const section = replyControl.closest('section')
+    const id = section.dataset.variant
+    const root = state[id].comments.find(item => item.id === replyControl.dataset.rootId)
+    if (!root) return
+    if (replyControl.classList.contains('reply-toggle')) {
+      root.repliesExpanded = true
+      root.visibleReplyCount = Math.min(3, root.replies.length)
+    } else if (replyControl.classList.contains('reply-more')) {
+      root.repliesExpanded = true
+      root.visibleReplyCount = Math.min(
+        (root.visibleReplyCount || 3) + 3,
+        root.replies.length
+      )
+    } else {
+      root.repliesExpanded = false
+      root.visibleReplyCount = 1
+    }
+    renderComments(id, section)
+    return
+  }
+
+  const like = event.target.closest('.comment-like')
+  if (like) {
+    const section = like.closest('section')
+    const id = section.dataset.variant
+    const item = findComment(id, like.dataset.rootId, like.dataset.replyId)
+    if (!item) return
+    item.liked = !item.liked
+    item.likes += item.liked ? 1 : -1
+    like.textContent = `${item.liked ? '已赞' : '赞'} ${item.likes}`
+    like.classList.toggle('liked', item.liked)
+  }
+
+  const replyTrigger = event.target.closest('.comment-reply')
+  if (replyTrigger) {
+    const section = replyTrigger.closest('section')
+    const rootId = replyTrigger.dataset.rootId
+    const targetItem = findComment(section.dataset.variant, rootId, replyTrigger.dataset.replyId)
+    const rootElement = section.querySelector(`[data-root-id="${rootId}"]`)
+    section.querySelectorAll('.reply-box').forEach(box => {
+      if (box.dataset.rootId !== rootId) box.hidden = true
+    })
+    const replyBox = rootElement.querySelector('.reply-box')
+    replyBox.hidden = false
+    replyBox.dataset.replyToId = replyTrigger.dataset.replyId || rootId
+    const input = replyBox.querySelector('input')
+    input.placeholder = targetItem ? `回复 @${targetItem.name}` : '回复...'
+    input.value = ''
+    replyBox.querySelector('button').disabled = true
+    input.focus()
+  }
+})
+
+document.addEventListener('click', event => {
+  const replyButton = event.target.closest('.reply-box button')
+  if (replyButton && !replyButton.disabled) {
+    const section = replyButton.closest('section')
+    const id = section.dataset.variant
+    const replyBox = replyButton.closest('.reply-box')
+    const rootId = replyBox.dataset.rootId
+    const root = state[id].comments.find(item => item.id === rootId)
+    const target = findComment(id, rootId, replyBox.dataset.replyToId !== rootId
+      ? replyBox.dataset.replyToId
+      : null)
+    const input = replyBox.querySelector('input')
+    root.replies.push({
+      id: `${rootId}-new-${Date.now()}`,
+      avatarMark: '我',
+      name: '当前用户',
+      replyTo: target ? target.name : root.name,
+      text: input.value.trim(),
+      likes: 0,
+      liked: false,
+      time: '刚刚'
+    })
+    root.repliesExpanded = true
+    root.visibleReplyCount = root.replies.length
+    replyBox.hidden = true
+    renderComments(id, section)
+  }
+})
+</script>
+</body>
+</html>

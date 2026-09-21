@@ -32,9 +32,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * 演示数据生成器（方案 B：走后端，自己保证分表路由与计数一致）
@@ -76,6 +78,14 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final long CONV_ID = ID_BASE + 900_000L;
     private static final long MSG_ID = ID_BASE + 950_000L;
     private static final long NOTIFY_ID = ID_BASE + 990_000L;
+
+    /** 评论填充：单条灵感目标评论量 200~300（用于详情页分页演示） */
+    private static final int RICH_COMMENT_MIN = 200;
+    private static final int RICH_COMMENT_MAX = 300;
+    /** 每个演示用户按热度挑选的灵感条数，也填充成 200~300 条评论 */
+    private static final int RICH_COMMENT_PER_USER = 5;
+    /** 指定重点填充的灵感（当前详情页演示地址所用的灵感） */
+    private static final long[] FEATURED_COMMENT_INSPIRES = { INSPIRE_ID + 284L };
 
     /** 固定随机种子，保证每次生成的数据一致、可复现 */
     private final Random rnd = new Random(20260920L);
@@ -196,6 +206,50 @@ public class DemoDataSeeder implements ApplicationRunner {
             "这条建议对我很有用", "已经有画面感了", "收藏夹又多了一条"
     };
 
+    /** 详情页演示用的长评论句库（填充 200~300 条评论区） */
+    private static final String[] RICH_COMMENTS = {
+            "写得很实在，尤其是把细节和踩过的坑都写出来了，收藏了慢慢看",
+            "这个思路我之前完全没想到，周末打算照着试一遍，有结果回来汇报",
+            "第三点特别认同，我也是这么做的，效果确实不错",
+            "配图好好看，配色很舒服，请问是用什么拍的",
+            "刚好在找这类的经验，谢谢分享，解决了我一直纠结的问题",
+            "看完立刻想去实践一下，感觉门槛没有想象中那么高",
+            "细节写得真清楚，比很多教程都实用，希望能出续集",
+            "同款爱好者，握手，我也在慢慢摸索这一块",
+            "学到了，感谢，已经转给朋友一起看了",
+            "这条建议对我很有用，之前一直走弯路，现在方向清楚多了",
+            "已经有画面感了，仿佛跟着你走了一遍整个流程",
+            "收藏夹又多了一条，希望以后能多分享这种干货",
+            "看完有种被治愈的感觉，生活里这些小确幸真好",
+            "排版和文字都很舒服，读起来一点也不累",
+            "请问预算大概是多少，想照着做一个低配版本",
+            "这个角度很新颖，之前看别人写都没提到这一点",
+            "感谢分享，正好最近在整理类似的东西，很有参考价值",
+            "写得好细腻，能感觉到你是真的喜欢这件事",
+            "已经按你说的试了两天，确实比之前顺手多了",
+            "求推荐入门清单，想从最简单的一步开始",
+            "看到这条评论的人都去实践一下吧，真的不难",
+            "文笔真好，读完心里暖暖的，谢谢你的分享",
+            "我也有类似的经历，看到你写出来特别有共鸣",
+            "这个小技巧太实用了，今天就用上了",
+            "整体思路很清晰，一步一步跟着做完全没问题",
+            "希望多更新这种日常向的内容，比纯教程更亲切",
+            "第一次看到有人把这个讲得这么明白，厉害",
+            "已经收藏加关注了，期待你的下一篇",
+            "刚好周末有空，准备照着清单去逛一圈",
+            "这个配色我可以抄作业吗，太好看了",
+            "分享得很真诚，没有任何广告感，舒服",
+            "照着做了之后朋友都说变化很大，回来谢谢你",
+            "很治愈的一篇，焦虑的时候读一读心情会变好",
+            "细节控狂喜，连小配件都写得清清楚楚",
+            "求问这种搭配适合小个子吗，想试试",
+            "从标题点进来，读完没失望，内容比标题还好",
+            "把复杂的事情讲简单了，这才是真正的功力",
+            "感谢你把这些经验留下来，对后来人太友好了",
+            "看完了，默默点了个收藏，准备慢慢消化",
+            "这条写进我的年度清单了，争取今年完成"
+    };
+
     private static final String[] CHAT = {
             "在吗？看了你那篇灵感，写得好棒", "哈哈谢谢，最近在折腾这个", "你是用什么拍的？",
             "手机直出，调了一下色温", "我周末也想去试试", "那地方早上人少，建议早点去",
@@ -248,6 +302,8 @@ public class DemoDataSeeder implements ApplicationRunner {
             generateForUser(ownerId, want, allUsers, userFolders);
         }
 
+        // 先补详情页评论，保证后面任何一步异常都不会影响详情页演示数据
+        ensureRichComments(allUsers);
         ensureFollows(allUsers);
         ensureConversations(allUsers);
         generateNotifications();
@@ -426,6 +482,135 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
+    // ==================== 详情页 200~300 条评论填充 ====================
+
+    /**
+     * 为详情页准备足够的评论数据（200~300 条），让分页、回复链都能演示。
+     *
+     * 幂等：某条灵感评论数已达到下限就跳过，重复启动不会重复灌。
+     * 目标灵感 = 指定重点灵感（当前演示详情页）+ 每个演示用户热度最高的若干条灵感。
+     */
+    private void ensureRichComments(List<Long> allUsers) {
+        Set<Long> targets = new LinkedHashSet<>();
+        for (long id : FEATURED_COMMENT_INSPIRES) {
+            targets.add(id);
+        }
+        for (Long uid : allUsers) {
+            targets.addAll(jdbcTemplate.queryForList(
+                    "SELECT id FROM inspire_main WHERE user_id = ? AND deleted = 0 "
+                            + "ORDER BY heat DESC LIMIT " + RICH_COMMENT_PER_USER,
+                    Long.class, uid));
+        }
+
+        Map<Long, String[]> profiles = loadUserProfiles();
+        long nextId = nextCommentId();
+        int processed = 0, inserted = 0;
+        for (Long inspireId : targets) {
+            if (!inspireExists(inspireId)) {
+                continue;
+            }
+            int exist = countComments(inspireId);
+            if (exist >= RICH_COMMENT_MIN) {
+                continue;
+            }
+            int target = RICH_COMMENT_MIN + rnd.nextInt(RICH_COMMENT_MAX - RICH_COMMENT_MIN + 1);
+            int added = fillComments(inspireId, target - exist, profiles, nextId);
+            nextId += added;
+            inserted += added;
+            processed++;
+        }
+        log.info("[DemoSeeder] 详情页评论填充完成：处理 {} 条灵感，新增 {} 条评论", processed, inserted);
+    }
+
+    /** user_id -> [nickname, avatar]，评论落库时冗余昵称、头像，避免读取时再逐条查库 */
+    private Map<Long, String[]> loadUserProfiles() {
+        Map<Long, String[]> profiles = new LinkedHashMap<>();
+        jdbcTemplate.query("SELECT id, nickname, avatar FROM `user` WHERE deleted = 0", rs -> {
+            profiles.put(rs.getLong("id"),
+                    new String[]{ rs.getString("nickname"), rs.getString("avatar") });
+        });
+        return profiles;
+    }
+
+    private long nextCommentId() {
+        Long max = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) FROM inspire_comment", Long.class);
+        return (max == null ? 0L : max) + 1L;
+    }
+
+    private int countComments(Long inspireId) {
+        Integer c = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inspire_comment WHERE inspire_id = ? AND deleted = 0",
+                Integer.class, inspireId);
+        return c == null ? 0 : c;
+    }
+
+    private boolean inspireExists(Long inspireId) {
+        Integer c = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inspire_main WHERE id = ? AND deleted = 0",
+                Integer.class, inspireId);
+        return c != null && c > 0;
+    }
+
+    /**
+     * 生成 need 条评论：约 55% 为主评论，其余为挂在主评论下的回复，
+     * 回复会带上 replyUserId / replyUsername，前端即可展示「A 回复 B」。
+     */
+    private int fillComments(Long inspireId, int need, Map<Long, String[]> profiles, long startId) {
+        if (need <= 0 || profiles.isEmpty()) {
+            return 0;
+        }
+        List<Long> actors = new ArrayList<>(profiles.keySet());
+        List<Object[]> batch = new ArrayList<>(need);
+        List<Long> rootIds = new ArrayList<>();
+        List<Long> rootUsers = new ArrayList<>();
+
+        LocalDateTime cursor = now().minusDays(25).withHour(8).withMinute(0).withSecond(0).withNano(0);
+        long id = startId;
+        for (int i = 0; i < need; i++) {
+            cursor = cursor.plusMinutes(1 + rnd.nextInt(180));
+            Long actor = actors.get(rnd.nextInt(actors.size()));
+            String[] actorProfile = profiles.get(actor);
+
+            long parentId = 0L, replyUserId = 0L;
+            String replyUsername = "";
+            boolean asReply = !rootIds.isEmpty() && rnd.nextInt(100) < 45;
+            if (asReply) {
+                int idx = rnd.nextInt(rootIds.size());
+                parentId = rootIds.get(idx);
+                Long targetUser = rootUsers.get(idx);
+                replyUserId = targetUser;
+                replyUsername = nicknameOf(profiles.get(targetUser), targetUser);
+            }
+
+            Timestamp ts = Timestamp.valueOf(cursor);
+            batch.add(new Object[]{
+                    id, inspireId, actor, nicknameOf(actorProfile, actor),
+                    actorProfile == null || actorProfile[1] == null ? "" : actorProfile[1],
+                    parentId, replyUserId, replyUsername,
+                    RICH_COMMENTS[rnd.nextInt(RICH_COMMENTS.length)], ts, ts
+            });
+            if (!asReply) {
+                rootIds.add(id);
+                rootUsers.add(actor);
+            }
+            id++;
+        }
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO inspire_comment(id, inspire_id, user_id, username, avatar, parent_id, "
+                        + "reply_user_id, reply_username, content, create_time, update_time, deleted) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,0)",
+                batch);
+        return need;
+    }
+
+    private String nicknameOf(String[] profile, Long userId) {
+        if (profile != null && profile[0] != null && !profile[0].isBlank()) {
+            return profile[0];
+        }
+        return nickOf(userId);
+    }
+
     private String buildTitle(String topic) {
         String p = TITLE_PATTERNS[rnd.nextInt(TITLE_PATTERNS.length)];
         String s = String.format(p, topic, 3 + rnd.nextInt(7));
@@ -531,6 +716,13 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     /** 通知：取最近的灵感，每用户最多 50 条，避免通知表被灌成几万行 */
     private void generateNotifications() {
+        Integer existed = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_notification WHERE id >= ?", Integer.class, NOTIFY_ID);
+        if (existed != null && existed > 0) {
+            log.info("[DemoSeeder] 通知已存在 {} 条，跳过生成", existed);
+            return;
+        }
+
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "SELECT user_id AS owner, id AS inspire_id, title, create_time "
                         + "FROM inspire_main WHERE deleted = 0 AND user_id >= ? "

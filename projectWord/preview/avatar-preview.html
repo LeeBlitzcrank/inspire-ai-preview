@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灵感详情 · 头像配色 / 尺寸预览</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 18px 60px;
+    background: #e8e0d4;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #4a3b2f;
+  }
+  .wrap { width: 100%; max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .hint { font-size: 13px; color: #8a7561; margin-bottom: 22px; }
+  h2 {
+    font-size: 15px; margin: 30px 0 12px; padding-left: 10px;
+    border-left: 4px solid #e67833;
+  }
+
+  /* 实时预览卡片（和详情页同款风格） */
+  .live-card {
+    padding: 18px 16px;
+    border-radius: 18px;
+    background: rgba(255, 249, 240, .78);
+    box-shadow: 4px 5px 0 rgba(230, 120, 51, .13);
+  }
+  .author-card { display: flex; align-items: center; gap: 12px; }
+  .author-meta b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+  .author-meta small { color: #9a7653; font-size: 12px; }
+  .comment-root {
+    margin-top: 14px; padding: 13px 12px 10px;
+    border-top: 1px solid rgba(230, 120, 51, .24);
+    border-radius: 17px;
+    background: rgba(255, 249, 240, .58);
+  }
+  .comment-head { display: flex; align-items: center; gap: 9px; }
+  .comment-head b { font-size: 13.5px; }
+  .comment-head span.time { color: #a68d76; font-size: 12px; }
+  .comment-text { margin: 8px 0 0; font-size: 13.5px; line-height: 1.7; }
+
+  /* 头像通用：颜色/字号由 JS 变量控制 */
+  .avatar {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden; border-radius: 50%;
+    font-weight: 700;
+    background: var(--av-bg);
+    color: var(--av-fg);
+  }
+  .avatar.author { width: var(--av-author); height: var(--av-author); font-size: calc(var(--av-author) * .34); }
+  .avatar.comment { width: var(--av-comment); height: var(--av-comment); font-size: calc(var(--av-comment) * .4); }
+  .avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+  /* 颜色方案列表 */
+  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .color-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; cursor: pointer;
+    border-radius: 14px; border: 2px solid transparent;
+    background: rgba(255, 249, 240, .7);
+    transition: border-color .15s, transform .15s;
+  }
+  .color-item:hover { transform: translateY(-1px); }
+  .color-item.active { border-color: #e67833; }
+  .color-item .meta { font-size: 12px; color: #8a7561; line-height: 1.6; }
+  .color-item .meta b { display: block; font-size: 13px; color: #4a3b2f; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.06); }
+
+  /* 尺寸方案 */
+  .size-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .size-chip {
+    padding: 7px 14px; cursor: pointer; font-size: 13px;
+    border-radius: 999px; border: 2px solid transparent;
+    background: rgba(255, 249, 240, .8); color: #6b5745;
+  }
+  .size-chip.active { border-color: #e67833; color: #c1651f; font-weight: 700; }
+  .size-label { font-size: 13px; color: #8a7561; min-width: 74px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>灵感详情 · 头像配色 / 尺寸预览</h1>
+  <div class="hint">点下面的配色卡片和尺寸按钮，上面这块会实时跟着变。选好后告诉我编号（例如「颜色 C + 作者 44 / 评论 30」）。</div>
+
+  <div class="live-card">
+    <div class="author-card">
+      <span class="avatar author" id="liveAuthor">🐰</span>
+      <div class="author-meta">
+        <b>温暖小兔</b>
+        <small>3小时前 · 杭州</small>
+      </div>
+    </div>
+
+    <div class="comment-root">
+      <div class="comment-head">
+        <span class="avatar comment" id="liveC1">🧁</span>
+        <b>清爽奶茶</b>
+        <span class="time">2小时前</span>
+      </div>
+      <p class="comment-text">写得很实在，尤其是把细节和踩过的坑都写出来了，收藏了慢慢看。</p>
+    </div>
+
+    <div class="comment-root">
+      <div class="comment-head">
+        <span class="avatar comment" id="liveC2">📷</span>
+        <b>文艺胶片</b>
+        <span class="time">1小时前</span>
+      </div>
+      <p class="comment-text">第三点特别认同，我也是这么做的，效果确实不错。</p>
+    </div>
+  </div>
+
+  <h2>一、配色方案（背景 / 文字）</h2>
+  <div class="color-grid" id="colorGrid"></div>
+
+  <h2>二、尺寸方案</h2>
+  <div class="size-row">
+    <span class="size-label">作者头像</span>
+    <button class="size-chip" data-kind="author" data-value="38">38px</button>
+    <button class="size-chip" data-kind="author" data-value="42">42px</button>
+    <button class="size-chip active" data-kind="author" data-value="46">46px（当前）</button>
+    <button class="size-chip" data-kind="author" data-value="50">50px</button>
+    <button class="size-chip" data-kind="author" data-value="56">56px</button>
+  </div>
+  <div class="size-row">
+    <span class="size-label">评论头像</span>
+    <button class="size-chip" data-kind="comment" data-value="26">26px</button>
+    <button class="size-chip" data-kind="comment" data-value="28">28px</button>
+    <button class="size-chip" data-kind="comment" data-value="30">30px</button>
+    <button class="size-chip active" data-kind="comment" data-value="32">32px（当前）</button>
+    <button class="size-chip" data-kind="comment" data-value="36">36px</button>
+    <button class="size-chip" data-kind="comment" data-value="40">40px</button>
+  </div>
+
+  <h2>三、同一配色下的尺寸对比</h2>
+  <div class="live-card" id="sizeCompare"></div>
+</div>
+
+<script>
+  const COLORS = [
+    { key: 'A', name: '暖橙淡（当前）', bg: '#fbe7d2', fg: '#c1651f' },
+    { key: 'B', name: '蜜桃粉',       bg: '#fde7e5', fg: '#c0574f' },
+    { key: 'C', name: '薄荷绿',       bg: '#e6f2e4', fg: '#4f8a48' },
+    { key: 'D', name: '雾霾蓝',       bg: '#e5eefb', fg: '#456ba3' },
+    { key: 'E', name: '香芋紫',       bg: '#f1e8fb', fg: '#7550a3' },
+    { key: 'F', name: '奶油黄',       bg: '#fdf4d9', fg: '#a1802a' },
+    { key: 'G', name: '燕麦灰米',     bg: '#efeae3', fg: '#6b6156' },
+    { key: 'H', name: '浅青',         bg: '#e2f3f4', fg: '#3f7f86' }
+  ]
+
+  const state = {
+    color: COLORS[0],
+    author: 46,
+    comment: 32
+  }
+
+  const root = document.documentElement
+  const grid = document.getElementById('colorGrid')
+
+  function paint() {
+    root.style.setProperty('--av-bg', state.color.bg)
+    root.style.setProperty('--av-fg', state.color.fg)
+    root.style.setProperty('--av-author', state.author + 'px')
+    root.style.setProperty('--av-comment', state.comment + 'px')
+    renderCompare()
+  }
+
+  function renderColors() {
+    grid.innerHTML = ''
+    COLORS.forEach(c => {
+      const item = document.createElement('div')
+      item.className = 'color-item' + (c.key === state.color.key ? ' active' : '')
+      item.innerHTML = `
+        <span class="swatch" style="background:${c.bg}"></span>
+        <span class="meta"><b>${c.key} · ${c.name}</b>底色 ${c.bg} / 文字 ${c.fg}</span>
+        <span class="avatar" style="--av-bg:${c.bg};--av-fg:${c.fg};width:34px;height:34px;font-size:15px">🐰</span>
+      `
+      item.onclick = () => { state.color = c; renderColors(); paint() }
+      grid.appendChild(item)
+    })
+  }
+
+  function renderCompare() {
+    const sizes = [38, 42, 46, 50, 56]
+    const csizes = [26, 28, 30, 32, 36, 40]
+    document.getElementById('sizeCompare').innerHTML = `
+      <div style="font-size:13px;color:#8a7561;margin-bottom:10px">作者头像（${state.color.key} · ${state.color.name}）</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+        ${sizes.map(s => `<span style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <span class="avatar" style="--av-bg:${state.color.bg};--av-fg:${state.color.fg};width:${s}px;height:${s}px;font-size:${Math.round(s * .34)}px">🐰</span>
+            <em style="font-style:normal;font-size:11px;color:#9a7653">${s}${s === state.author ? ' ✓' : ''}</em>
+          </span>`).join('')}
+      </div>
+      <div style="font-size:13px;color:#8a7561;margin-bottom:10px">评论头像</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        ${csizes.map(s => `<span style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <span class="avatar" style="--av-bg:${state.color.bg};--av-fg:${state.color.fg};width:${s}px;height:${s}px;font-size:${Math.round(s * .4)}px">🧁</span>
+            <em style="font-style:normal;font-size:11px;color:#9a7653">${s}${s === state.comment ? ' ✓' : ''}</em>
+          </span>`).join('')}
+      </div>
+    `
+  }
+
+  document.querySelectorAll('.size-chip').forEach(btn => {
+    btn.onclick = () => {
+      const kind = btn.dataset.kind
+      state[kind] = Number(btn.dataset.value)
+      document.querySelectorAll(`.size-chip[data-kind="${kind}"]`).forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      paint()
+    }
+  })
+
+  renderColors()
+  paint()
+</script>
+</body>
+</html>

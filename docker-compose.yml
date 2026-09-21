@@ -25,7 +25,7 @@ x-common-env: &common-env
   # 邮件重置密码链接的前端域名（生产改为 https://ai.20sherry.com）
   INSPIRE_APP_FRONTEND_URL: https://ai.20sherry.com
   # 网关 CORS 来源白名单（逗号分隔），必须与前端访问域名一致
-  INSPIRE_CORS_ALLOWED_ORIGINS: https://ai.20sherry.com,http://localhost:5173
+  INSPIRE_CORS_ALLOWED_ORIGINS: https://ai.20sherry.com,http://localhost:5173,http://127.0.0.1:5173
   # 日志时间
   TZ: Asia/Shanghai
 
