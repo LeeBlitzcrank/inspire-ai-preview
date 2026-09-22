@@ -11,6 +11,6 @@ inspire:
     hosts: localhost:9200
 logging:
   level:
-    com.inspire: debug
+    com.inspire: ${INSPIRE_LOG_LEVEL:info}
   pattern:
     dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai

@@ -169,23 +169,26 @@
               </div>
             </div>
 
-            <div v-if="commentItem.replies?.length" class="reply-actions">
+            <div v-if="commentItem.replyCount" class="reply-actions">
               <button
                 v-if="!commentItem._repliesExpanded"
                 class="reply-toggle"
                 type="button"
                 @click="expandReplies(commentItem)"
               >
-                展开 {{ commentItem.replies.length }} 条回复
+                展开 {{ commentItem.replyCount }} 条回复
               </button>
               <template v-else>
                 <button
-                  v-if="commentItem._visibleReplyCount < commentItem.replies.length"
+                  v-if="commentItem._visibleReplyCount < commentItem.replyCount"
                   class="reply-more"
                   type="button"
+                  :disabled="commentItem._repliesLoading"
                   @click="loadMoreReplies(commentItem)"
                 >
-                  继续显示 {{ commentItem._visibleReplyCount }}/{{ commentItem.replies.length }}
+                  {{ commentItem._repliesLoading
+                    ? '加载中...'
+                    : `继续显示 ${commentItem._visibleReplyCount}/${commentItem.replyCount}` }}
                 </button>
                 <button class="reply-collapse" type="button" @click="collapseReplies(commentItem)">
                   收起回复
@@ -345,6 +348,7 @@ import {useAuthStore} from '@/stores/auth'
 import {
   createComment,
   followUser,
+  getCommentReplies,
   getComments,
   getInspireDetail,
   likeComment as likeCommentApi,
@@ -469,8 +473,8 @@ const commentState = computed(() => {
   if (commentError.value && !comments.value.length) return 'error'
   return comments.value.length ? 'ready' : 'empty'
 })
-const loadedCommentCount = computed(() => allCommentRecords.value.length)
-const commentHasMore = computed(() => !commentLoading.value && allCommentRecords.value.length < commentTotal.value)
+const loadedCommentCount = computed(() => comments.value.length)
+const commentHasMore = computed(() => !commentLoading.value && comments.value.length < commentTotal.value)
 
 const isImageAvatar = (avatar) => typeof avatar === 'string'
   && (avatar.startsWith('http') || avatar.startsWith('/') || avatar.startsWith('data:'))
@@ -729,10 +733,33 @@ const expandReplies = (commentItem) => {
 }
 
 const loadMoreReplies = (commentItem) => {
-  commentItem._visibleReplyCount = Math.min(
-    (commentItem._visibleReplyCount || 3) + 3,
-    commentItem.replies.length
-  )
+  if (commentItem._repliesLoading) return
+  commentItem._repliesLoading = true
+  const nextPage = commentItem._replyPage || 1
+  getCommentReplies(detail.value.id, commentItem.id, {
+    page: nextPage,
+    size: 20,
+    sort: commentSort.value
+  }).then(res => {
+    if (res.code !== 200) throw new Error(res.msg || '回复加载失败')
+    const rows = res.data?.records || []
+    const merged = new Map(allCommentRecords.value.map(item => [String(item.id), item]))
+    rows.forEach(item => merged.set(String(item.id), item))
+    allCommentRecords.value = sortCommentRecords([...merged.values()])
+    const previousPage = commentItem._replyPage || 1
+    regroupComments()
+    const root = comments.value.find(item => String(item.id) === String(commentItem.id))
+    if (root) {
+      root._repliesExpanded = true
+      root._visibleReplyCount = root.replies?.length || 0
+      root._replyPage = previousPage + 1
+      root._repliesLoading = false
+      root.replyCount = Number(res.data?.total || root.replyCount || root.replies?.length || 0)
+    }
+  }).catch(() => {
+    ElMessage.error('回复加载失败')
+    commentItem._repliesLoading = false
+  })
 }
 
 const collapseReplies = (commentItem) => {
@@ -765,11 +792,12 @@ const cancelReply = () => {
 const mergeCreatedComment = (created) => {
   if (!created?.id) return null
   const existed = allCommentRecords.value.some(item => String(item.id) === String(created.id))
+  const isRootComment = !created.parentId || String(created.parentId) === '0'
   const record = { ...created, _avatarErr: false }
   const next = new Map(allCommentRecords.value.map(item => [String(item.id), item]))
   next.set(String(record.id), record)
   allCommentRecords.value = sortCommentRecords([...next.values()])
-  if (!existed) commentTotal.value += 1
+  if (!existed && isRootComment) commentTotal.value += 1
   regroupComments()
 
   const parentId = String(record.parentId || '0')
@@ -780,8 +808,10 @@ const mergeCreatedComment = (created) => {
         || item.replies?.some(reply => String(reply.id) === String(record.id))
       )
   if (root && parentId !== '0') {
+    if (!existed) root.replyCount = Number(root.replyCount || root.replies?.length || 0) + 1
     root._repliesExpanded = true
     root._visibleReplyCount = root.replies?.length || 0
+    root._replyPage = Math.max(1, Math.ceil(root.replies.length / 20))
   }
   return { record, root }
 }

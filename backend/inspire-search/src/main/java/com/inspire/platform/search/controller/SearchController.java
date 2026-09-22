@@ -6,8 +6,12 @@ import com.inspire.platform.search.service.impl.SearchServiceManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -26,7 +30,9 @@ public class SearchController {
             @Parameter(description = "分类筛选", example = "美食") @RequestParam(required = false) String tag,
             @Parameter(description = "页码", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数", example = "20") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "游标(search_after)，格式: heat_id") @RequestParam(required = false) String searchAfter) {
+            @Parameter(description = "游标(search_after)，格式: heat_id") @RequestParam(required = false) String searchAfter,
+            HttpServletResponse response) {
+        response.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
         return Result.success(searchServiceManager.search(keyword, tag, page, size, searchAfter));
     }
 }

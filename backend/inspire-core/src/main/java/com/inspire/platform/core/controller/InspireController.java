@@ -1,33 +1,33 @@
 package com.inspire.platform.core.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import com.inspire.platform.common.result.Result;
 import com.inspire.platform.core.config.MinioConfig;
 import com.inspire.platform.core.dto.*;
-import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.entity.CollectFolder;
-import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.service.ImageVariantService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import jakarta.annotation.PostConstruct;
+import com.inspire.platform.core.service.InspireService;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
-import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Tag(name = "灵感核心", description = "灵感列表、详情、创建、收藏、点赞")
 @RestController
@@ -64,7 +64,9 @@ public class InspireController {
             @RequestHeader(value = "X-User-Id", required = false) Long loginUserId,
             HttpServletResponse response) {
         if (loginUserId == null) {
-            response.setHeader("Cache-Control", "public, max-age=60");
+            response.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+        } else {
+            response.setHeader("Cache-Control", "private, no-store");
         }
         return Result.success(inspireService.listPublic(query, loginUserId));
     }
@@ -81,8 +83,9 @@ public class InspireController {
     public Result<PageResult<InspireVO>> myPublished(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "5") int size) {
-        return Result.success(inspireService.listMyPublished(userId, page, size));
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String cursor) {
+        return Result.success(inspireService.listMyPublished(userId, page, size, cursor));
     }
 
     @Operation(summary = "我的草稿", description = "当前用户未发布的草稿列表")
@@ -90,8 +93,9 @@ public class InspireController {
     public Result<PageResult<InspireVO>> myDrafts(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "5") int size) {
-        return Result.success(inspireService.listMyDrafts(userId, page, size));
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String cursor) {
+        return Result.success(inspireService.listMyDrafts(userId, page, size, cursor));
     }
 
     @Operation(summary = "我的收藏", description = "当前用户收藏的灵感列表")
@@ -162,6 +166,8 @@ public class InspireController {
             HttpServletResponse response) {
         if (userId == null) {
             response.setHeader("Cache-Control", "public, max-age=60");
+        } else {
+            response.setHeader("Cache-Control", "private, no-store");
         }
         return Result.success(inspireService.recommend(userId, page, size));
     }

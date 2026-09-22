@@ -180,6 +180,8 @@ services:
       # 演示数据生成开关（幂等：目标用户已有数据会自动跳过）
       # 需要灌数据时：INSPIRE_DEMO_SEED=true docker compose up -d --force-recreate inspire-core
       INSPIRE_DEMO_SEED: ${INSPIRE_DEMO_SEED:-false}
+      # small=默认演示数据，large=万级压测数据
+      INSPIRE_DEMO_SCALE: ${INSPIRE_DEMO_SCALE:-small}
       INSPIRE_IMAGE_BACKFILL_VARIANTS: ${INSPIRE_IMAGE_BACKFILL_VARIANTS:-false}
     volumes:
       - ./log/inspire-core:/logs
@@ -207,6 +209,7 @@ services:
     ports: [ "8086:8086" ]
     depends_on:
       elasticsearch: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment: *common-env
     volumes: [ ./log/inspire-search:/logs ]
 
@@ -225,6 +228,14 @@ services:
       inspire-search: { condition: service_started }
     environment:
       <<: *common-env
+      INSPIRE_GATEWAY_RATE_LIMIT_REPLENISH: ${INSPIRE_GATEWAY_RATE_LIMIT_REPLENISH:-50}
+      INSPIRE_GATEWAY_RATE_LIMIT_BURST: ${INSPIRE_GATEWAY_RATE_LIMIT_BURST:-100}
+      INSPIRE_AUTH_RATE_LIMIT_REPLENISH: ${INSPIRE_AUTH_RATE_LIMIT_REPLENISH:-50}
+      INSPIRE_AUTH_RATE_LIMIT_BURST: ${INSPIRE_AUTH_RATE_LIMIT_BURST:-100}
+      INSPIRE_CORE_WRITE_RATE_LIMIT_REPLENISH: ${INSPIRE_CORE_WRITE_RATE_LIMIT_REPLENISH:-50}
+      INSPIRE_CORE_WRITE_RATE_LIMIT_BURST: ${INSPIRE_CORE_WRITE_RATE_LIMIT_BURST:-100}
+      INSPIRE_AI_RATE_LIMIT_REPLENISH: ${INSPIRE_AI_RATE_LIMIT_REPLENISH:-5}
+      INSPIRE_AI_RATE_LIMIT_BURST: ${INSPIRE_AI_RATE_LIMIT_BURST:-10}
       routes_auth_service: http://inspire-auth:8081
       routes_ai_service: http://inspire-ai:8082
       routes_core_service: http://inspire-core:8083

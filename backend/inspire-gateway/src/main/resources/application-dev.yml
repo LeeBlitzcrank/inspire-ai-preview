@@ -69,8 +69,8 @@ routes:
 
 logging:
   level:
-    com.inspire.platform.gateway: debug
-    org.springframework.cloud.gateway: info
-    org.springframework.data.redis: debug
+    com.inspire.platform.gateway: ${INSPIRE_LOG_LEVEL:info}
+    org.springframework.cloud.gateway: warn
+    org.springframework.data.redis: warn
   pattern:
     dateformat: yyyy-MM-dd'T'HH:mm:ss.SSS Asia/Shanghai

@@ -10,4 +10,4 @@ inspire:
     mode: auto
 logging:
   level:
-    com.inspire: debug
+    com.inspire: ${INSPIRE_LOG_LEVEL:info}

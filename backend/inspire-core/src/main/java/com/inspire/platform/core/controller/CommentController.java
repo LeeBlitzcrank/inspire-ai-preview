@@ -30,6 +30,17 @@ public class CommentController {
         return Result.success(commentService.listByInspireId(id, userId, page, size, sort));
     }
 
+    @Operation(summary = "回复分页", description = "按主评论ID分页查询回复")
+    @GetMapping("/{id}/comments/{parentId}/replies")
+    public Result<Page<CommentVO>> replies(@PathVariable Long id,
+                                           @PathVariable Long parentId,
+                                           @RequestParam(defaultValue = "1") int page,
+                                           @RequestParam(defaultValue = "20") int size,
+                                           @RequestParam(defaultValue = "hot") String sort,
+                                           @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return Result.success(commentService.listReplies(id, parentId, userId, page, size, sort));
+    }
+
     @Operation(summary = "发表评论")
     @PostMapping("/{id}/comment")
     public Result<CommentVO> create(@PathVariable("id") Long inspireId,

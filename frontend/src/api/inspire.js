@@ -14,8 +14,8 @@ export const getInspireList = (params) => cachedGet('/inspire/public/list', para
 export const getInspireDetail = (id) => request.get(`/inspire/public/${id}`)
 // 注意：这两个接口必须带上 page/size，否则后端会用它自己的默认分页（只返回 5 条），
 // 导致「我的发布」只显示几条、且因为没有更多而直接显示「已经到底啦」。
-export const getMyInspires = (page = 1, size = 20) =>
-  request.get('/inspire/my', { params: { page, size } })
+export const getMyInspires = (page = 1, size = 20, cursor = '') =>
+  request.get('/inspire/my', { params: { page, size, cursor: cursor || undefined } })
 export const getMyDrafts = (page = 1, size = 20) =>
   request.get('/inspire/my/drafts', { params: { page, size } })
 export const getMyCollects = (page = 1, size = 20) =>
@@ -72,6 +72,8 @@ export const suggestImages = (keyword, page = 1) =>
 
 // ===== 评论 =====
 export const getComments = (id, params) => request.get(`/inspire/${id}/comments`, { params })
+export const getCommentReplies = (id, parentId, params) =>
+  request.get(`/inspire/${id}/comments/${parentId}/replies`, { params })
 export const createComment = (id, data) => request.post(`/inspire/${id}/comment`, data)
 export const deleteComment = (id, commentId) => request.delete(`/inspire/${id}/comment/${commentId}`)
 export const likeComment = (id, commentId) => request.post(`/inspire/${id}/comment/${commentId}/like`)

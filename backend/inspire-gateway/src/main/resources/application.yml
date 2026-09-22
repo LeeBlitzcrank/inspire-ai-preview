@@ -14,12 +14,6 @@ spring:
         # 去重 CORS 响应头，防止下游/代理额外注入导致
         # "Access-Control-Allow-Origin cannot contain more than one origin"
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
-        - name: RequestRateLimiter
-          args:
-            key-resolver: "#{@userKeyResolver}"
-            redis-rate-limiter.replenishRate: 50
-            redis-rate-limiter.burstCapacity: 100
-            redis-rate-limiter.requestedTokens: 1
       routes:
         # 公开接口：移除会阻止 Cloudflare 缓存的 Vary 响应头
         - id: inspire-public-api-cache
@@ -46,6 +40,12 @@ spring:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: ${INSPIRE_AUTH_RATE_LIMIT_REPLENISH:50}
+                redis-rate-limiter.burstCapacity: ${INSPIRE_AUTH_RATE_LIMIT_BURST:100}
+                redis-rate-limiter.requestedTokens: 1
         - id: inspire-ai
           uri: ${routes.ai-service:http://localhost:8082}
           predicates:
@@ -55,8 +55,8 @@ spring:
             - name: RequestRateLimiter
               args:
                 key-resolver: "#{@userKeyResolver}"
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.replenishRate: ${INSPIRE_AI_RATE_LIMIT_REPLENISH:5}
+                redis-rate-limiter.burstCapacity: ${INSPIRE_AI_RATE_LIMIT_BURST:10}
                 redis-rate-limiter.requestedTokens: 1
         - id: inspire-core
           uri: ${routes.core-service:http://localhost:8083}
@@ -64,6 +64,21 @@ spring:
             - Path=/api/inspire/**
           filters:
             - StripPrefix=1
+        # 核心写操作保留限流，公开 GET 和高频列表读请求不经过 Redis 令牌桶
+        - id: inspire-core-write
+          uri: ${routes.core-service:http://localhost:8083}
+          order: -5
+          predicates:
+            - Path=/api/inspire/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userKeyResolver}"
+                redis-rate-limiter.replenishRate: ${INSPIRE_CORE_WRITE_RATE_LIMIT_REPLENISH:50}
+                redis-rate-limiter.burstCapacity: ${INSPIRE_CORE_WRITE_RATE_LIMIT_BURST:100}
+                redis-rate-limiter.requestedTokens: 1
         # 静态文件（上传的图片）
         - id: inspire-uploads
           uri: ${routes.core-service:http://localhost:8083}
@@ -145,5 +160,5 @@ inspire:
 
 logging:
   level:
-    com.inspire: debug
+    com.inspire: ${INSPIRE_LOG_LEVEL:info}
     org.springframework.cloud.gateway: warn

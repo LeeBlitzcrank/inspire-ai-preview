@@ -77,7 +77,9 @@ CREATE TABLE IF NOT EXISTS `inspire_comment_0` (
   `deleted` TINYINT DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_inspire_deleted_time` (`inspire_id`,`deleted`,`create_time`),
-  KEY `idx_inspire_deleted_hot` (`inspire_id`,`deleted`,`like_count`,`create_time`)
+  KEY `idx_inspire_deleted_hot` (`inspire_id`,`deleted`,`like_count`,`create_time`),
+  KEY `idx_inspire_parent_hot` (`inspire_id`,`parent_id`,`deleted`,`like_count`,`create_time`),
+  KEY `idx_inspire_parent_time` (`inspire_id`,`parent_id`,`deleted`,`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `inspire_comment_1` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `inspire_comment_2` LIKE `inspire_comment_0`;

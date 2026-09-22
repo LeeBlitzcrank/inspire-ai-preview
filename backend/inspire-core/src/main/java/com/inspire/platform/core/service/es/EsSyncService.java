@@ -1,9 +1,9 @@
 package com.inspire.platform.core.service.es;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.mapper.InspireMainMapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RestClient;
@@ -26,6 +26,7 @@ public class EsSyncService {
     private final String esHosts;
     private final InspireMainMapper mainMapper;
     private static final String INDEX = "inspire_index";
+    private volatile LocalDateTime lastIncrementalSync;
 
     public EsSyncService(ObjectMapper objectMapper,
                          @Value("${inspire.es.hosts:}") String esHosts,
@@ -75,7 +76,6 @@ public class EsSyncService {
         }
     }
 
-    @Scheduled(initialDelay = 15000, fixedDelay = 300000)
     public void batchSync() {
         if (!isEnabled() || mainMapper == null) {
             return;
@@ -87,31 +87,70 @@ public class EsSyncService {
             if (mains.isEmpty()) {
                 return;
             }
+            bulkWrite(mains);
+            log.info("批量同步完成: {} 条", mains.size());
+        } catch (Exception e) {
+            log.warn("批量同步失败，不影响主流程: {}", e.getMessage());
+        }
+    }
 
-            StringBuilder bulkBody = new StringBuilder();
-            for (InspireMain main : mains) {
-                Map<String, Object> doc = buildDoc(main);
-                bulkBody.append("{\"index\":{\"_index\":\"")
+    @Scheduled(initialDelay = 15000, fixedDelay = 60000)
+    public void syncIncremental() {
+        if (!isEnabled() || mainMapper == null) {
+            return;
+        }
+        if (lastIncrementalSync == null) {
+            batchSync();
+            lastIncrementalSync = LocalDateTime.now();
+            return;
+        }
+        LocalDateTime syncStartedAt = LocalDateTime.now();
+        try {
+            List<InspireMain> mains = mainMapper.selectList(
+                Wrappers.lambdaQuery(InspireMain.class)
+                    .gt(InspireMain::getUpdateTime, lastIncrementalSync));
+            if (mains.isEmpty()) {
+                lastIncrementalSync = syncStartedAt;
+                return;
+            }
+            bulkWrite(mains);
+            lastIncrementalSync = syncStartedAt;
+            log.info("增量同步完成: {} 条", mains.size());
+        } catch (Exception e) {
+            log.warn("增量同步失败，下次定时任务继续重试: {}", e.getMessage());
+        }
+    }
+
+    private void bulkWrite(List<InspireMain> mains) throws Exception {
+        StringBuilder bulkBody = new StringBuilder();
+        int indexed = 0, deleted = 0;
+        for (InspireMain main : mains) {
+            if (Integer.valueOf(1).equals(main.getDeleted())) {
+                bulkBody.append("{\"delete\":{\"_index\":\"")
                     .append(INDEX)
                     .append("\",\"_id\":\"")
                     .append(main.getId())
                     .append("\"}}\n");
-                bulkBody.append(objectMapper.writeValueAsString(doc)).append("\n");
+                deleted++;
+                continue;
             }
-
-            // 种子数据刚写完时立即要求 refresh，避免搜索还要等 ES 的下一次 refresh。
-            Request req = new Request("POST", "/_bulk?refresh=true");
-            req.setJsonEntity(bulkBody.toString());
-            org.elasticsearch.client.Response resp = getClient().performRequest(req);
-            String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
-            if (respBody.contains("\"errors\":true")) {
-                log.warn("批量同步存在错误");
-            } else {
-                log.info("批量同步完成: {} 条", mains.size());
-            }
-        } catch (Exception e) {
-            log.warn("批量同步失败，不影响主流程: {}", e.getMessage());
+            Map<String, Object> doc = buildDoc(main);
+            bulkBody.append("{\"index\":{\"_index\":\"")
+                .append(INDEX)
+                .append("\",\"_id\":\"")
+                .append(main.getId())
+                .append("\"}}\n");
+            bulkBody.append(objectMapper.writeValueAsString(doc)).append("\n");
+            indexed++;
         }
+        Request req = new Request("POST", "/_bulk?refresh=true");
+        req.setJsonEntity(bulkBody.toString());
+        org.elasticsearch.client.Response resp = getClient().performRequest(req);
+        String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
+        if (respBody.contains("\"errors\":true")) {
+            throw new IllegalStateException("批量写入存在错误");
+        }
+        log.debug("ES批量写入: indexed={}, deleted={}", indexed, deleted);
     }
 
     private Map<String, Object> buildDoc(InspireMain main) {
@@ -120,6 +159,7 @@ public class EsSyncService {
         doc.put("title", main.getTitle());
         doc.put("img", main.getImg());
         doc.put("tag", main.getTag());
+        doc.put("status", main.getStatus());
         doc.put("category_id", main.getCategoryId());
         doc.put("sub_category_id", main.getSubCategoryId());
         doc.put("user_id", main.getUserId());

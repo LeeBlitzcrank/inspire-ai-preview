@@ -267,17 +267,27 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { getUserInfo, getMyInspires, getMyDrafts, getMyCollects,
-         uncollectInspire, updateUserInfo, changePassword,
-         getCollectFolders, getCollectListByFolder, getFollowing } from '@/api/inspire.js'
-import { cityOptions, findCityPath } from '@/utils/cityData.js'
-import { randomNickname } from '@/utils/nickname.js'
-import { thumbOf } from '@/utils/media.js'
-import { useAuthStore } from '@/stores/auth'
-import { THEMES, currentTheme, applyTheme } from '@/utils/theme.js'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {
+  changePassword,
+  getCollectFolders,
+  getCollectListByFolder,
+  getFollowing,
+  getMyCollects,
+  getMyDrafts,
+  getMyInspires,
+  getUserInfo,
+  uncollectInspire,
+  updateUserInfo
+} from '@/api/inspire.js'
+import {cityOptions, findCityPath} from '@/utils/cityData.js'
+import {randomNickname} from '@/utils/nickname.js'
+import {thumbOf} from '@/utils/media.js'
+import {useAuthStore} from '@/stores/auth'
+import {applyTheme, currentTheme, THEMES} from '@/utils/theme.js'
+
 const auth = useAuthStore()
 
 const router = useRouter()
@@ -462,6 +472,7 @@ const PUB_PAGE_SIZE = 20
 const pubLoadedPage = ref(0)
 const pubHasMore = ref(true)
 const pubLoading = ref(false)
+const pubCursor = ref('')
 
 const loadPublished = async (reset = false) => {
   if (pubLoading.value) return
@@ -470,13 +481,16 @@ const loadPublished = async (reset = false) => {
   publishedError.value = ''
   const nextPage = reset ? 1 : pubLoadedPage.value + 1
   try {
-    const json = await getMyInspires(nextPage, PUB_PAGE_SIZE)
+    const json = await getMyInspires(nextPage, PUB_PAGE_SIZE, reset ? '' : pubCursor.value)
     if (json.code !== 200) throw new Error(json.msg || 'load published failed')
     const rows = json.data?.records || []
     publishedList.value = reset ? rows : [...publishedList.value, ...rows]
-    pubTotal.value = json.data?.total || 0
+    if (reset || Number(json.data?.total || 0) > 0) pubTotal.value = json.data?.total || 0
     pubLoadedPage.value = nextPage
-    pubHasMore.value = rows.length >= PUB_PAGE_SIZE
+    pubCursor.value = json.data?.nextCursor || ''
+    pubHasMore.value = json.data?.hasMore !== undefined
+      ? Boolean(json.data.hasMore)
+      : rows.length >= PUB_PAGE_SIZE
   } catch (e) {
     console.error(e)
     publishedError.value = e?.message || 'load published failed'
@@ -706,7 +720,10 @@ onMounted(async () => {
     publishedList.value = pubRes.data?.records || []
     pubTotal.value = pubRes.data?.total || 0
     pubLoadedPage.value = 1
-    pubHasMore.value = (pubRes.data?.records || []).length >= PUB_PAGE_SIZE
+    pubCursor.value = pubRes.data?.nextCursor || ''
+    pubHasMore.value = pubRes.data?.hasMore !== undefined
+      ? Boolean(pubRes.data.hasMore)
+      : (pubRes.data?.records || []).length >= PUB_PAGE_SIZE
     draftList.value = draftRes.data?.records || []
     draftTotal.value = draftRes.data?.total || 0
     statList.value[3].num = (folRes.data || []).length
@@ -737,7 +754,10 @@ const refreshPersonalData = () => {
       publishedList.value = pubRes.data.records || []
       pubTotal.value = pubRes.data.total || 0
       pubLoadedPage.value = 1
-      pubHasMore.value = (pubRes.data.records || []).length >= PUB_PAGE_SIZE
+      pubCursor.value = pubRes.data.nextCursor || ''
+      pubHasMore.value = pubRes.data.hasMore !== undefined
+        ? Boolean(pubRes.data.hasMore)
+        : (pubRes.data.records || []).length >= PUB_PAGE_SIZE
       statList.value[0].num = pubTotal.value
       statList.value[2].num = publishedList.value.reduce((sum, item) => sum + (item.viewCount || 0), 0)
     }

@@ -23,6 +23,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,9 @@ public class InspireServiceImpl implements InspireService {
     private final MqProducer mqProducer;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+
+    private record UserRelationState(Set<Long> collectedIds, Set<Long> likedIds) {
+    }
 
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "publicList", key = "#query.page + ':' + #query.size + ':' + #query.tag + ':' + #query.sort", unless = "#loginUserId != null")
@@ -76,23 +80,73 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
-    public PageResult<InspireVO> listMyPublished(Long userId, int page, int size) {
-        return queryByUser(userId, 1, page, size);
+    public PageResult<InspireVO> listMyPublished(Long userId, int page, int size, String cursor) {
+        return queryByUser(userId, 1, page, size, cursor);
     }
 
     @Override
-    public PageResult<InspireVO> listMyDrafts(Long userId, int page, int size) {
-        return queryByUser(userId, 0, page, size);
+    public PageResult<InspireVO> listMyDrafts(Long userId, int page, int size, String cursor) {
+        return queryByUser(userId, 0, page, size, cursor);
     }
 
-    private PageResult<InspireVO> queryByUser(Long userId, int status, int page, int size) {
+    private PageResult<InspireVO> queryByUser(Long userId, int status, int page, int size, String cursor) {
+        int safeSize = Math.max(1, Math.min(size, 50));
+        if ((cursor == null || cursor.isBlank()) && page > 1) {
+            LambdaQueryWrapper<InspireMain> pageQuery = Wrappers.lambdaQuery();
+            pageQuery.eq(InspireMain::getUserId, userId)
+                    .eq(InspireMain::getStatus, status)
+                    .eq(InspireMain::getDeleted, 0)
+                    .orderByDesc(InspireMain::getCreateTime)
+                    .orderByDesc(InspireMain::getId);
+            Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, safeSize), pageQuery);
+            return new PageResult<>(toVOList(mpPage.getRecords(), userId), mpPage.getTotal());
+        }
+
+        long total = 0;
         LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
-        w.eq(InspireMain::getUserId, userId).eq(InspireMain::getStatus, status).eq(InspireMain::getDeleted, 0)
-         .orderByDesc(InspireMain::getCreateTime);
-        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, size), w);
-        List<InspireVO> list = toVOList(mpPage.getRecords(), userId);
-        log.info("[PAGEDBG] queryByUser userId={} status={} page={} size={} records={} total={}", userId, status, page, size, list.size(), mpPage.getTotal());
-        return new PageResult<>(list, mpPage.getTotal());
+        w.eq(InspireMain::getUserId, userId)
+                .eq(InspireMain::getStatus, status)
+                .eq(InspireMain::getDeleted, 0);
+        if (cursor == null || cursor.isBlank()) {
+            total = mainMapper.selectCount(w);
+        } else {
+            parseCursor(cursor).ifPresent(point -> w.and(q -> q
+                    .lt(InspireMain::getCreateTime, point.time())
+                    .or(n -> n.eq(InspireMain::getCreateTime, point.time())
+                            .lt(InspireMain::getId, point.id()))));
+        }
+        w.orderByDesc(InspireMain::getCreateTime)
+                .orderByDesc(InspireMain::getId)
+                .last("LIMIT " + (safeSize + 1));
+        List<InspireMain> rows = mainMapper.selectList(w);
+        boolean hasMore = rows.size() > safeSize;
+        if (hasMore) rows = new ArrayList<>(rows.subList(0, safeSize));
+        String nextCursor = null;
+        if (!rows.isEmpty()) {
+            InspireMain last = rows.get(rows.size() - 1);
+            if (last.getCreateTime() != null) {
+                nextCursor = last.getCreateTime() + "_" + last.getId();
+            }
+        }
+        return new PageResult<>(toVOList(rows, userId), total, nextCursor, hasMore);
+    }
+
+    private Optional<CursorPoint> parseCursor(String cursor) {
+        int split = cursor.lastIndexOf('_');
+        if (split <= 0 || split >= cursor.length() - 1) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new CursorPoint(
+                    LocalDateTime.parse(cursor.substring(0, split)),
+                    Long.parseLong(cursor.substring(split + 1))));
+        } catch (Exception e) {
+            log.debug("忽略无效分页游标: {}", cursor);
+            return Optional.empty();
+        }
+    }
+
+    private record CursorPoint(LocalDateTime time, Long id) {
     }
 
     @Override @Transactional
@@ -343,14 +397,14 @@ public class InspireServiceImpl implements InspireService {
             List<CollectAction> collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, userId).orderByDesc(CollectAction::getCreateTime));
             total = collects.size();
-            log.info("[PAGEDBG] listMyCollects userId={} page={} size={} totalCollects={}", userId, page, size, total);
+            log.debug("[PAGEDBG] listMyCollects userId={} page={} size={} totalCollects={}", userId, page, size, total);
             int start = (page - 1) * size;
             if (start >= collects.size()) {
-                log.info("[PAGEDBG] start={} >= collects.size={} -> empty", start, collects.size());
+                log.debug("[PAGEDBG] start={} >= collects.size={} -> empty", start, collects.size());
                 return new PageResult<>(new ArrayList<>(), total);
             }
             int end = Math.min(start + size, collects.size());
-            log.info("[PAGEDBG] start={} end={} records={}", start, end, end - start);
+            log.debug("[PAGEDBG] start={} end={} records={}", start, end, end - start);
             collects = collects.subList(start, end);
             if (collects.isEmpty()) {
                 return new PageResult<>(new ArrayList<>(), total);
@@ -359,7 +413,7 @@ public class InspireServiceImpl implements InspireService {
         } finally { ShardContext.clear(); }
         List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
                 .in(InspireMain::getId, ids).eq(InspireMain::getDeleted, 0));
-        log.info("[PAGEDBG] found mains={} total={}", mains.size(), total);
+        log.debug("[PAGEDBG] found mains={} total={}", mains.size(), total);
         return new PageResult<>(toVOList(mains, userId), total);
     }
 
@@ -543,7 +597,7 @@ public class InspireServiceImpl implements InspireService {
                 .in(InspireMain::getId, ids));
         Map<Long, InspireMain> map = mains.stream().collect(Collectors.toMap(InspireMain::getId, m -> m));
         Map<Long, String> nicknameMap = buildNicknameMap(mains);
-        Set<Long> likedIds = buildLikedIdsByUser(ids, userId);
+        Set<Long> likedIds = buildRelationState(userId, ids).likedIds();
 
         List<InspireVO> result = new ArrayList<>();
         for (CollectAction c : collects) {
@@ -602,8 +656,9 @@ public class InspireServiceImpl implements InspireService {
         Set<Long> likedIds = new HashSet<>();
         if (loginUserId != null) {
             List<Long> inspireIds = mains.stream().map(InspireMain::getId).collect(Collectors.toList());
-            collectedIds = buildCollectedIds(loginUserId, inspireIds);
-            likedIds = buildLikedIdsByUser(inspireIds, loginUserId);
+            UserRelationState relationState = buildRelationState(loginUserId, inspireIds);
+            collectedIds = relationState.collectedIds();
+            likedIds = relationState.likedIds();
         }
 
         // 3. Build VOs
@@ -637,29 +692,41 @@ public class InspireServiceImpl implements InspireService {
         return map;
     }
 
-    /** 批量查当前用户是否收藏了这些灵感（单分片查询，1次） */
-    private Set<Long> buildCollectedIds(Long userId, List<Long> inspireIds) {        if (inspireIds.isEmpty()) {
-        return Collections.emptySet();
-    }
-        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIdsByUser(List<Long> inspireIds, Long userId) {
+    /**
+     * 收藏和点赞都按 user_id 分片，合并为一次 UNION ALL 查询，减少列表接口一次数据库往返。
+     */
+    private UserRelationState buildRelationState(Long userId, List<Long> inspireIds) {
         if (inspireIds.isEmpty()) {
-            return Collections.emptySet();
+            return new UserRelationState(Collections.emptySet(), Collections.emptySet());
         }
-        int shard = (int) Math.floorMod(userId, 10);
+        int shard = Math.floorMod(userId, 10);
         String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT 'collect' AS kind, inspire_id FROM collect_" + shard
+                + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")"
+                + " UNION ALL "
+                + "SELECT 'like' AS kind, inspire_id FROM user_like_" + shard
+                + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")";
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+        params.addAll(inspireIds);
+        params.add(userId);
+        params.addAll(inspireIds);
+
+        Set<Long> collectedIds = new HashSet<>();
+        Set<Long> likedIds = new HashSet<>();
         try {
-            List<Object> params = new ArrayList<>();
-            params.add(userId);
-            params.addAll(inspireIds);
-            List<Long> found = jdbcTemplate.queryForList(
-                    "SELECT inspire_id FROM user_like_" + shard
-                            + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",
-                    Long.class, params.toArray());
-            return new HashSet<>(found);
+            jdbcTemplate.query(sql, rs -> {
+                long inspireId = rs.getLong("inspire_id");
+                if ("collect".equals(rs.getString("kind"))) {
+                    collectedIds.add(inspireId);
+                } else {
+                    likedIds.add(inspireId);
+                }
+            }, params.toArray());
         } catch (Exception e) {
-            log.warn("批量查询点赞状态失败: userId={}", userId, e);
-            return Collections.emptySet();
+            log.warn("批量查询收藏/点赞状态失败: userId={}", userId, e);
         }
+        return new UserRelationState(collectedIds, likedIds);
     }
 
     /**

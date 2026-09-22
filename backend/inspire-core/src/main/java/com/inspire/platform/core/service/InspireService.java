@@ -15,10 +15,10 @@ public interface InspireService {
     InspireVO getDetail(Long id, Long loginUserId);
 
     /** 我的发布（分页） */
-    PageResult<InspireVO> listMyPublished(Long userId, int page, int size);
+    PageResult<InspireVO> listMyPublished(Long userId, int page, int size, String cursor);
 
     /** 我的草稿（分页） */
-    PageResult<InspireVO> listMyDrafts(Long userId, int page, int size);
+    PageResult<InspireVO> listMyDrafts(Long userId, int page, int size, String cursor);
 
     /** 创建 */
     InspireMain create(InspireCreateRequest req, Long userId);

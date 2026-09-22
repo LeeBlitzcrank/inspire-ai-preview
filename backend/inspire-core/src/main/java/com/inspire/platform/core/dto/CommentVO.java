@@ -25,6 +25,7 @@ public class CommentVO {
     private String replyUsername;
     private Integer likeCount;
     private Boolean liked;
+    private Integer replyCount;
     private LocalDateTime createTime;
     private List<CommentVO> children;
 }

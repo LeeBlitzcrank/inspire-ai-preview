@@ -9,6 +9,7 @@ cd "$(dirname "$0")"
 
 echo "⚠️  即将执行：docker compose down -v"
 echo "   这会删除以下数据卷：mysql-data / es-data / minio-data / nginx-cache"
+echo "   演示数据档位：${INSPIRE_DEMO_SCALE:-small}"
 read -r -p "确认清除全部数据并重启？(y/N) " ans
 if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
   echo "已取消。"
@@ -37,6 +38,7 @@ sleep 20
 echo "==> 启动全部服务 …"
 # 打开演示数据开关：清库后会重新生成用户/灵感/评论/互动，以及 MinIO 里的演示图
 export INSPIRE_DEMO_SEED=true
+export INSPIRE_DEMO_SCALE="${INSPIRE_DEMO_SCALE:-small}"
 docker compose up -d --build
 sleep 5
 

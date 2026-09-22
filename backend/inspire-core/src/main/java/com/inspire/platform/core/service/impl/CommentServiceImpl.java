@@ -11,6 +11,8 @@ import com.inspire.platform.core.service.CommentService;
 import com.inspire.platform.core.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,10 @@ public class CommentServiceImpl implements CommentService {
     private final InspireCommentMapper commentMapper;
     private final NotificationService notificationService;
     private final JdbcTemplate jdbcTemplate;
+    private final StringRedisTemplate redisTemplate;
+
+    @Value("${inspire.comment.total-cache-seconds:30}")
+    private long totalCacheSeconds;
 
     private static long seq = 0L, lastTs = -1L;
 
@@ -32,8 +38,9 @@ public class CommentServiceImpl implements CommentService {
     public Page<CommentVO> listByInspireId(Long inspireId, Long userId, int page, int size, String sort) {
         boolean hotSort = "hot".equalsIgnoreCase(sort);
         Page<InspireComment> rootPage;
-        Long total;
-        List<InspireComment> records = new ArrayList<>();
+        long total;
+        List<InspireComment> rootRecords;
+        List<InspireComment> replyRecords = List.of();
         ShardContext.setByInspireId(inspireId);
         try {
             // 第一层只分页主评论，避免新回复因为全局热度分页而始终落在第一页之外。
@@ -50,11 +57,11 @@ public class CommentServiceImpl implements CommentService {
             rootPage = commentMapper.selectPage(
                     new Page<>(page, size),
                     rootQuery);
-            records.addAll(rootPage.getRecords());
+            rootRecords = rootPage.getRecords();
 
-            // 主评论和其回复一次查全，重新进入页面时仍能看到回复内容。
-            if (!rootPage.getRecords().isEmpty()) {
-                List<Long> rootIds = rootPage.getRecords().stream()
+            // 只返回每个主评论的 3 条回复预览，完整回复通过独立分页接口加载。
+            if (!rootRecords.isEmpty()) {
+                List<Long> rootIds = rootRecords.stream()
                         .map(InspireComment::getId)
                         .toList();
                 LambdaQueryWrapper<InspireComment> replyQuery = new LambdaQueryWrapper<InspireComment>()
@@ -67,22 +74,61 @@ public class CommentServiceImpl implements CommentService {
                 } else {
                     replyQuery.orderByDesc(InspireComment::getCreateTime);
                 }
-                records.addAll(commentMapper.selectList(replyQuery));
+                replyRecords = commentMapper.selectList(replyQuery);
             }
 
-            total = commentMapper.selectCount(new LambdaQueryWrapper<InspireComment>()
-                    .eq(InspireComment::getInspireId, inspireId)
-                    .eq(InspireComment::getDeleted, 0));
+            total = getRootTotal(inspireId);
         } finally {
             ShardContext.clear();
         }
 
         Page<CommentVO> voPage = new Page<>(rootPage.getCurrent(), rootPage.getSize(),
-                total == null ? 0 : total);
-        List<CommentVO> voRecords = records.stream().map(this::toVO).toList();
+                total);
+        Map<Long, List<InspireComment>> repliesByRoot = new LinkedHashMap<>();
+        for (InspireComment reply : replyRecords) {
+            repliesByRoot.computeIfAbsent(reply.getParentId(), key -> new ArrayList<>()).add(reply);
+        }
+        List<CommentVO> voRecords = new ArrayList<>(rootRecords.size() + Math.min(replyRecords.size(), rootRecords.size() * 3));
+        for (InspireComment root : rootRecords) {
+            CommentVO rootVo = toVO(root);
+            List<InspireComment> replies = repliesByRoot.getOrDefault(root.getId(), List.of());
+            rootVo.setReplyCount(replies.size());
+            voRecords.add(rootVo);
+            replies.stream().limit(3).map(this::toVO).forEach(voRecords::add);
+        }
         fillLikedState(voRecords, userId);
         voPage.setRecords(voRecords);
         return voPage;
+    }
+
+    @Override
+    public Page<CommentVO> listReplies(Long inspireId, Long parentId, Long userId,
+                                       int page, int size, String sort) {
+        boolean hotSort = "hot".equalsIgnoreCase(sort);
+        Page<InspireComment> pg;
+        long replyTotal;
+        ShardContext.setByInspireId(inspireId);
+        try {
+            LambdaQueryWrapper<InspireComment> query = new LambdaQueryWrapper<InspireComment>()
+                    .eq(InspireComment::getInspireId, inspireId)
+                    .eq(InspireComment::getDeleted, 0)
+                    .eq(InspireComment::getParentId, parentId);
+            if (hotSort) {
+                query.orderByDesc(InspireComment::getLikeCount)
+                        .orderByDesc(InspireComment::getCreateTime);
+            } else {
+                query.orderByDesc(InspireComment::getCreateTime);
+            }
+            pg = commentMapper.selectPage(new Page<>(page, size), query);
+            replyTotal = getReplyTotal(inspireId, parentId);
+        } finally {
+            ShardContext.clear();
+        }
+        List<CommentVO> records = pg.getRecords().stream().map(this::toVO).toList();
+        fillLikedState(records, userId);
+        Page<CommentVO> result = new Page<>(pg.getCurrent(), pg.getSize(), replyTotal);
+        result.setRecords(records);
+        return result;
     }
 
     private CommentVO toVO(InspireComment c) {
@@ -99,8 +145,68 @@ public class CommentServiceImpl implements CommentService {
         vo.setReplyUsername(c.getReplyUsername());
         vo.setLikeCount(c.getLikeCount() == null ? 0 : c.getLikeCount());
         vo.setLiked(false);
+        vo.setReplyCount(0);
         vo.setCreateTime(c.getCreateTime());
         return vo;
+    }
+
+    private long getRootTotal(Long inspireId) {
+        String key = "comment:total:" + inspireId;
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            if (cached != null && !cached.isBlank()) {
+                return Long.parseLong(cached);
+            }
+        } catch (Exception e) {
+            log.debug("评论总数缓存读取失败: {}", e.getMessage());
+        }
+        Long total = commentMapper.selectCount(new LambdaQueryWrapper<InspireComment>()
+                .eq(InspireComment::getInspireId, inspireId)
+                .eq(InspireComment::getDeleted, 0)
+                .eq(InspireComment::getParentId, 0L));
+        long value = total == null ? 0 : total;
+        try {
+            redisTemplate.opsForValue().set(key, String.valueOf(value),
+                    java.time.Duration.ofSeconds(Math.max(1, totalCacheSeconds)));
+        } catch (Exception e) {
+            log.debug("评论总数缓存写入失败: {}", e.getMessage());
+        }
+        return value;
+    }
+
+    private long getReplyTotal(Long inspireId, Long parentId) {
+        String key = "comment:replies:" + inspireId + ":" + parentId;
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            if (cached != null && !cached.isBlank()) {
+                return Long.parseLong(cached);
+            }
+        } catch (Exception e) {
+            log.debug("回复总数缓存读取失败: {}", e.getMessage());
+        }
+        Long total = commentMapper.selectCount(new LambdaQueryWrapper<InspireComment>()
+                .eq(InspireComment::getInspireId, inspireId)
+                .eq(InspireComment::getDeleted, 0)
+                .eq(InspireComment::getParentId, parentId));
+        long value = total == null ? 0 : total;
+        try {
+            redisTemplate.opsForValue().set(key, String.valueOf(value),
+                    java.time.Duration.ofSeconds(Math.max(1, totalCacheSeconds)));
+        } catch (Exception e) {
+            log.debug("回复总数缓存写入失败: {}", e.getMessage());
+        }
+        return value;
+    }
+
+    private void evictCommentCaches(Long inspireId, Long parentId) {
+        try {
+            redisTemplate.delete("comment:total:" + inspireId);
+            if (parentId != null && parentId > 0) {
+                redisTemplate.delete("comment:replies:" + inspireId + ":" + parentId);
+            }
+        } catch (Exception e) {
+            log.debug("评论缓存清理失败: {}", e.getMessage());
+        }
     }
 
     private void fillLikedState(List<CommentVO> records, Long userId) {
@@ -193,6 +299,7 @@ public class CommentServiceImpl implements CommentService {
         } catch (Exception e) {
             log.warn("评论通知发送失败", e);
         }
+        evictCommentCaches(request.getInspireId(), request.getParentId());
         return toVO(c);
     }
 

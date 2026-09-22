@@ -36,7 +36,7 @@ public class MysqlSearchService implements SearchService {
         }
         params.add(size); params.add(offset);
 
-        log.info("MySQL搜索: keyword={}, tag={}, page={}", keyword, tag, page);
+        log.debug("MySQL搜索: keyword={}, tag={}, page={}", keyword, tag, page);
         return jdbcTemplate.query(sql, (rs, row) -> {
             SearchResultVO vo = new SearchResultVO();
             vo.setId(rs.getLong("id"));

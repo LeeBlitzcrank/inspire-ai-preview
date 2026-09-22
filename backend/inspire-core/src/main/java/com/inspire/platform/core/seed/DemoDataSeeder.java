@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@Order(1)
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "inspire.demo.seed", havingValue = "true")
 public class DemoDataSeeder implements ApplicationRunner {
