@@ -116,40 +116,31 @@
   </div>
   </div>
 
-  <!-- 收藏文件夹选择器 -->
-  <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-      <AppCard v-for="f in collectFolders" :key="f.id" class="folder-option"
-           :selected="selectedFolder === f.id"
-           padding="12px"
-           clickable
-           @click="selectedFolder = f.id"
-           style="flex:1;min-width:100px;text-align:center;">
-        <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
-        <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
-      </AppCard>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
-      <el-button size="small" @click="createAndUseCollectFolder">新建</el-button>
-    </div>
-    <div style="margin-top:16px;text-align:right;">
-      <el-button @click="folderDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
-    </div>
-  </el-dialog>
+  <CollectFolderDialog
+    v-model="folderDialogVisible"
+    :target-id="pendingCollectId"
+    @collected="handleCollected"
+  />
 
 </template>
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-const auth = useAuthStore()
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useAuthStore} from '@/stores/auth'
 import InspireCard from '@/components/InspireCard.vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder, getCategoryTree } from '@/api/inspire.js'
-import { startConversation } from '@/api/message.js'
-import { thumbOf } from '@/utils/media.js'
+import {useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {
+  getCategoryTree,
+  getFollowing,
+  getFollowingFeed,
+  getInspireList,
+  getRecommendList,
+  getUnreadCount
+} from '@/api/inspire.js'
+import {startConversation} from '@/api/message.js'
+import {thumbOf} from '@/utils/media.js'
+
+const auth = useAuthStore()
 const router = useRouter()
 const unreadCount = ref(0)
 const isLogin = computed(() => auth.isLogin)
@@ -343,11 +334,18 @@ const resetSubItem = () => { activeSubItem.value = ''; inspireList.value = [] }
 
 const handleCollect = async (targetId) => {
   if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
-  try {
-    const res = await collectInspire(targetId)
-    if (res.code === 200) ElMessage.success('收藏成功')
-    else ElMessage.warning(res.msg || '操作失败')
-  } catch (e) { ElMessage.error('网络异常请重试') }
+  advanceAfterCollect.value = false
+  pendingCollectId.value = targetId
+  folderDialogVisible.value = true
+}
+const handleCollected = () => {
+  pendingCollectId.value = null
+  if (advanceAfterCollect.value) {
+    advanceAfterCollect.value = false
+    cardTransition.value = 'transform 0.3s ease'
+    offsetX.value = 450
+    setTimeout(nextCard, 300)
+  }
 }
   const swipeCards = ref([])
   const currentIndex = ref(0)
@@ -356,10 +354,9 @@ const wasSwiped = ref(false)
   const likeOpacity = ref(0)
   const passOpacity = ref(0)
   const startX = ref(0)
-const collectFolders = ref([])
-const selectedFolder = ref(null)
 const folderDialogVisible = ref(false)
-const newFolderName = ref('')
+const pendingCollectId = ref(null)
+const advanceAfterCollect = ref(false)
   const offsetX = ref(0)
   const cardTransition = ref('')
   const isDragging = ref(false)
@@ -456,14 +453,15 @@ const newFolderName = ref('')
     if (!card) return
     card.style.transition = 'transform 0.3s ease'
     if (offsetX.value > 100) {
-      // 右滑 → 收藏
-      if (currentCard.value && currentCard.value.inspireId) {
-        collectInspire(currentCard.value.inspireId).then(function(r) {
-          if (r.code === 200) ElMessage.success('收藏成功')
-        }).catch(function(e) { console.error(e) })
+      // 右滑 → 选择收藏夹，确认后再进入下一张
+      if (currentCard.value?.inspireId && sessionStorage.getItem('isLogin')) {
+        advanceAfterCollect.value = true
+        pendingCollectId.value = currentCard.value.inspireId
+        folderDialogVisible.value = true
+      } else if (!sessionStorage.getItem('isLogin')) {
+        ElMessage.warning('请先登录')
       }
-      card.style.transform = 'translateX(450px) rotate(25deg)'
-      setTimeout(nextCard, 300)
+      card.style.transform = 'translateX(0) rotate(0)'
     } else if (offsetX.value < -100) {
       card.style.transform = 'translateX(-450px) rotate(-25deg)'
       setTimeout(nextCard, 300)
@@ -471,7 +469,7 @@ const newFolderName = ref('')
       card.style.transform = 'translateX(0) rotate(0)'
       likeOpacity.value = 0; passOpacity.value = 0
     }
-    wasSwiped.value = Math.abs(offsetX.value) > 50
+    wasSwiped.value = offsetX.value < -50
     offsetX.value = 0
     scheduleAutoAdvance()
   }
@@ -529,25 +527,14 @@ const nextCard = async () => {
   }
   const swipeRight = async () => {
     stopAutoAdvance()
-    if (currentCard.value && currentCard.value.inspireId) {
-      try {
-        await loadCollectFolders()
-        if (collectFolders.value.length === 0) {
-          try { await createCollectFolder('默认收藏'); await loadCollectFolders() } catch (e) { console.error(e) }
-        }
-        if (collectFolders.value.length > 0) {
-          await collectToFolder(currentCard.value.inspireId, collectFolders.value[0].id)
-          ElMessage.success('已收藏到 ' + collectFolders.value[0].name)
-        } else {
-          const res = await collectInspire(currentCard.value.inspireId)
-          if (res && res.code === 200) ElMessage.success('收藏成功')
-        }
-      } catch (e) { ElMessage.error('收藏失败') }
+    if (!currentCard.value?.inspireId) return
+    if (!sessionStorage.getItem('isLogin')) {
+      ElMessage.warning('请先登录')
+      return
     }
-    // 右滑收藏后同样翻到下一张
-    cardTransition.value = 'transform 0.3s ease'
-    offsetX.value = 450
-    setTimeout(nextCard, 300)
+    advanceAfterCollect.value = true
+    pendingCollectId.value = currentCard.value.inspireId
+    folderDialogVisible.value = true
   }
 
 const handleMsgFromFollow = async (u) => {

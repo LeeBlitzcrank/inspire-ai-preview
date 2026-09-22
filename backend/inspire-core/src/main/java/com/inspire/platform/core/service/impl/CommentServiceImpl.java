@@ -31,29 +31,57 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Page<CommentVO> listByInspireId(Long inspireId, Long userId, int page, int size, String sort) {
         boolean hotSort = "hot".equalsIgnoreCase(sort);
-        Page<InspireComment> pg;
+        Page<InspireComment> rootPage;
+        Long total;
+        List<InspireComment> records = new ArrayList<>();
         ShardContext.setByInspireId(inspireId);
         try {
-            LambdaQueryWrapper<InspireComment> query = new LambdaQueryWrapper<InspireComment>()
+            // 第一层只分页主评论，避免新回复因为全局热度分页而始终落在第一页之外。
+            LambdaQueryWrapper<InspireComment> rootQuery = new LambdaQueryWrapper<InspireComment>()
                     .eq(InspireComment::getInspireId, inspireId)
-                    .eq(InspireComment::getDeleted, 0);
+                    .eq(InspireComment::getDeleted, 0)
+                    .eq(InspireComment::getParentId, 0L);
             if (hotSort) {
-                query.orderByDesc(InspireComment::getLikeCount)
+                rootQuery.orderByDesc(InspireComment::getLikeCount)
                         .orderByDesc(InspireComment::getCreateTime);
             } else {
-                query.orderByDesc(InspireComment::getCreateTime);
+                rootQuery.orderByDesc(InspireComment::getCreateTime);
             }
-            pg = commentMapper.selectPage(
+            rootPage = commentMapper.selectPage(
                     new Page<>(page, size),
-                    query);
+                    rootQuery);
+            records.addAll(rootPage.getRecords());
+
+            // 主评论和其回复一次查全，重新进入页面时仍能看到回复内容。
+            if (!rootPage.getRecords().isEmpty()) {
+                List<Long> rootIds = rootPage.getRecords().stream()
+                        .map(InspireComment::getId)
+                        .toList();
+                LambdaQueryWrapper<InspireComment> replyQuery = new LambdaQueryWrapper<InspireComment>()
+                        .eq(InspireComment::getInspireId, inspireId)
+                        .eq(InspireComment::getDeleted, 0)
+                        .in(InspireComment::getParentId, rootIds);
+                if (hotSort) {
+                    replyQuery.orderByDesc(InspireComment::getLikeCount)
+                            .orderByDesc(InspireComment::getCreateTime);
+                } else {
+                    replyQuery.orderByDesc(InspireComment::getCreateTime);
+                }
+                records.addAll(commentMapper.selectList(replyQuery));
+            }
+
+            total = commentMapper.selectCount(new LambdaQueryWrapper<InspireComment>()
+                    .eq(InspireComment::getInspireId, inspireId)
+                    .eq(InspireComment::getDeleted, 0));
         } finally {
             ShardContext.clear();
         }
 
-        Page<CommentVO> voPage = new Page<>(pg.getCurrent(), pg.getSize(), pg.getTotal());
-        List<CommentVO> records = pg.getRecords().stream().map(this::toVO).toList();
-        fillLikedState(records, userId);
-        voPage.setRecords(records);
+        Page<CommentVO> voPage = new Page<>(rootPage.getCurrent(), rootPage.getSize(),
+                total == null ? 0 : total);
+        List<CommentVO> voRecords = records.stream().map(this::toVO).toList();
+        fillLikedState(voRecords, userId);
+        voPage.setRecords(voRecords);
         return voPage;
     }
 
@@ -94,7 +122,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
-    public void create(Long userId, CommentCreateRequest request) {
+    public CommentVO create(Long userId, CommentCreateRequest request) {
         String nickname = request.getUsername();
         String avatar = request.getAvatar();
         try {
@@ -165,6 +193,7 @@ public class CommentServiceImpl implements CommentService {
         } catch (Exception e) {
             log.warn("评论通知发送失败", e);
         }
+        return toVO(c);
     }
 
     @Override

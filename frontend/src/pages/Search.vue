@@ -205,8 +205,9 @@
               </div>
               <button
                 class="collect-button"
+                :class="{ collected: isCollected(item.id) }"
                 type="button"
-                aria-label="收藏"
+                :aria-label="isCollected(item.id) ? '已收藏' : '收藏'"
                 @click.stop="handleCollect(item.id)"
               >
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -231,45 +232,18 @@
     </template>
   </div>
 
-  <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
-    <div class="folder-options">
-      <AppCard
-        v-for="folder in collectFolders"
-        :key="folder.id"
-        class="folder-option"
-        :selected="selectedFolder === folder.id"
-        padding="12px"
-        clickable
-        @click="selectedFolder = folder.id"
-      >
-        <div class="folder-icon">{{ folder.icon || '📁' }}</div>
-        <div class="folder-name">{{ folder.name }}</div>
-      </AppCard>
-    </div>
-    <div class="folder-create">
-      <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" />
-      <el-button size="small" @click="createAndUseCollectFolder">新建</el-button>
-    </div>
-    <div class="folder-actions">
-      <el-button @click="folderDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmCollectToFolder">收藏到此</el-button>
-    </div>
-  </el-dialog>
+  <CollectFolderDialog
+    v-model="collectDialogVisible"
+    :target-id="pendingCollectId"
+    @collected="markCollected"
+  />
 </template>
 
 <script setup>
 import {computed, onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
-import {
-  collectToFolder,
-  createCollectFolder,
-  getCategoryTree,
-  getCollectFolders,
-  getInspireList,
-  getWordCloud,
-  searchInspires
-} from '@/api/inspire.js'
+import {getCategoryTree, getInspireList, getWordCloud, searchInspires} from '@/api/inspire.js'
 import {srcsetOf, thumbOf} from '@/utils/media.js'
 
 const router = useRouter()
@@ -294,11 +268,9 @@ const hotList = ref([])
 const loadingHot = ref(false)
 const hotError = ref('')
 
-const folderDialogVisible = ref(false)
-const collectFolders = ref([])
-const selectedFolder = ref(null)
-const newFolderName = ref('')
+const collectDialogVisible = ref(false)
 const pendingCollectId = ref(null)
+const collectedIds = ref(new Set())
 
 const hotState = computed(() => {
   if (loadingHot.value && !hotList.value.length) return 'loading'
@@ -455,52 +427,14 @@ const handleCollect = async (id) => {
     ElMessage.warning('请先登录')
     return
   }
-  try {
-    pendingCollectId.value = id
-    const res = await getCollectFolders()
-    collectFolders.value = res.data || []
-    selectedFolder.value = collectFolders.value[0]?.id ?? null
-    folderDialogVisible.value = true
-  } catch (e) {
-    ElMessage.error('收藏夹加载失败')
-  }
+  pendingCollectId.value = id
+  collectDialogVisible.value = true
 }
 
-const loadCollectFolders = async () => {
-  const res = await getCollectFolders()
-  collectFolders.value = res.data || []
-}
+const isCollected = (id) => collectedIds.value.has(String(id))
 
-const createAndUseCollectFolder = async () => {
-  const name = newFolderName.value.trim()
-  if (!name) {
-    ElMessage.warning('请输入收藏夹名称')
-    return
-  }
-  try {
-    const res = await createCollectFolder(name, '📁')
-    const created = res.data || res
-    await loadCollectFolders()
-    selectedFolder.value = created?.id ?? collectFolders.value.at(-1)?.id ?? null
-    newFolderName.value = ''
-  } catch (e) {
-    ElMessage.error('创建收藏夹失败')
-  }
-}
-
-const confirmCollectToFolder = async () => {
-  if (!pendingCollectId.value || !selectedFolder.value) {
-    ElMessage.warning('请选择收藏夹')
-    return
-  }
-  try {
-    await collectToFolder(pendingCollectId.value, selectedFolder.value)
-    ElMessage.success('收藏成功')
-    folderDialogVisible.value = false
-    pendingCollectId.value = null
-  } catch (e) {
-    ElMessage.error('收藏失败')
-  }
+const markCollected = (id) => {
+  collectedIds.value = new Set([...collectedIds.value, String(id)])
 }
 
 onMounted(() => {
@@ -863,6 +797,15 @@ onMounted(() => {
   height: 15px;
 }
 
+.collect-button.collected {
+  background: rgba(20, 28, 25, .54);
+}
+
+.collect-button.collected .icon {
+  color: #fff;
+  fill: #fff;
+}
+
 .category-strip {
   display: flex;
   gap: 7px;
@@ -904,44 +847,6 @@ onMounted(() => {
   text-align: center;
   color: #9a8b7d;
   font-size: 11.5px;
-}
-
-.folder-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.folder-option {
-  flex: 1;
-  min-width: 100px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.folder-icon {
-  font-size: 24px;
-}
-
-.folder-name {
-  margin-top: 4px;
-  color: #1d1d1f;
-  font-size: 13px;
-}
-
-.folder-create {
-  display: flex;
-  gap: 8px;
-}
-
-.folder-create :deep(.el-input) {
-  flex: 1;
-}
-
-.folder-actions {
-  margin-top: 16px;
-  text-align: right;
 }
 
 @media screen and (max-width: 620px) {

@@ -32,12 +32,11 @@ public class CommentController {
 
     @Operation(summary = "发表评论")
     @PostMapping("/{id}/comment")
-    public Result<Void> create(@PathVariable("id") Long inspireId,
-                                @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-                                @Valid @RequestBody CommentCreateRequest request) {
+    public Result<CommentVO> create(@PathVariable("id") Long inspireId,
+                                    @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+                                    @Valid @RequestBody CommentCreateRequest request) {
         request.setInspireId(inspireId);
-        commentService.create(userId, request);
-        return Result.success("评论成功", null);
+        return Result.success("评论成功", commentService.create(userId, request));
     }
 
     @Operation(summary = "删除评论", description = "仅限本人删除")

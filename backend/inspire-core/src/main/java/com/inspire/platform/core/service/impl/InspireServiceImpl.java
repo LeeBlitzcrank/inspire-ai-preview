@@ -3,27 +3,28 @@ package com.inspire.platform.core.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.util.TextFilter;
+import com.inspire.platform.common.util.TitleUtil;
 import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.InspireService;
-import com.inspire.platform.common.util.TextFilter;
+import com.inspire.platform.core.service.NotificationService;
+import com.inspire.platform.core.service.es.EsSyncService;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
-import com.inspire.platform.core.service.es.EsSyncService;
-import com.inspire.platform.core.service.NotificationService;
-import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 @Slf4j
 @Service
@@ -97,11 +98,12 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public InspireMain create(InspireCreateRequest req, Long userId) {
         checkUserExists(userId);
+        String title = TitleUtil.truncate(req.getTitle());
         InspireMain m = new InspireMain();
-        m.setId(nextId()); m.setTitle(req.getTitle());
+        m.setId(nextId()); m.setTitle(title);
         m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
         // 内容审核：命中敏感词设为待审核（2），否则用请求的status
-        String reason = TextFilter.check(req.getTitle());
+        String reason = TextFilter.check(title);
         if (reason == null) {
             reason = TextFilter.check(req.getContent());
         }
@@ -134,7 +136,7 @@ public class InspireServiceImpl implements InspireService {
             throw new BusinessException("只能修改自己的灵感");
         }
         if (req.getTitle() != null) {
-            m.setTitle(req.getTitle());
+            m.setTitle(TitleUtil.truncate(req.getTitle()));
         }
         if (req.getTag() != null) {
             m.setTag(req.getTag());

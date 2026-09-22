@@ -117,6 +117,24 @@ CREATE TABLE IF NOT EXISTS `ai_call_log` (
   PRIMARY KEY (`id`),
   KEY `idx_call_date` (`call_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI调用日志表';
+
+CREATE TABLE IF NOT EXISTS `user_ai_history` (
+  `id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `keyword` VARCHAR(100) NOT NULL DEFAULT '',
+  `path` VARCHAR(500) NOT NULL DEFAULT '',
+  `cache_key` VARCHAR(600) NOT NULL DEFAULT '',
+  `result_json` MEDIUMTEXT,
+  `selected_index` INT DEFAULT -1,
+  `selected_title` VARCHAR(200) DEFAULT '',
+  `status` VARCHAR(20) DEFAULT 'generated',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_ai_history` (`user_id`,`deleted`,`create_time`),
+  KEY `idx_cache_key` (`cache_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户AI探索历史';
 CREATE TABLE IF NOT EXISTS `user_follow` (
   `id` BIGINT NOT NULL,
   `follower_id` BIGINT NOT NULL COMMENT '关注者',

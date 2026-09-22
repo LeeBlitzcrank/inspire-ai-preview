@@ -4,15 +4,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.ai.dto.*;
 import com.inspire.platform.ai.service.AiService;
+import com.inspire.platform.common.util.TitleUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.*;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.util.*;
 
 @Slf4j
 @Service
@@ -26,8 +27,8 @@ public class AiServiceImpl implements AiService {
 
     // 缓存 24 小时：同一关键词的结果可被其他用户直接复用，减少 token 消耗
     private static final int CACHE_TTL = 24 * 3600;
-    // v2：提示词升级为「最终内容 300~500 字」，换前缀让旧的短内容缓存立即失效
-    private static final String CACHE_PREFIX = "ai:explore:v2:";
+    // v3：标题限制为 16 字，换前缀让旧的长标题缓存立即失效
+    private static final String CACHE_PREFIX = "ai:explore:v3:";
     private final JedisPool jedisPool;
 
     public AiServiceImpl(RestTemplate restTemplate,
@@ -114,7 +115,7 @@ public class AiServiceImpl implements AiService {
             Map<String, Object> contentMap = (Map<String, Object>) data.get("content");
             if (contentMap != null) {
                 AiExploreResponse.LeafContent content = new AiExploreResponse.LeafContent();
-                content.setTitle((String) contentMap.get("title"));
+                content.setTitle(TitleUtil.truncate((String) contentMap.get("title")));
                 content.setText((String) contentMap.get("text"));
                 content.setTag((String) contentMap.get("tag"));
                 // 多风格候选：解析后主字段与第一组保持一致，兼容旧前端
@@ -125,7 +126,7 @@ public class AiServiceImpl implements AiService {
                         if (!(item instanceof Map<?, ?> vm)) continue;
                         AiExploreResponse.Variant variant = new AiExploreResponse.Variant();
                         variant.setStyle(vm.get("style") == null ? null : String.valueOf(vm.get("style")));
-                        variant.setTitle(vm.get("title") == null ? null : String.valueOf(vm.get("title")));
+                        variant.setTitle(vm.get("title") == null ? null : TitleUtil.truncate(String.valueOf(vm.get("title"))));
                         variant.setText(vm.get("text") == null ? null : String.valueOf(vm.get("text")));
                         variantList.add(variant);
                     }
@@ -247,7 +248,7 @@ public class AiServiceImpl implements AiService {
         // 深度≥2 → 直接返回最终内容，不再有options
         return "用户对「" + keyword + "」感兴趣，已选择：" + String.join(" > ", parts) +
                "。请围绕「" + focus + "」直接返回最终灵感内容(content)，不要options。" +
-               "content.title 是 10~20 字的标题；content.text 必须是 300~500 个中文字符，" +
+               "content.title 是 6~16 个中文字符的标题；content.text 必须是 300~500 个中文字符，" +
                "分成 3~5 个自然段，其中至少一段用“1. 2. 3.”分条列出可落地的建议，" +
                "内容要具体、有画面感，不要泛泛而谈；content.tag 从「家居/美食/旅行/摄影/穿搭/手作/运动/文案/电影/生活」中选一个。" +
                "另外必须在 content.variants 里一次给出 " + variants + " 组不同风格的文案，" +

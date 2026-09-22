@@ -1,5 +1,6 @@
 package com.inspire.platform.core.seed;
 
+import com.inspire.platform.common.util.TitleUtil;
 import com.inspire.platform.core.config.MinioConfig;
 import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.entity.*;
@@ -186,13 +187,13 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final String[] TITLE_PATTERNS = {
             "%s｜我的真实体验",
             "%s的%d个实用思路",
-            "关于%s，我想说几句真心话",
-            "%s避坑指南：新手一定要看",
-            "低成本%s计划，预算不到%d百",
-            "%s清单：有这几样就够了",
-            "%s入门：从零开始的完整记录",
-            "坚持%s一个月后，我的变化",
-            "%s复盘：做对了什么，也踩过哪些坑",
+            "关于%s的真心话",
+            "%s避坑指南",
+            "低成本%s计划",
+            "%s清单：这几样就够",
+            "%s入门记录",
+            "坚持%s满一个月",
+            "%s复盘笔记",
             "写给刚开始%s的你"
     };
 
@@ -695,8 +696,8 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private String buildTitle(String topic) {
         String p = TITLE_PATTERNS[rnd.nextInt(TITLE_PATTERNS.length)];
-        String s = String.format(p, topic, 3 + rnd.nextInt(7));
-        return s.length() > 60 ? s.substring(0, 60) : s;
+        String title = String.format(p, topic, 3 + rnd.nextInt(7)).replaceAll("\\s+", "");
+        return TitleUtil.truncate(title);
     }
 
     /** 正文 3~5 段 + 3 条编号建议，约 250~400 字 */

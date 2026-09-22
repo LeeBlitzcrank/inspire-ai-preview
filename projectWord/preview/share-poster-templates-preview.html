@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>分享海报多模板预览</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:28px 20px 70px;background:#edf2f0;color:#18211e;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button{font:inherit;cursor:pointer}
+  .page-head{max-width:1220px;margin:0 auto 24px}
+  .eyebrow{color:#1f8a70;font-size:12px;font-weight:850;letter-spacing:.09em;margin-bottom:8px}
+  h1{margin:0 0 8px;font-size:27px;line-height:1.2}
+  .lead{max-width:860px;margin:0;color:#66736f;font-size:14px;line-height:1.8}
+  .templates{max-width:1220px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+  .template{min-width:0}
+  .template-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .template-head b{font-size:16px}
+  .badge{padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:750}
+  .badge.a{background:#f3e7d8;color:#8b5b35}
+  .badge.b{background:#eef0f2;color:#59636c}
+  .badge.c{background:#e8eefc;color:#3f5ea8}
+  .poster-wrap{
+    position:relative;padding:10px;border-radius:24px;background:#111820;
+    box-shadow:0 24px 54px rgba(20,35,55,.18);
+  }
+  .poster{
+    position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border-radius:15px;background:#fff;
+  }
+  .poster img{width:100%;height:100%;object-fit:cover;display:block}
+  .choose{
+    width:100%;height:42px;margin-top:12px;border:1px solid #dbe5e1;border-radius:12px;background:#fff;
+    color:#41695e;font-weight:800;font-size:12.5px;
+  }
+  .choose:hover,.template.selected .choose{border-color:#74bdab;background:#eaf7f3;color:#1f8a70}
+  .template.selected .poster-wrap{box-shadow:0 0 0 3px #74bdab,0 24px 54px rgba(20,35,55,.18)}
+
+  /* A 文艺纸感 */
+  .poster-a{background:#f4ead9;color:#4b3828;padding:20px}
+  .poster-a .paper-img{
+    width:100%;height:200px;object-fit:cover;border-radius:8px;filter:saturate(.8) sepia(.12);
+  }
+  .poster-a .paper-line{width:56px;height:2px;background:#9a7653;margin:18px 0 12px}
+  .poster-a .paper-kicker{font-size:10px;letter-spacing:.18em;color:#8e6d4e;margin-bottom:9px}
+  .poster-a h2{
+    margin:0;font-family:Georgia,"Songti SC","SimSun",serif;font-size:24px;font-weight:600;line-height:1.38;
+  }
+  .poster-a p{margin:12px 0 0;color:#76604d;font-size:11.5px;line-height:1.75}
+  .poster-a .paper-foot{
+    position:absolute;left:20px;right:20px;bottom:18px;padding-top:11px;border-top:1px dashed #b79a7c;
+    display:flex;align-items:center;justify-content:space-between;color:#86694e;font-size:10px;
+  }
+  .poster-a .paper-qr{width:42px;height:42px;background:#4b3828;color:#f4ead9;display:flex;align-items:center;justify-content:center;font-size:9px}
+
+  /* B 极简留白 */
+  .poster-b{background:#fff;color:#202522;padding:22px;display:flex;flex-direction:column}
+  .poster-b .minimal-brand{font-size:10px;letter-spacing:.2em;color:#9a9f9c}
+  .poster-b .minimal-img{width:100%;height:250px;object-fit:cover;margin-top:18px;filter:saturate(.72) contrast(.96)}
+  .poster-b h2{margin:20px 0 0;font-size:24px;font-weight:500;line-height:1.35;letter-spacing:0}
+  .poster-b .minimal-meta{margin-top:9px;color:#8d9490;font-size:10.5px}
+  .poster-b .minimal-copy{margin-top:14px;color:#555e5a;font-size:11.5px;line-height:1.75}
+  .poster-b .minimal-foot{margin-top:auto;padding-top:14px;border-top:1px solid #e8ecea;display:flex;justify-content:space-between;color:#a0a6a2;font-size:9.5px}
+
+  /* C 杂志封面 */
+  .poster-c{color:#fff;background:#111}
+  .poster-c img{filter:brightness(.78) saturate(1.06)}
+  .poster-c .cover-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,10,11,.08),rgba(8,10,11,.82))}
+  .poster-c .cover-brand{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-size:9px;letter-spacing:.14em;font-weight:800}
+  .poster-c .cover-main{position:absolute;left:20px;right:20px;bottom:20px}
+  .poster-c .cover-tag{display:inline-block;padding:4px 7px;background:#f3c56b;color:#261d0d;font-size:9px;font-weight:900}
+  .poster-c h2{margin:10px 0 8px;font-size:28px;line-height:1.18;font-weight:850}
+  .poster-c p{margin:0;color:rgba(255,255,255,.78);font-size:10.5px;line-height:1.65}
+  .poster-c .cover-foot{margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.3);display:flex;justify-content:space-between;font-size:9.5px;color:rgba(255,255,255,.78)}
+
+  .fake-qr{
+    width:42px;height:42px;padding:3px;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+    background:#fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.08);
+  }
+  .fake-qr i{background:transparent}
+  .fake-qr i.on{background:#161b19}
+  .qr-foot{display:flex;align-items:center;gap:6px}
+  .qr-foot .fake-qr{width:32px;height:32px;padding:2px;gap:0}
+
+  .note{
+    max-width:1220px;margin:26px auto 0;padding:16px 18px;border:1px solid rgba(31,138,112,.12);
+    border-radius:16px;background:rgba(255,255,255,.75);color:#65736e;font-size:12.5px;line-height:1.8;
+  }
+  .note b{color:#34453f}
+  @media(max-width:900px){
+    .templates{display:flex;overflow-x:auto;padding-bottom:18px;scroll-snap-type:x mandatory}
+    .template{width:330px;flex:0 0 330px;scroll-snap-align:start}
+    .note{max-width:330px;margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div class="eyebrow">SHARE POSTER · TEMPLATE OPTIONS</div>
+  <h1>分享海报多模板预览</h1>
+  <p class="lead">同一篇灵感内容分别套入三套海报模板，你可以直接比较最终分享图的方向。点击“选择此模板”可标记偏好。</p>
+</header>
+
+<main class="templates" id="templates">
+  <section class="template" data-id="paper">
+    <div class="template-head"><b>方案 A · 文艺纸感</b><span class="badge a">现有方向</span></div>
+    <div class="poster-wrap">
+      <div class="poster poster-a">
+        <img class="paper-img" src="https://picsum.photos/seed/poster-paper/700/500" alt="">
+        <div class="paper-line"></div>
+        <div class="paper-kicker">INSPIRE NOTES</div>
+        <h2>低饱和胶片感<br>随手拍</h2>
+        <p>减少高光、保留颗粒，让日常照片多一点安静的电影感。</p>
+        <div class="paper-foot">
+          <div>文艺胶片 · 2026.09.23</div>
+          <div class="fake-qr" data-qr="paper"></div>
+        </div>
+      </div>
+    </div>
+    <button class="choose" data-choose>选择此模板</button>
+  </section>
+
+  <section class="template" data-id="minimal">
+    <div class="template-head"><b>方案 B · 极简留白</b><span class="badge b">最克制</span></div>
+    <div class="poster-wrap">
+      <div class="poster poster-b">
+        <div class="minimal-brand">LINGGANGAN</div>
+        <img class="minimal-img" src="https://picsum.photos/seed/poster-minimal/700/700" alt="">
+        <h2>低饱和胶片感随手拍</h2>
+        <div class="minimal-meta">摄影 · 文艺胶片 · 09/23</div>
+        <div class="minimal-copy">减少高光、保留颗粒，让照片回到更安静、更耐看的节奏。</div>
+        <div class="minimal-foot"><span>INSPIRE DAILY</span><span class="qr-foot"><span class="fake-qr" data-qr="minimal"></span>扫码阅读全文</span></div>
+      </div>
+    </div>
+    <button class="choose" data-choose>选择此模板</button>
+  </section>
+
+  <section class="template" data-id="magazine">
+    <div class="template-head"><b>方案 C · 杂志封面</b><span class="badge c">冲击最强</span></div>
+    <div class="poster-wrap">
+      <div class="poster poster-c">
+        <img src="https://picsum.photos/seed/poster-magazine/700/950" alt="">
+        <div class="cover-shade"></div>
+        <div class="cover-brand"><span>INSPIRE DAILY</span><span>ISSUE 09</span></div>
+        <div class="cover-main">
+          <span class="cover-tag">PHOTOGRAPHY</span>
+          <h2>低饱和胶片感<br>随手拍</h2>
+          <p>减少高光、保留颗粒，让日常照片多一点安静的电影感。</p>
+          <div class="cover-foot"><span>文艺胶片</span><span class="qr-foot"><span class="fake-qr" data-qr="magazine"></span>扫码阅读</span></div>
+        </div>
+      </div>
+    </div>
+    <button class="choose" data-choose>选择此模板</button>
+  </section>
+</main>
+
+<section class="note"><b>说明：</b>A 延续当前纸感方向；B 更现代、适合图片和文字都简洁的内容；C 更像杂志封面，适合摄影、旅行、城市和生活方式主题。</section>
+
+<script>
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-choose]')
+  if (!button) return
+  document.querySelectorAll('.template').forEach(item => item.classList.remove('selected'))
+  const template = button.closest('.template')
+  template.classList.add('selected')
+  button.textContent = '已选择'
+  document.querySelectorAll('[data-choose]').forEach(item => {
+    if (item !== button) item.textContent = '选择此模板'
+  })
+})
+
+document.querySelectorAll('[data-qr]').forEach(qr => {
+  const seed = qr.dataset.qr || 'qr'
+  let hash = 0
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  for (let i = 0; i < 49; i++) {
+    const cell = document.createElement('i')
+    const edge = i < 7 || i >= 42 || i % 7 === 0 || i % 7 === 6
+    if ((hash >> (i % 24)) & 1 || edge) cell.className = 'on'
+    qr.appendChild(cell)
+  }
+})
+</script>
+</body>
+</html>

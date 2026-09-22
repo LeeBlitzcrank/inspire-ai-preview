@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>用户选择分享海报流程预览</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 70px;background:#edf3f1;color:#17201d;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  button{font:inherit;cursor:pointer}
+  .page-head{max-width:1320px;margin:0 auto 22px}
+  .eyebrow{color:#1f8a70;font-size:12px;font-weight:850;letter-spacing:.08em;margin-bottom:8px}
+  h1{margin:0 0 8px;font-size:26px}
+  .lead{max-width:920px;margin:0;color:#65736e;font-size:14px;line-height:1.8}
+  .options{max-width:1320px;margin:0 auto;display:flex;gap:22px;align-items:flex-start}
+  .option{width:412px;flex:0 0 412px}.option-info{min-height:104px;padding:0 3px 7px}
+  .option-title{display:flex;align-items:center;gap:8px;margin-bottom:7px}.option-title b{font-size:16px}
+  .badge{padding:2px 8px;border-radius:999px;background:#e8f7f2;color:#1f8a70;font-size:10.5px;font-weight:800}
+  .option-info p{margin:0;color:#697873;font-size:12.5px;line-height:1.7}
+  .device{position:relative;width:412px;height:866px;padding:11px;border-radius:46px;background:#10161d;
+    box-shadow:0 30px 70px rgba(25,42,64,.20),inset 0 0 0 1px rgba(255,255,255,.08)}
+  .statusbar{position:absolute;z-index:8;top:11px;left:11px;right:11px;height:32px;padding:0 17px;
+    display:flex;align-items:center;justify-content:space-between;border-radius:35px 35px 0 0;background:#fff;font-size:11px;font-weight:800}
+  .status-icons{display:flex;gap:5px;align-items:center}.status-icons svg{height:11px;width:auto}.status-5g{font-size:9px}
+  .screen{position:absolute;top:43px;left:11px;right:11px;bottom:11px;overflow:hidden;border-radius:0 0 35px 35px;background:#fff2dc}
+  .detail{position:relative;height:100%;display:flex;flex-direction:column;color:#674026}
+  .topbar{height:48px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px dashed #d9905d88;background:#fff2dc}
+  .topbar button{width:34px;height:34px;border:1px solid rgba(168,105,58,.42);border-radius:50%;background:#fff9f0;color:#8b5732}
+  .topbar b{font-size:14px}
+  .content{flex:1;min-height:0;overflow-y:auto;padding:14px}
+  .cover{width:100%;height:210px;object-fit:cover;border-radius:18px;display:block}
+  .title{font-size:24px;margin:16px 0 8px;font-family:Georgia,"Songti SC",serif}
+  .copy{color:#806149;font-size:12.5px;line-height:1.75}
+  .bottom{height:58px;padding:8px 12px;display:flex;align-items:center;gap:9px;border-top:1px dashed #d9905d88;background:#fffaf3}
+  .fake-input{flex:1;height:38px;border:1px solid #e1c6a9;border-radius:12px;display:flex;align-items:center;padding:0 12px;color:#a88b70;font-size:12px}
+  .actions{display:flex;gap:10px;color:#8b5732;font-size:12px}
+  .share-icon{cursor:pointer}
+
+  .mask{position:absolute;inset:0;z-index:20;background:rgba(25,24,20,.34);display:flex;align-items:flex-end}
+  .sheet{width:100%;padding:17px;border-radius:22px 22px 0 0;background:#fff}
+  .sheet h3{margin:0 0 5px;font-size:16px;color:#26332e}
+  .sheet p{margin:0 0 14px;color:#82908b;font-size:11.5px;line-height:1.6}
+  .share-option{width:100%;padding:12px;border:1px solid #e4ece9;border-radius:14px;background:#fff;display:flex;align-items:center;gap:11px;text-align:left}
+  .share-option + .share-option{margin-top:8px}
+  .share-option .ico{width:38px;height:38px;border-radius:12px;background:#e8f7f2;color:#1f8a70;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .share-option b{display:block;font-size:13px}.share-option small{display:block;margin-top:3px;color:#8b9893;font-size:10.5px}
+
+  .template-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .template-card{padding:6px;border:1px solid #e4ece9;border-radius:12px;background:#fff;text-align:left}
+  .template-card.on{border-color:#1f8a70;box-shadow:0 0 0 2px #d9f0ea}
+  .template-card b{display:block;margin-top:6px;font-size:11px;color:#3f514b}
+  .mini-poster{position:relative;aspect-ratio:3/4;border-radius:7px;overflow:hidden;background:#eee}
+  .mini-poster img{width:100%;height:100%;object-fit:cover;display:block}
+  .mini-a{background:#f4ead9}.mini-a img{height:58%;filter:saturate(.75) sepia(.1)}
+  .mini-b{background:#fff;padding:5px}.mini-b img{height:60%;margin-top:9px}
+  .mini-c{background:#111}.mini-c img{filter:brightness(.72)}
+  .mini-overlay{position:absolute;left:5px;right:5px;bottom:5px;color:#fff;font-size:6px;line-height:1.25;text-shadow:0 1px 2px #000}
+  .mini-a .mini-overlay,.mini-b .mini-overlay{color:#444;text-shadow:none}
+  .fake-qr{margin-left:auto;width:35px;height:35px;padding:2px;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+  .fake-qr i{background:transparent}.fake-qr i.on{background:#151a18}
+  .generate{width:100%;height:42px;margin-top:12px;border:0;border-radius:12px;background:#c46e49;color:#fff;font-weight:800;font-size:12.5px}
+
+  .poster-stage{flex:1;min-height:0;padding:14px;display:flex;align-items:center;justify-content:center;background:#eef3f1}
+  .generated{position:relative;width:100%;max-width:300px;aspect-ratio:3/4;overflow:hidden;border-radius:14px;box-shadow:0 18px 42px rgba(21,38,32,.18)}
+  .generated img{width:100%;height:100%;object-fit:cover;display:block}
+  .generated .gen-copy{position:absolute;left:18px;right:18px;bottom:18px;color:#fff;z-index:2}
+  .generated .gen-copy b{display:block;font-size:23px;line-height:1.22;margin:8px 0}
+  .generated .gen-copy p{margin:0;font-size:11px;line-height:1.65;color:rgba(255,255,255,.82)}
+  .gen-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.78))}
+  .gen-foot{margin-top:13px;padding-top:10px;border-top:1px solid rgba(255,255,255,.28);display:flex;align-items:center;gap:9px;font-size:10px}
+  .gen-foot .fake-qr{width:48px;height:48px;padding:3px;margin-left:auto}
+  .poster-actions{display:flex;gap:8px;padding:10px 14px 14px;background:#eef3f1}
+  .poster-actions button{flex:1;height:40px;border:0;border-radius:11px;font-weight:800;font-size:12px}
+  .poster-actions .ghost{background:#fff;color:#53645e}.poster-actions .main{background:#1f8a70;color:#fff}
+
+  .note{max-width:1320px;margin:26px auto 0;padding:16px 18px;border:1px solid rgba(31,138,112,.12);border-radius:16px;background:rgba(255,255,255,.75);color:#65736e;font-size:12.5px;line-height:1.8}
+  .note b{color:#34453f}
+  @media(max-width:1050px){body{padding-left:14px;padding-right:14px}.options{overflow-x:auto;padding-bottom:20px}.option{scroll-snap-align:start}}
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div class="eyebrow">SHARE POSTER · USER FLOW</div>
+  <h1>用户什么时候选择海报模板</h1>
+  <p class="lead">预览按真实流程分为三步：用户点生成海报 → 用户选择模板 → 用户预览并保存带二维码的海报。</p>
+</header>
+
+<main class="options">
+  <section class="option">
+    <div class="option-info"><div class="option-title"><b>第 1 步 · 打开分享</b><span class="badge">用户操作</span></div><p>用户点击分享按钮，打开分享面板。</p></div>
+    <div class="device" data-step="1"></div>
+  </section>
+  <section class="option">
+    <div class="option-info"><div class="option-title"><b>第 2 步 · 选择模板</b><span class="badge">用户操作</span></div><p>点击“生成分享海报”后，用户自己选择三套模板之一。</p></div>
+    <div class="device" data-step="2"></div>
+  </section>
+  <section class="option">
+    <div class="option-info"><div class="option-title"><b>第 3 步 · 预览保存</b><span class="badge">最终结果</span></div><p>生成带二维码的预览，用户决定保存图片或重新选择。</p></div>
+    <div class="device" data-step="3"></div>
+  </section>
+</main>
+<section class="note"><b>二维码位置：</b>A/B/C 三套模板都预留了二维码区域，当前使用假二维码展示位置和尺寸。</section>
+
+<script>
+let chosen = 'paper'
+
+function statusBar() {
+  return `<div class="statusbar"><span>9:41</span><div class="status-icons"><svg viewBox="0 0 20 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="4.5" y="6" width="3" height="6" rx="1" fill="currentColor"/><rect x="9" y="3.5" width="3" height="8.5" rx="1" fill="currentColor"/><rect x="13.5" y=".5" width="3" height="11.5" rx="1" fill="currentColor"/></svg><span class="status-5g">5G</span><svg viewBox="0 0 18 13"><path d="M1 4.2C5.5 0 12.5 0 17 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 7.2c2.8-2.5 7.2-2.5 10 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 10c1.2-1 2.8-1 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="12" r="1.1" fill="currentColor"/></svg><svg viewBox="0 0 26 12"><rect x=".8" y=".8" width="21" height="10.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/><rect x="2.6" y="2.6" width="16.2" height="6.8" rx="1.8" fill="currentColor"/><path d="M23.5 4v4c1.1-.3 1.8-1 1.8-2s-.7-1.7-1.8-2z" fill="currentColor" opacity=".55"/></svg></div></div>`
+}
+
+function qrMarkup(seed) {
+  let hash = 0
+  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  let cells = ''
+  for (let i = 0; i < 49; i++) {
+    const edge = i < 7 || i >= 42 || i % 7 === 0 || i % 7 === 6
+    cells += `<i class="${((hash >> (i % 24)) & 1) || edge ? 'on' : ''}"></i>`
+  }
+  return `<span class="fake-qr">${cells}</span>`
+}
+
+function baseDetail(inner) {
+  return `${statusBar()}<div class="screen"><div class="detail">
+    <div class="topbar"><button>‹</button><b>灵感手账</b><button data-open-share>···</button></div>
+    <div class="content"><img class="cover" src="https://picsum.photos/seed/share-flow-cover/700/500"><div class="title">低饱和胶片感随手拍</div><div class="copy">减少高光、保留颗粒，让日常照片多一点安静的电影感。</div>${inner}</div>
+    <div class="bottom"><div class="fake-input">说点什么...</div><div class="actions"><span class="share-icon" data-open-share>分享</span><span>♡ 98</span></div></div>
+  </div></div>`
+}
+
+function renderStep1(root) {
+  if (root._shareOpen === undefined) root._shareOpen = true
+  root.innerHTML = baseDetail(root._shareOpen ? `<div class="mask"><div class="sheet"><h3>分享灵感</h3><p>选择一种分享方式。</p><button class="share-option"><span class="ico">⌁</span><span><b>复制链接</b><small>复制后在聊天或浏览器中打开</small></span></button><button class="share-option" data-generate><span class="ico">▣</span><span><b>生成分享海报</b><small>选择模板后生成一张图片</small></span></button></div></div>` : '')
+}
+
+function templateCard(id, name, cls) {
+  return `<button class="template-card ${chosen === id ? 'on' : ''}" data-template="${id}"><span class="mini-poster ${cls}"><img src="https://picsum.photos/seed/share-${id}/500/700"><span class="mini-overlay">低饱和胶片感随手拍</span></span><b>${name}</b></button>`
+}
+
+function renderStep2(root) {
+  root.innerHTML = `${statusBar()}<div class="screen"><div class="detail">
+    <div class="topbar"><button>‹</button><b>灵感手账</b><button>···</button></div>
+    <div class="content"><img class="cover" src="https://picsum.photos/seed/share-flow-cover/700/500"><div class="title">低饱和胶片感随手拍</div></div>
+    <div class="mask"><div class="sheet"><h3>选择海报模板</h3><p>由用户自己选择喜欢的样式。</p><div class="template-list">${templateCard('paper','文艺纸感','mini-a')}${templateCard('minimal','极简留白','mini-b')}${templateCard('magazine','杂志封面','mini-c')}</div><button class="generate" data-generate-poster>生成海报预览</button></div></div>
+  </div></div>`
+}
+
+function renderStep3(root) {
+  const label = { paper:'文艺纸感', minimal:'极简留白', magazine:'杂志封面' }[chosen]
+  root.innerHTML = `${statusBar()}<div class="screen"><div class="detail">
+    <div class="topbar"><button data-back-select>‹</button><b>${label}</b><button>···</button></div>
+    <div class="poster-stage"><div class="generated">
+      <img src="https://picsum.photos/seed/share-result-${chosen}/800/1100"><div class="gen-shade"></div>
+      <div class="gen-copy"><span>${chosen === 'magazine' ? 'PHOTOGRAPHY' : 'INSPIRE NOTES'}</span><b>低饱和胶片感<br>随手拍</b><p>减少高光、保留颗粒，让日常照片多一点安静的电影感。</p><div class="gen-foot"><span>文艺胶片</span>${qrMarkup(chosen)}</div></div>
+    </div></div>
+    <div class="poster-actions"><button class="ghost" data-back-select>重新选择</button><button class="main data">保存图片</button></div>
+  </div></div>`
+}
+
+function renderAll() {
+  document.querySelectorAll('.device').forEach(root => {
+    const step = root.dataset.step
+    if (step === '1') renderStep1(root)
+    else if (step === '2') renderStep2(root)
+    else renderStep3(root)
+  })
+}
+
+document.addEventListener('click', event => {
+  const device = event.target.closest('.device')
+  const template = event.target.closest('[data-template]')
+  const generate = event.target.closest('[data-generate]')
+  const generatePoster = event.target.closest('[data-generate-poster]')
+  const openShare = event.target.closest('[data-open-share]')
+  const backSelect = event.target.closest('[data-back-select]')
+
+  if (openShare && device?.dataset.step === '1') {
+    device._shareOpen = true
+    return renderAll()
+  }
+  if (generate) {
+    document.querySelector('.options').scrollTo({ left:420, behavior:'smooth' })
+    return
+  }
+  if (template) {
+    chosen = template.dataset.template
+    return renderAll()
+  }
+  if (generatePoster) {
+    document.querySelector('.options').scrollTo({ left:850, behavior:'smooth' })
+    return
+  }
+  if (backSelect) {
+    document.querySelector('.options').scrollTo({ left:420, behavior:'smooth' })
+    return
+  }
+})
+
+renderAll()
+</script>
+</body>
+</html>

@@ -110,7 +110,12 @@
         @retry="loadComments(true)"
       >
       <div class="comment-list">
-        <div v-for="commentItem in displayComments" :key="commentItem.id" class="comment-root">
+        <div
+          v-for="commentItem in displayComments"
+          :key="commentItem.id"
+          class="comment-root"
+          :data-comment-id="commentItem.id"
+        >
           <div class="comment-head">
             <span class="comment-avatar">
               <img
@@ -133,7 +138,12 @@
           </div>
 
           <div class="replies" :class="{ empty: !commentItem.replies?.length }">
-            <div v-for="reply in visibleReplies(commentItem)" :key="reply.id" class="reply">
+            <div
+              v-for="reply in visibleReplies(commentItem)"
+              :key="reply.id"
+              class="reply"
+              :data-comment-id="reply.id"
+            >
               <div class="comment-head">
                 <span class="comment-avatar">
                   <img
@@ -159,20 +169,27 @@
               </div>
             </div>
 
-            <div v-if="commentItem.replies?.length > 1" class="reply-actions">
-              <span v-if="!commentItem._repliesExpanded" class="reply-toggle" @click="expandReplies(commentItem)">
-                查看全部 {{ commentItem.replies.length }} 条回复
-              </span>
+            <div v-if="commentItem.replies?.length" class="reply-actions">
+              <button
+                v-if="!commentItem._repliesExpanded"
+                class="reply-toggle"
+                type="button"
+                @click="expandReplies(commentItem)"
+              >
+                展开 {{ commentItem.replies.length }} 条回复
+              </button>
               <template v-else>
-                <span
+                <button
                   v-if="commentItem._visibleReplyCount < commentItem.replies.length"
                   class="reply-more"
+                  type="button"
                   @click="loadMoreReplies(commentItem)"
                 >
-                  继续显示回复 {{ commentItem._visibleReplyCount }}/{{ commentItem.replies.length }}
-                </span>
-                <span v-else class="reply-collapse" @click="collapseReplies(commentItem)">收起回复</span>
-                <span v-if="commentItem._visibleReplyCount < commentItem.replies.length" class="reply-collapse" @click="collapseReplies(commentItem)">收起</span>
+                  继续显示 {{ commentItem._visibleReplyCount }}/{{ commentItem.replies.length }}
+                </button>
+                <button class="reply-collapse" type="button" @click="collapseReplies(commentItem)">
+                  收起回复
+                </button>
               </template>
             </div>
 
@@ -202,7 +219,7 @@
           type="button"
           @click="loadMoreComments"
         >
-          点击加载下一批 20 条 · 当前显示 {{ loadedCommentCount }}/{{ commentTotal }}
+          点击加载下一批 · 当前显示 {{ loadedCommentCount }}/{{ commentTotal }}
         </button>
         <span v-else>已显示全部 {{ commentTotal }} 条评论</span>
       </div>
@@ -242,10 +259,57 @@
           <span class="share-icon">⌁</span>
           <span>复制链接</span>
         </button>
-        <button class="share-option" type="button" :disabled="posterBuilding" @click="makePoster">
+        <button class="share-option" type="button" :disabled="posterBuilding" @click="openPosterTemplatePicker">
           <span class="share-icon">🖼</span>
-          <span>{{ posterBuilding ? '正在生成海报…' : '生成分享海报' }}</span>
+          <span>生成分享海报</span>
         </button>
+      </div>
+    </div>
+
+    <div
+      v-if="posterTemplatePickerVisible"
+      class="overlay poster-template-overlay"
+      @click.self="posterTemplatePickerVisible = false"
+    >
+      <div class="poster-template-panel">
+        <div class="poster-template-head">
+          <div>
+            <h3>选择海报样式</h3>
+            <p>选择后生成带二维码的分享海报。</p>
+          </div>
+          <button type="button" aria-label="关闭" @click="posterTemplatePickerVisible = false">×</button>
+        </div>
+        <div class="poster-template-grid">
+          <button
+            v-for="template in posterTemplates"
+            :key="template.id"
+            class="poster-template-card"
+            :class="{ selected: selectedPosterTemplate === template.id }"
+            type="button"
+            @click="selectedPosterTemplate = template.id"
+          >
+            <span class="poster-template-thumb" :class="`thumb-${template.id}`">
+              <span class="thumb-line wide"></span>
+              <span class="thumb-image"></span>
+              <span class="thumb-line"></span>
+              <span class="thumb-line short"></span>
+              <span class="thumb-qr"></span>
+            </span>
+            <b>{{ template.name }}</b>
+            <small>{{ template.description }}</small>
+          </button>
+        </div>
+        <div class="poster-template-actions">
+          <button class="ghost" type="button" :disabled="posterBuilding" @click="posterTemplatePickerVisible = false">取消</button>
+          <button
+            class="primary"
+            type="button"
+            :disabled="posterBuilding"
+            @click="makePoster(selectedPosterTemplate)"
+          >
+            {{ posterBuilding ? '正在生成...' : '生成海报预览' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -259,10 +323,16 @@
             :href="posterUrl"
             :download="`inspire-${detail.id || 'poster'}.png`"
           >保存图片</a>
+          <button class="poster-btn" type="button" @click="reopenPosterTemplatePicker">重新选择</button>
           <button class="poster-btn" type="button" @click="posterVisible = false">关闭</button>
         </div>
       </div>
     </div>
+    <CollectFolderDialog
+      v-model="collectDialogVisible"
+      :target-id="detail.id"
+      @collected="handleCollected"
+    />
   </div>
 </template>
 
@@ -273,7 +343,6 @@ import {ElMessage} from '@/utils/uiFeedback.js'
 import {useAuthStore} from '@/stores/auth'
 // 注意：qrcode 体积不小，改成命中「生成海报」时再动态加载，避免进详情页就打包进去
 import {
-  collectInspire,
   createComment,
   followUser,
   getComments,
@@ -305,9 +374,17 @@ const liked = ref(false)
 const collected = ref(false)
 const isFollowing = ref(false)
 const showSharePanel = ref(false)
+const collectDialogVisible = ref(false)
 const posterVisible = ref(false)
 const posterUrl = ref('')
 const posterBuilding = ref(false)
+const posterTemplatePickerVisible = ref(false)
+const selectedPosterTemplate = ref('paper')
+const posterTemplates = [
+  { id: 'paper', name: '文艺纸感', description: '纸张底色 · 衬线标题' },
+  { id: 'minimal', name: '极简留白', description: '白底 · 大留白' },
+  { id: 'magazine', name: '杂志封面', description: '大图 · 视觉冲击' }
+]
 const activeImageIndex = ref(0)
 const mainImageError = ref(false)
 const authorAvatarError = ref(false)
@@ -521,7 +598,7 @@ const regroupComments = () => {
     const previous = previousState.get(String(root.id))
     root.replies = replies
     root._repliesExpanded = previous?.expanded || false
-    root._visibleReplyCount = previous?.visibleCount || Math.min(1, replies.length)
+    root._visibleReplyCount = previous?.visibleCount || 0
     replies.forEach(reply => { reply._avatarErr = false })
   })
 
@@ -641,9 +718,8 @@ watch(() => route.params.id, id => { if (id) loadData(id) }, { immediate: true }
 
 const visibleReplies = (commentItem) => {
   if (!commentItem.replies?.length) return []
-  const count = commentItem._repliesExpanded
-    ? Math.min(commentItem._visibleReplyCount || 3, commentItem.replies.length)
-    : Math.min(1, commentItem.replies.length)
+  if (!commentItem._repliesExpanded) return []
+  const count = Math.min(commentItem._visibleReplyCount || 3, commentItem.replies.length)
   return commentItem.replies.slice(0, count)
 }
 
@@ -661,7 +737,7 @@ const loadMoreReplies = (commentItem) => {
 
 const collapseReplies = (commentItem) => {
   commentItem._repliesExpanded = false
-  commentItem._visibleReplyCount = 1
+  commentItem._visibleReplyCount = 0
 }
 
 const replyTo = (commentItem, userInfo = null) => {
@@ -682,6 +758,42 @@ const cancelReply = () => {
   replyText.value = ''
 }
 
+/**
+ * 评论列表按热度分页时，新评论/新回复的点赞数最低，可能不在第一页。
+ * 服务端创建成功后直接合并返回的记录，保证用户马上能看到自己的内容。
+ */
+const mergeCreatedComment = (created) => {
+  if (!created?.id) return null
+  const existed = allCommentRecords.value.some(item => String(item.id) === String(created.id))
+  const record = { ...created, _avatarErr: false }
+  const next = new Map(allCommentRecords.value.map(item => [String(item.id), item]))
+  next.set(String(record.id), record)
+  allCommentRecords.value = sortCommentRecords([...next.values()])
+  if (!existed) commentTotal.value += 1
+  regroupComments()
+
+  const parentId = String(record.parentId || '0')
+  const root = parentId === '0'
+    ? comments.value.find(item => String(item.id) === String(record.id))
+    : comments.value.find(item =>
+        String(item.id) === parentId
+        || item.replies?.some(reply => String(reply.id) === String(record.id))
+      )
+  if (root && parentId !== '0') {
+    root._repliesExpanded = true
+    root._visibleReplyCount = root.replies?.length || 0
+  }
+  return { record, root }
+}
+
+const focusCreatedComment = async (created, root) => {
+  await nextTick()
+  const targetId = String(created?.id || root?.id || '')
+  const target = Array.from(document.querySelectorAll('[data-comment-id]'))
+    .find(el => el.dataset.commentId === targetId)
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 const submitComment = async () => {
   if (!isLogin.value) { requireLogin(); return }
   if (!quickCommentText.value.trim() || submittingComment.value) return
@@ -691,9 +803,14 @@ const submitComment = async () => {
     if (res.code === 200) {
       quickCommentText.value = ''
       ElMessage.success('评论成功')
-      await loadComments(true)
-      await nextTick()
-      document.querySelector('.comments-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const merged = mergeCreatedComment(res.data)
+      if (merged?.record) {
+        await focusCreatedComment(merged.record, merged.root)
+      } else {
+        await loadComments(true)
+        await nextTick()
+        document.querySelector('.comments-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     } else {
       ElMessage.error(res.msg || '评论失败')
     }
@@ -717,7 +834,12 @@ const submitReply = async (root) => {
     if (res.code === 200) {
       ElMessage.success('回复成功')
       cancelReply()
-      await loadComments(true)
+      const merged = mergeCreatedComment(res.data)
+      if (merged?.record) {
+        await focusCreatedComment(merged.record, merged.root)
+      } else {
+        await loadComments(true)
+      }
     } else {
       ElMessage.error(res.msg || '回复失败')
     }
@@ -804,13 +926,16 @@ const toggleCollect = async () => {
         detail.value.collectCount = Math.max(0, (detail.value.collectCount ?? 0) - 1)
       }
     } else {
-      const res = await collectInspire(detail.value.id)
-      if (res.code === 200) {
-        collected.value = true
-        detail.value.collectCount = (detail.value.collectCount ?? 0) + 1
-      }
+      collectDialogVisible.value = true
     }
   } catch (e) {}
+}
+
+const handleCollected = () => {
+  if (!collected.value) {
+    collected.value = true
+    detail.value.collectCount = (detail.value.collectCount ?? 0) + 1
+  }
 }
 
 const handleShare = async () => {
@@ -828,6 +953,17 @@ const copyShareLink = () => {
   const url = `${window.location.origin}/#/detail/${detail.value.id}`
   navigator.clipboard.writeText(url).then(() => ElMessage.success('链接已复制'))
   showSharePanel.value = false
+}
+
+const openPosterTemplatePicker = () => {
+  showSharePanel.value = false
+  posterVisible.value = false
+  posterTemplatePickerVisible.value = true
+}
+
+const reopenPosterTemplatePicker = () => {
+  posterVisible.value = false
+  posterTemplatePickerVisible.value = true
 }
 
 /* ==================== 分享海报（纯前端 Canvas 生成） ==================== */
@@ -920,7 +1056,135 @@ const loadPosterCover = async (src) => {
   return await loadImage(src)
 }
 
-const makePoster = async () => {
+const makeModernPoster = async (template) => {
+  if (posterBuilding.value) return
+  posterBuilding.value = true
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = POSTER_W
+    canvas.height = POSTER_H
+    const ctx = canvas.getContext('2d')
+    const coverSrc = imageList.value.find(u => !isVideo(u)) || ''
+    const cover = await loadPosterCover(coverSrc)
+    const title = detail.value.title || '未命名灵感'
+    const plain = String(detail.value.content || DEFAULT_DESC).replace(/\s+/g, ' ')
+    const authorName = detail.value.nickname || detail.value.username || '灵感创作者'
+    const tag = tagList.value[0] || '灵感'
+    const shareUrl = `${window.location.origin}/#/detail/${detail.value.id}`
+    const { default: QRCode } = await import('qrcode')
+    const qrDataUrl = await QRCode.toDataURL(shareUrl, {
+      width: 320,
+      margin: 0,
+      color: { dark: '#111715', light: '#ffffff' }
+    })
+    const qrImg = await loadImage(qrDataUrl)
+
+    const drawQr = (x, y, size) => {
+      if (!qrImg) return
+      ctx.fillStyle = '#ffffff'
+      roundRectPath(ctx, x - 12, y - 12, size + 24, size + 24, 14)
+      ctx.fill()
+      ctx.drawImage(qrImg, x, y, size, size)
+    }
+
+    if (template === 'minimal') {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H)
+      ctx.fillStyle = '#a0a6a2'
+      ctx.font = '500 24px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      ctx.fillText('LINGGANGAN · INSPIRE DAILY', 80, 100)
+
+      ctx.save()
+      roundRectPath(ctx, 80, 160, 920, 650, 8)
+      ctx.clip()
+      if (cover) drawImageCover(ctx, cover, 80, 160, 920, 650)
+      else { ctx.fillStyle = '#e7ecea'; ctx.fillRect(80, 160, 920, 650) }
+      ctx.restore()
+
+      ctx.fillStyle = '#202522'
+      ctx.font = '500 58px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      let cursorY = 905
+      wrapText(ctx, title, 920, 2).forEach((line, i) => ctx.fillText(line, 80, cursorY + i * 72))
+      cursorY += 150
+
+      ctx.fillStyle = '#8d9490'
+      ctx.font = '400 25px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      ctx.fillText(`${tag} · ${authorName} · ${publishText.value}`, 80, cursorY)
+      cursorY += 58
+      ctx.fillStyle = '#555e5a'
+      ctx.font = '400 29px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      wrapText(ctx, plain, 920, 2).forEach((line, i) => ctx.fillText(line, 80, cursorY + i * 46))
+
+      ctx.strokeStyle = '#e8ecea'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(80, 1270)
+      ctx.lineTo(1000, 1270)
+      ctx.stroke()
+      ctx.fillStyle = '#9aa19d'
+      ctx.font = '400 23px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      ctx.fillText('扫码查看完整灵感', 80, 1340)
+      drawQr(875, 1220, 150)
+    } else {
+      if (cover) drawImageCover(ctx, cover, 0, 0, POSTER_W, POSTER_H)
+      else { ctx.fillStyle = '#27322f'; ctx.fillRect(0, 0, POSTER_W, POSTER_H) }
+      const shade = ctx.createLinearGradient(0, POSTER_H * .35, 0, POSTER_H)
+      shade.addColorStop(0, 'rgba(4,8,7,0)')
+      shade.addColorStop(1, 'rgba(4,8,7,.88)')
+      ctx.fillStyle = shade
+      ctx.fillRect(0, 0, POSTER_W, POSTER_H)
+
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '700 25px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      ctx.fillText('INSPIRE DAILY', 70, 95)
+      ctx.textAlign = 'right'
+      ctx.fillText('ISSUE 09', POSTER_W - 70, 95)
+      ctx.textAlign = 'left'
+
+      ctx.fillStyle = '#f3c56b'
+      ctx.font = '800 22px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      const tagW = ctx.measureText(tag.toUpperCase()).width + 40
+      ctx.fillRect(70, 840, Math.max(tagW, 150), 46)
+      ctx.fillStyle = '#261d0d'
+      ctx.fillText(tag.toUpperCase(), 88, 872)
+
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '800 60px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      let cursorY = 960
+      wrapText(ctx, title, 880, 2).forEach((line, i) => ctx.fillText(line, 70, cursorY + i * 76))
+      cursorY += 165
+      ctx.fillStyle = 'rgba(255,255,255,.82)'
+      ctx.font = '400 29px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      wrapText(ctx, plain, 880, 2).forEach((line, i) => ctx.fillText(line, 70, cursorY + i * 46))
+
+      ctx.strokeStyle = 'rgba(255,255,255,.32)'
+      ctx.beginPath()
+      ctx.moveTo(70, 1265)
+      ctx.lineTo(1010, 1265)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(255,255,255,.88)'
+      ctx.font = '500 25px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+      ctx.fillText(authorName, 70, 1340)
+      drawQr(875, 1215, 150)
+    }
+
+    posterUrl.value = canvas.toDataURL('image/png')
+    posterVisible.value = true
+    posterTemplatePickerVisible.value = false
+    showSharePanel.value = false
+  } catch (e) {
+    console.error('[poster]', e)
+    ElMessage.error('海报生成失败，请稍后再试')
+  } finally {
+    posterBuilding.value = false
+  }
+}
+
+const makePoster = async (template = 'paper') => {
+  if (template !== 'paper') {
+    await makeModernPoster(template)
+    return
+  }
   if (posterBuilding.value) return
   posterBuilding.value = true
   try {
@@ -1046,6 +1310,7 @@ const makePoster = async () => {
       return
     }
     posterVisible.value = true
+    posterTemplatePickerVisible.value = false
     showSharePanel.value = false
   } catch (e) {
     ElMessage.error('海报生成失败，请稍后再试')
@@ -1488,7 +1753,14 @@ h1 {
 
 .reply { padding: 10px 0; border-top: 1px dotted rgba(103, 64, 38, .46); }
 .reply:first-child { padding-top: 0; border-top: 0; }
-.reply-to { color: #c56025; font-weight: 700; }
+.reply-to {
+  display: inline;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #b6531d;
+  background: #ffe7d2;
+  font-weight: 700;
+}
 
 .reply-actions {
   display: flex;
@@ -1501,6 +1773,13 @@ h1 {
 .reply-toggle,
 .reply-more { color: #b75b22; font-weight: 700; cursor: pointer; }
 .reply-collapse { color: #9a7653; cursor: pointer; }
+
+.reply-actions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
 
 .reply-box { display: flex; gap: 7px; margin-top: 11px; }
 
@@ -1669,6 +1948,221 @@ h1 {
   font-size: 18px;
 }
 
+.poster-template-overlay {
+  z-index: 120;
+}
+
+.poster-template-panel {
+  width: 100%;
+  max-width: 620px;
+  padding: 20px;
+  border: 2px solid #e67833;
+  border-radius: 22px 22px 0 0;
+  background: #fff8ec;
+}
+
+.poster-template-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.poster-template-head h3 {
+  margin: 0 0 4px;
+  color: #674026;
+  font-size: 18px;
+}
+
+.poster-template-head p {
+  margin: 0;
+  color: #9a7653;
+  font-size: 12px;
+}
+
+.poster-template-head button {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3e5d5;
+  color: #8b5732;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.poster-template-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.poster-template-card {
+  padding: 7px;
+  border: 1px solid #ead9c5;
+  border-radius: 14px;
+  background: #fff;
+  color: #674026;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poster-template-card.selected {
+  border-color: #e67833;
+  box-shadow: 0 0 0 2px rgba(230, 120, 51, .18);
+}
+
+.poster-template-card b {
+  display: block;
+  margin: 7px 1px 2px;
+  font-size: 12.5px;
+}
+
+.poster-template-card small {
+  display: block;
+  color: #a1846d;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.poster-template-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #f4ead9;
+}
+
+.poster-template-thumb .thumb-line,
+.poster-template-thumb .thumb-image,
+.poster-template-thumb .thumb-qr {
+  position: absolute;
+  display: block;
+}
+
+.poster-template-thumb .thumb-line {
+  left: 9px;
+  bottom: 42px;
+  width: 45%;
+  height: 4px;
+  border-radius: 4px;
+  background: #8b5732;
+}
+
+.poster-template-thumb .thumb-line.wide {
+  top: 8px;
+  bottom: auto;
+  width: 34%;
+  height: 3px;
+  opacity: .55;
+}
+
+.poster-template-thumb .thumb-line.short {
+  bottom: 30px;
+  width: 62%;
+  opacity: .45;
+}
+
+.poster-template-thumb .thumb-image {
+  top: 26px;
+  left: 9px;
+  right: 9px;
+  height: 48%;
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(109, 151, 126, .88), rgba(102, 86, 61, .7)),
+    #8cae98;
+}
+
+.poster-template-thumb .thumb-qr {
+  right: 9px;
+  bottom: 9px;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #fff;
+  background:
+    repeating-linear-gradient(90deg, #202522 0 3px, #fff 3px 6px),
+    repeating-linear-gradient(0deg, #202522 0 3px, #fff 3px 6px);
+  background-blend-mode: multiply;
+}
+
+.thumb-minimal {
+  background: #fff;
+}
+
+.thumb-minimal .thumb-line {
+  background: #606864;
+}
+
+.thumb-minimal .thumb-image {
+  background: linear-gradient(145deg, #d6d9d7, #8e9893);
+}
+
+.thumb-magazine {
+  background: #111;
+}
+
+.thumb-magazine .thumb-line {
+  background: #fff;
+}
+
+.thumb-magazine .thumb-image {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.8)),
+    linear-gradient(145deg, #576a63, #151a18);
+}
+
+.thumb-magazine .thumb-line.wide {
+  top: 9px;
+}
+
+.thumb-magazine .thumb-line {
+  bottom: 43px;
+}
+
+.thumb-magazine .thumb-line.short {
+  bottom: 31px;
+}
+
+.poster-template-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.poster-template-actions button {
+  flex: 1;
+  height: 42px;
+  border: 0;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.poster-template-actions .ghost {
+  background: #eee3d5;
+  color: #765d49;
+}
+
+.poster-template-actions .primary {
+  background: #e67833;
+  color: #fff7ed;
+}
+
+.poster-template-actions button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
 /* 分享海报预览 */
 .poster-overlay { align-items: flex-start; }
 .poster-panel {
@@ -1689,16 +2183,16 @@ h1 {
   border-radius: 14px;
   background: #fdfaf5;
 }
-.poster-actions { display: flex; gap: 10px; justify-content: center; }
+.poster-actions { display: flex; gap: 8px; justify-content: center; }
 .poster-btn {
   flex: 1;
-  padding: 11px 0;
+  padding: 10px 6px;
   border: 0;
   border-radius: 999px;
   background: #f0e6d8;
   color: #6b5745;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 700;
   text-align: center;
   text-decoration: none;

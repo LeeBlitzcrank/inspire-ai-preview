@@ -73,12 +73,41 @@
             {{ v.style || ('风格' + (i + 1)) }}
           </button>
         </div>
+
+        <div v-if="historyList.length" class="history-panel">
+          <button class="history-toggle" type="button" @click="historyOpen = !historyOpen">
+            <span>最近探索 · {{ historyList.length }}</span>
+            <span>{{ historyOpen ? '收起' : '展开' }}</span>
+          </button>
+          <div v-if="historyOpen" class="history-list">
+            <div
+              v-for="item in historyList"
+              :key="item.id"
+              class="history-item"
+              :class="{ active: String(currentHistoryId) === String(item.id) }"
+              @click="useHistory(item)"
+            >
+              <div class="history-main">
+                <b>{{ item.keyword || '未命名探索' }}</b>
+                <span>{{ item.createTime ? formatHistoryTime(item.createTime) : '' }}</span>
+              </div>
+              <small>{{ item.selectedTitle || '未使用' }}</small>
+              <button type="button" @click.stop="removeHistory(item.id)">删除</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ============ 灵感标题 ============ -->
       <div class="card">
         <label class="label">灵感标题</label>
-        <input v-model="form.title" class="title-input" placeholder="输入简短标题…" />
+        <input
+          v-model="form.title"
+          class="title-input"
+          maxlength="16"
+          placeholder="输入简短标题…"
+        />
+        <div class="title-count">{{ titleLength }}/16</div>
       </div>
 
       <!-- ============ 所属分类 ============ -->
@@ -148,6 +177,25 @@
               <el-progress type="circle" :percentage="uploadPercent" :width="44" />
               <span>上传中 {{ uploadingCount }} 张</span>
             </template>
+          </div>
+        </div>
+
+        <div v-if="videoUploadTasks.length" class="video-upload-list">
+          <div v-for="task in videoUploadTasks" :key="task.id" class="video-upload-item">
+            <div class="video-upload-head">
+              <span class="video-upload-name">🎬 {{ task.name }}</span>
+              <span class="video-upload-size">{{ task.sizeText }}</span>
+              <span class="video-upload-state">
+                {{ task.status === 'done' ? '上传完成' : task.status === 'failed' ? '上传失败' : `${task.progress}%` }}
+              </span>
+            </div>
+            <div class="video-upload-bar">
+              <i :style="{ width: task.progress + '%' }" :class="{ failed: task.status === 'failed' }"></i>
+            </div>
+            <div v-if="task.status === 'failed'" class="video-upload-error">
+              <span>{{ task.error || '网络中断，请重试' }}</span>
+              <button type="button" @click="retryVideoUpload(task)">重新上传</button>
+            </div>
           </div>
         </div>
 
@@ -238,12 +286,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo, suggestImages as suggestImagesApi, compressVideo, trimVideo, getWordCloud, getCategoryTree } from '@/api/inspire.js'
-import { autoFormatHtml } from '@/utils/autoFormat.js'
-import { thumbOf } from '@/utils/media.js'
+import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {
+  compressVideo,
+  createInspire,
+  deleteAiHistory,
+  exploreInspiration,
+  getAiHistory,
+  getCategoryTree,
+  getInspireDetail,
+  getUserInfo,
+  getWordCloud,
+  markAiHistorySelected,
+  saveAiHistory,
+  suggestImages as suggestImagesApi,
+  trimVideo,
+  updateInspire,
+  uploadFile,
+  uploadFromUrl
+} from '@/api/inspire.js'
+import {autoFormatHtml} from '@/utils/autoFormat.js'
+import {thumbOf} from '@/utils/media.js'
+
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)
@@ -341,6 +407,11 @@ const pathLabels = ref([])
 const leafContent = ref(null)
 const contentVariants = ref([])
 const activeVariant = ref(0)
+const historyList = ref([])
+const historyOpen = ref(false)
+const currentHistoryId = ref('')
+const TITLE_MAX_LENGTH = 16
+const titleLength = computed(() => Array.from(form.value.title || '').length)
 
 // —— AI 探索 · 词云（把当前层的选项渲染成流动的书法词） ——
 const pickedWordId = ref(null)
@@ -404,10 +475,7 @@ const exploreByWord = async (keyword) => {
   try {
     const res = await exploreInspiration({ keyword, path: '' })
     if (res.code === 200) {
-      options.value = res.data?.options || []
-      summary.value = res.data?.summary || summary.value
-      // 词云固定不变，保留点选高亮，指示当前正在探索哪个方向
-      if (res.data?.content) applyContent(res.data.content)
+      applyExploreData(res.data, keyword, '')
     }
   } catch (e) {
     console.error(e)
@@ -425,9 +493,7 @@ const handleExplore = async () => {
   try {
     const res = await exploreInspiration({ keyword: aiKeyword.value, path: '' })
     if (res.code === 200) {
-      options.value = res.data?.options || []
-      summary.value = res.data?.summary || ''
-      if (res.data?.content) applyContent(res.data.content)
+      applyExploreData(res.data, aiKeyword.value, '')
     }
   } catch (e) { ElMessage.warning('探索失败请重试') }
   finally { exploring.value = false }
@@ -441,14 +507,13 @@ const selectOption = async (opt) => {
   try {
     const res = await exploreInspiration({ keyword: aiKeyword.value, path: path.value.join(',') })
     if (res.code === 200) {
-      options.value = res.data?.options || []
-      summary.value = res.data?.summary || ''
-      // 词云固定展示方向词：这里只刷新下方的选项，也不动词云上的点选高亮
-      if (res.data?.content) applyContent(res.data.content)
+      applyExploreData(res.data, aiKeyword.value, path.value.join(','))
     }
   } catch (e) { console.error(e) }
   finally { exploring.value = false }
 }
+
+const clampTitle = (value) => Array.from(String(value || '')).slice(0, TITLE_MAX_LENGTH).join('')
 
 const applyContent = (c) => {
   leafContent.value = c
@@ -456,11 +521,48 @@ const applyContent = (c) => {
   // 一次生成的多组风格候选（后端 content.variants）
   contentVariants.value = Array.isArray(c.variants) ? c.variants.filter(v => v && v.text) : []
   activeVariant.value = 0
-  form.value.title = c.title || form.value.title
+  form.value.title = clampTitle(c.title || form.value.title)
   form.value.tag = c.tag || form.value.tag
   // 编辑器以 HTML 存储：AI 返回的纯文本先自动排版（段落/编号/清单）再追加
   const add = c.text ? autoFormatHtml(c.text) : ''
   setContent((form.value.content || '') + add)
+}
+
+const loadAiHistory = async () => {
+  if (!sessionStorage.getItem('isLogin')) return
+  try {
+    const res = await getAiHistory(20)
+    historyList.value = res.data || []
+  } catch (e) {
+    console.error('[ai-history]', e)
+  }
+}
+
+const recordAiHistory = async (data, keyword, pathString) => {
+  if (!sessionStorage.getItem('isLogin') || !data?.content) return
+  try {
+    const res = await saveAiHistory({
+      keyword,
+      path: pathString || '',
+      cacheKey: data.cacheKey || '',
+      result: data
+    })
+    currentHistoryId.value = res.data?.id || ''
+    historyList.value = [res.data, ...historyList.value.filter(item => item.id !== res.data?.id)].slice(0, 20)
+  } catch (e) {
+    console.error('[ai-history-save]', e)
+  }
+}
+
+const applyExploreData = (data, keyword, pathString) => {
+  options.value = data?.options || []
+  summary.value = data?.summary || ''
+  if (data?.content) {
+    applyContent(data.content)
+    recordAiHistory(data, keyword, pathString)
+  } else {
+    currentHistoryId.value = ''
+  }
 }
 
 /** 切换风格：直接替换标题与正文（避免和上一组内容叠加） */
@@ -468,9 +570,51 @@ const applyVariant = (index) => {
   const v = contentVariants.value[index]
   if (!v) return
   activeVariant.value = index
-  if (v.title) form.value.title = v.title
+  if (v.title) form.value.title = clampTitle(v.title)
   if (v.text) setContent(autoFormatHtml(v.text))
+  if (currentHistoryId.value) {
+    markAiHistorySelected(currentHistoryId.value, {
+      selectedIndex: index,
+      selectedTitle: v.title || form.value.title || ''
+    }).catch(() => {})
+  }
   ElMessage.success('已切换到「' + (v.style || ('风格' + (index + 1))) + '」')
+}
+
+const useHistory = (item) => {
+  const result = item?.result || {}
+  const content = result.content
+  if (!content) return
+  aiKeyword.value = item.keyword || ''
+  path.value = item.path ? String(item.path).split(',').filter(Boolean) : []
+  pathLabels.value = []
+  options.value = []
+  summary.value = result.summary || ''
+  leafContent.value = content
+  contentVariants.value = Array.isArray(content.variants) ? content.variants.filter(v => v?.text) : []
+  activeVariant.value = Math.max(0, Number(item.selectedIndex ?? 0))
+  form.value.title = content.title || form.value.title
+  form.value.tag = content.tag || form.value.tag
+  if (content.text) setContent(autoFormatHtml(content.text))
+  currentHistoryId.value = item.id
+  ElMessage.success('已载入探索记录')
+}
+
+const removeHistory = async (id) => {
+  try {
+    await deleteAiHistory(id)
+    historyList.value = historyList.value.filter(item => String(item.id) !== String(id))
+    if (String(currentHistoryId.value) === String(id)) currentHistoryId.value = ''
+  } catch (e) {
+    ElMessage.error('删除探索记录失败')
+  }
+}
+
+const formatHistoryTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 const reshuffle = async () => {
@@ -658,6 +802,7 @@ const applyFilter = async (preset) => {
 // ===== 视频 =====
 const VIDEO_MAX_SIZE = 50 * 1024 * 1024
 const videoMeta = ref({})                 // 服务端 url -> { name, sizeText, duration, processing }
+const videoUploadTasks = ref([])
 const keepOriginalOnly = ref(false)       // 只保留最终版：处理后删掉原片
 const isVideoUrl = (u) => /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(u || ''))
 const videoItems = computed(() => form.value.images
@@ -674,37 +819,71 @@ const uploadVideoOne = async (raw) => {
   if (raw.size > VIDEO_MAX_SIZE) { ElMessage.warning('视频不能超过 50MB'); return }
   const localUrl = URL.createObjectURL(raw)
   form.value.images.push(localUrl)
-  imageProgress.value[localUrl] = 0
+  const task = {
+    id: localUrl,
+    raw,
+    localUrl,
+    serverUrl: '',
+    name: raw.name || '视频',
+    sizeText: (raw.size / 1024 / 1024).toFixed(1) + 'MB',
+    progress: 0,
+    status: 'uploading',
+    error: '',
+    objectUrlRevoked: false
+  }
+  videoUploadTasks.value.push(task)
+  await performVideoUpload(task)
+}
+
+const performVideoUpload = async (task) => {
+  if (!task?.raw) return
+  task.status = 'uploading'
+  task.error = ''
+  task.progress = Math.max(0, Number(task.progress || 0))
+  imageProgress.value[task.localUrl] = task.progress
   uploadingCount.value++
   try {
     const fd = new FormData()
-    fd.append('file', raw, raw.name)
+    fd.append('file', task.raw, task.raw.name)
     const res = await uploadFile(fd, (evt) => {
       const total = evt.total || evt.loaded || 1
-      imageProgress.value[localUrl] = Math.min(99, Math.round(evt.loaded * 100 / total))
+      const percent = Math.min(99, Math.round(evt.loaded * 100 / total))
+      task.progress = percent
+      imageProgress.value[task.localUrl] = percent
     })
-    const idx = form.value.images.indexOf(localUrl)
+    const idx = form.value.images.indexOf(task.localUrl)
     if (res.code === 200 && res.data?.url) {
       if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
       videoMeta.value[res.data.url] = {
-        name: res.data.name || raw.name,
-        sizeText: (raw.size / 1024 / 1024).toFixed(1) + 'MB',
+        name: res.data.name || task.name,
+        sizeText: task.sizeText,
         duration: Number(res.data.duration || 0),
         processing: ''
       }
+      task.serverUrl = res.data.url
+      task.status = 'done'
+      task.progress = 100
+      delete imageProgress.value[task.localUrl]
+      if (!task.objectUrlRevoked) {
+        URL.revokeObjectURL(task.localUrl)
+        task.objectUrlRevoked = true
+      }
     } else {
-      if (idx >= 0) form.value.images.splice(idx, 1)
-      ElMessage.error(res.msg || '视频上传失败')
+      throw new Error(res.msg || '视频上传失败')
     }
   } catch (e) {
-    const idx = form.value.images.indexOf(localUrl)
-    if (idx >= 0) form.value.images.splice(idx, 1)
+    task.status = 'failed'
+    task.error = e?.message || '网络中断，请重试'
     ElMessage.error('视频上传失败')
   } finally {
-    URL.revokeObjectURL(localUrl)
-    delete imageProgress.value[localUrl]
     uploadingCount.value = Math.max(0, uploadingCount.value - 1)
   }
+}
+
+const retryVideoUpload = (task) => {
+  task.progress = 0
+  imageProgress.value[task.localUrl] = 0
+  return performVideoUpload(task)
 }
 
 const applyProcessed = (oldUrl, data) => {
@@ -850,18 +1029,31 @@ const handleFile = async (e) => {
     .map(f => f.type.startsWith('video/') ? uploadVideoOne(f) : uploadOne(f)))
 }
 
-const removeImage = (idx) => { form.value.images.splice(idx, 1) }
+const removeImage = (idx) => {
+  const url = form.value.images[idx]
+  const task = videoUploadTasks.value.find(item => item.localUrl === url || item.serverUrl === url)
+  if (task) {
+    if (!task.objectUrlRevoked) {
+      URL.revokeObjectURL(task.localUrl)
+      task.objectUrlRevoked = true
+    }
+    delete imageProgress.value[task.localUrl]
+    videoUploadTasks.value = videoUploadTasks.value.filter(item => item !== task)
+  }
+  form.value.images.splice(idx, 1)
+}
 
 // 编辑模式：预填表单
 onMounted(async () => {
   loadCloudWords()
   loadTags()
+  loadAiHistory()
   if (route.params.id) {
     document.title = '编辑灵感'
     try {
       const res = await getInspireDetail(route.params.id)
       if (res.data) {
-        form.value.title = res.data.title || ''
+        form.value.title = clampTitle(res.data.title || '')
         form.value.tag = res.data.tag || ''
         setContent(res.data.content || '')
         form.value.publishCity = res.data.publishCity || ''
@@ -890,6 +1082,7 @@ const submit = async (status) => {
   const pending = form.value.images.filter(i => typeof i === 'string' && i.startsWith('blob:'))
   if (pending.length > 0) return ElMessage.warning('有图片尚未上传完成，请稍候')
   if (!form.value.title) return ElMessage.warning('请填写标题')
+  if (titleLength.value > TITLE_MAX_LENGTH) return ElMessage.warning(`标题不能超过 ${TITLE_MAX_LENGTH} 个字`)
   if (!form.value.tag) return ElMessage.warning('请选择分类')
   if (!contentLen.value) return ElMessage.warning('请填写灵感详情')
   loading.value = true
@@ -1044,9 +1237,27 @@ const useSuggestedImages = async () => {
 .variant-chip:hover { border-color:#7ec07a; }
 .variant-chip.active { background:#4f8a48; border-color:#4f8a48; color:#f3faf2; font-weight:600; }
 
+.history-panel { margin-top:14px; border-top:1px dashed #c7dfc3; padding-top:11px; }
+.history-toggle {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:0; border:0; background:transparent; color:#4f7c4a; font:inherit; font-size:12.5px; cursor:pointer;
+}
+.history-list { margin-top:9px; display:flex; flex-direction:column; gap:7px; }
+.history-item {
+  display:flex; align-items:center; gap:9px; padding:9px 10px; border:1px solid #dfeddb;
+  border-radius:11px; background:#f8fcf7; cursor:pointer;
+}
+.history-item.active { border-color:#73ae6d; background:#f0f9eb; }
+.history-main { min-width:0; flex:1; }
+.history-main b { display:block; color:#395f35; font-size:12.5px; }
+.history-main span { display:block; margin-top:2px; color:#8b9b88; font-size:10px; }
+.history-item small { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#7e927a; font-size:10.5px; }
+.history-item button { border:0; background:transparent; color:#b26a5c; font-size:10.5px; cursor:pointer; }
+
 /* ---------- 标题 / 分类 ---------- */
 .title-input { width:100%; border:none; outline:none; font-size:19px; font-weight:600; color:#1d1d1f; background:transparent; padding:4px 0; }
 .title-input::placeholder { color:#c0c4cc; font-weight:400; }
+.title-count { margin-top:4px; text-align:right; color:#a0a8b5; font-size:11px; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; }
 .chip { padding:6px 14px; border-radius:999px; font-size:13px; color:#6b7280; background:#f5f7fa; cursor:pointer; border:1px solid transparent; transition:.15s; }
 .chip.on { color:#409eff; background:#ecf5ff; border-color:#b3d8ff; }
@@ -1094,6 +1305,19 @@ const useSuggestedImages = async () => {
   background:rgba(0,0,0,.55); color:#fff; font-size:11px;
 }
 .video-tools { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.video-upload-list { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.video-upload-item {
+  padding:10px 11px; border:1px solid #dceaf8; border-radius:12px; background:#f7fbff;
+}
+.video-upload-head { display:flex; align-items:center; gap:8px; min-width:0; }
+.video-upload-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#35516d; font-size:12.5px; }
+.video-upload-size { color:#8a94a6; font-size:11px; }
+.video-upload-state { color:#409eff; font-size:11px; font-weight:700; }
+.video-upload-bar { height:5px; margin-top:8px; overflow:hidden; border-radius:99px; background:#e4edf7; }
+.video-upload-bar i { display:block; height:100%; border-radius:99px; background:#409eff; transition:width .18s ease; }
+.video-upload-bar i.failed { background:#f56c6c; }
+.video-upload-error { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; color:#d45d5d; font-size:11px; }
+.video-upload-error button { border:0; background:transparent; color:#409eff; font-size:11px; font-weight:700; cursor:pointer; }
 .thumb.picked { outline:2px solid #409eff; outline-offset:2px; }
 .filter-bar {
   margin-top:12px; padding:10px 12px;

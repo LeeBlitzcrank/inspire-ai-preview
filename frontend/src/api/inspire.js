@@ -59,6 +59,10 @@ export const uploadFile = (formData, onUploadProgress) => request.post('/file/up
 })
 
 export const exploreInspiration = (data) => request.post('/ai/explore', data)
+export const saveAiHistory = (data) => request.post('/inspire/ai/history', data)
+export const getAiHistory = (limit = 20) => request.get('/inspire/ai/history', { params: { limit } })
+export const markAiHistorySelected = (id, data) => request.put(`/inspire/ai/history/${id}/select`, data)
+export const deleteAiHistory = (id) => request.delete(`/inspire/ai/history/${id}`)
 
 // AI 配图建议（公开接口）：返回 6 张图片 URL
 // page 用于「换一批」翻页，不传即第一页

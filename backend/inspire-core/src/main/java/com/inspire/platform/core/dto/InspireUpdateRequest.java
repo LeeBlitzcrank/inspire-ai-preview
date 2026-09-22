@@ -1,10 +1,12 @@
 package com.inspire.platform.core.dto;
+import com.inspire.platform.common.util.TitleUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data @Schema(description = "更新灵感请求（不传的字段不修改）")
 public class InspireUpdateRequest {
-    @Schema(description = "标题") private String title;
+    @Schema(description = "标题（最多16个字符）") @Size(max = TitleUtil.MAX_LENGTH) private String title;
     @Schema(description = "正文") private String content;
     @Schema(description = "分类") private String tag;
     @Schema(description = "封面图") private String img;
