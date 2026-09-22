@@ -16,6 +16,7 @@
   <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
   <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
   </DeviceShell>
+  <AppErrorDialog />
 </template>
 
 <script setup>

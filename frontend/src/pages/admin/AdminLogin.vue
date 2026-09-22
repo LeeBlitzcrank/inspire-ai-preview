@@ -12,7 +12,7 @@
 </template>
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { adminLogin } from '@/api/inspire.js'
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -24,8 +24,8 @@ const doLogin = async () => {
   try {
     const res = await adminLogin({ username: username.value, password: password.value })
     if (res.code === 200) {
-      localStorage.setItem('adminToken', res.data.token)
-      localStorage.setItem('adminUser', res.data.username)
+      sessionStorage.setItem('adminToken', res.data.token)
+      sessionStorage.setItem('adminUser', res.data.username)
       ElMessage.success('登录成功')
       router.push('/admin/dashboard')
     } else ElMessage.error(res.msg || '登录失败')

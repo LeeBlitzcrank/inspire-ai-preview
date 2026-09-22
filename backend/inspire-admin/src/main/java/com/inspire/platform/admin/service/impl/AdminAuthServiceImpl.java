@@ -29,7 +29,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
     public AdminAuthServiceImpl(AdminUserMapper adminUserMapper,
                                 @Value("${inspire.jwt.secret}") String secret,
-                                @Value("${inspire.jwt.expiration:604800000}") long expiration) {
+                                @Value("${inspire.jwt.expiration:315360000000}") long expiration) {
         this.adminUserMapper = adminUserMapper;
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);

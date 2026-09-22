@@ -59,7 +59,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { adminCategoryList, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '@/api/inspire.js'
 import { clearGetCache } from '@/utils/request.js'
 

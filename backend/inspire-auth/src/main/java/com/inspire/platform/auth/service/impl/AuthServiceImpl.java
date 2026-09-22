@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +44,15 @@ public class AuthServiceImpl implements AuthService {
     private final RedisSessionUtil redisSessionUtil;
     private final MqProducer mqProducer;
     private final HttpServletRequest request;
+
+    @Value("${inspire.session.long-lived-users:user001,user002,user003,admin}")
+    private String longLivedUsers;
+
+    @Value("${inspire.jwt.long-lived-access-expiration:315360000000}")
+    private long longLivedAccessExpirationMs;
+
+    @Value("${inspire.session.long-lived-refresh-expiration:315360000000}")
+    private long longLivedRefreshTokenTtlMs;
 
     public AuthServiceImpl(LoginLogMapper loginLogMapper, UserMapper userMapper,
                            PasswordResetMapper passwordResetMapper, EmailService emailService,
@@ -193,7 +203,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // ④ 生成全新 AccessToken（不更新 RefreshToken）
-        String newAccessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        long accessTtl = isLongLived(user.getUsername()) ? longLivedAccessExpirationMs : jwtUtil.getExpirationMs();
+        String newAccessToken = jwtUtil.generateToken(
+                user.getId(), user.getUsername(), user.getRole(), accessTtl);
 
         // ⑤ 记录日志
         saveLoginLog(user.getId(), user.getUsername(), 1, "", "refresh");
@@ -203,7 +215,7 @@ public class AuthServiceImpl implements AuthService {
         TokenResponse resp = new TokenResponse();
         resp.setAccessToken(newAccessToken);
         resp.setRefreshToken(refreshToken);
-        resp.setExpiresIn(jwtUtil.getExpirationMs() / 1000);
+        resp.setExpiresIn(accessTtl / 1000);
         resp.setUserId(user.getId());
         resp.setUsername(user.getUsername());
         resp.setNickname(user.getNickname());
@@ -247,7 +259,7 @@ public class AuthServiceImpl implements AuthService {
             redisSessionUtil.deleteRefreshToken(refreshToken);
         }
         if (userId != null) {
-            redisSessionUtil.deleteUserRefreshMapping(userId);
+            redisSessionUtil.removeUserRefreshToken(userId, refreshToken);
         }
 
         log.info("用户登出成功: userId={}", userId);
@@ -264,15 +276,10 @@ public class AuthServiceImpl implements AuthService {
         log.info("管理员踢人: adminUserId={}, targetUserId={}", adminUserId, targetUserId);
 
         // ① 通过 userId 查询绑定的 RefreshToken（文档4.5.2第2步）
-        String refreshToken = redisSessionUtil.getUserRefreshToken(targetUserId);
-
         // ② 删除该用户全部会话缓存
-        if (refreshToken != null) {
-            redisSessionUtil.deleteRefreshToken(refreshToken);
-        }
-        redisSessionUtil.deleteUserRefreshMapping(targetUserId);
+        redisSessionUtil.invalidateAllSessions(targetUserId);
 
-        log.info("管理员踢人成功: adminUserId={}, targetUserId={}, refreshToken已删除",
+        log.info("管理员踢人成功: adminUserId={}, targetUserId={}, 全部会话已删除",
                 adminUserId, targetUserId);
     }
 
@@ -403,32 +410,42 @@ public class AuthServiceImpl implements AuthService {
      * 6. 返回 TokenResponse
      */
     private TokenResponse createDualTokenSession(User user) {
+        boolean longLived = isLongLived(user.getUsername());
+        long accessTtl = longLived ? longLivedAccessExpirationMs : jwtUtil.getExpirationMs();
+        long refreshTtl = longLived ? longLivedRefreshTokenTtlMs : 604800000L;
+
         // ① 生成 AccessToken
-        String accessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        String accessToken = jwtUtil.generateToken(
+                user.getId(), user.getUsername(), user.getRole(), accessTtl);
 
         // ② 生成 32位随机字符串 RefreshToken
         String refreshToken = generateRefreshToken();
 
-        // ③ 单点登录：挤掉旧设备（文档4.1.2第6步）
-        redisSessionUtil.invalidateOldSession(user.getId());
-
-        // ④ 写入 RefreshToken 会话缓存
-        redisSessionUtil.saveRefreshToken(refreshToken, user.getId());
+        // ③ 写入 RefreshToken 会话缓存（允许多设备/多标签并存）
+        redisSessionUtil.saveRefreshToken(refreshToken, user.getId(), refreshTtl);
 
         // ⑤ 写入用户 → RefreshToken 映射绑定
-        redisSessionUtil.saveUserRefreshMapping(user.getId(), refreshToken);
+        redisSessionUtil.saveUserRefreshMapping(user.getId(), refreshToken, refreshTtl);
 
         // ⑥ 构建返回结果
         TokenResponse resp = new TokenResponse();
         resp.setAccessToken(accessToken);
         resp.setRefreshToken(refreshToken);
-        resp.setExpiresIn(jwtUtil.getExpirationMs() / 1000);
+        resp.setExpiresIn(accessTtl / 1000);
         resp.setUserId(user.getId());
         resp.setUsername(user.getUsername());
         resp.setNickname(user.getNickname());
         resp.setAvatar(user.getAvatar());
         resp.setRole(user.getRole());
         return resp;
+    }
+
+    private boolean isLongLived(String username) {
+        if (username == null || longLivedUsers == null) return false;
+        for (String item : longLivedUsers.split(",")) {
+            if (username.equalsIgnoreCase(item.trim())) return true;
+        }
+        return false;
     }
 
     // ==================== 登录日志 ====================

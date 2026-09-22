@@ -17,7 +17,7 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { adminConfigList, adminUpdateConfig, adminManualPush } from '@/api/inspire.js'
 const configs = ref([]); const pushing = ref(false)
 const push = ref({ title: '', content: '', city: '' })

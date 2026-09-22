@@ -76,7 +76,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { register } from '@/api/auth.js'
 import { randomNickname } from '@/utils/nickname.js'
 import { useAuthStore } from '@/stores/auth'
@@ -128,15 +128,15 @@ const handleRegister = async () => {
 
     if (res.code === 200) {
       const data = res.data || {}
-      localStorage.setItem('token', data.accessToken || '')
-      localStorage.setItem('isLogin', '1')
-      localStorage.setItem('userAccount', data.username || form.value.account)
-      localStorage.setItem('userNickname', data.nickname || previewNickname.value)
-      localStorage.setItem('userAvatar', data.avatar || previewAvatar.value)
+      sessionStorage.setItem('token', data.accessToken || '')
+      sessionStorage.setItem('isLogin', '1')
+      sessionStorage.setItem('userAccount', data.username || form.value.account)
+      sessionStorage.setItem('userNickname', data.nickname || previewNickname.value)
+      sessionStorage.setItem('userAvatar', data.avatar || previewAvatar.value)
 
       if (data.accessToken) {
         const payload = JSON.parse(atob(data.accessToken.split('.')[1]))
-        localStorage.setItem('userId', payload.sub)
+        sessionStorage.setItem('userId', payload.sub)
       }
 
       auth.setLoggedIn()

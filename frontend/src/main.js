@@ -17,7 +17,10 @@ const app = createApp(App)
 initTheme()
 app.use(BaseComponents)
 app.use(pinia)
-// 应用启动时同步初始化登录态，页面/路由守卫可立即读取
-useAuthStore().init()
-app.use(router)
-app.mount('#app')
+// 应用启动前恢复会话：新标签页只有 refreshToken 时先换到 accessToken，
+// 再挂载路由，避免页面的首个受保护请求被网关拦截。
+const auth = useAuthStore()
+auth.bootstrap().finally(() => {
+  app.use(router)
+  app.mount('#app')
+})

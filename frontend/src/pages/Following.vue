@@ -39,7 +39,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { getFollowing, unfollowUser } from '@/api/inspire.js'
 import { startConversation } from '@/api/message.js'
 

@@ -73,10 +73,10 @@ const router = createRouter({
 })
 router.beforeEach((to, from, next) => {
   NProgress.start()
-  // 方案C：读取全局登录态 store（启动时已从 localStorage 同步，零延迟）
+  // 方案C：读取全局登录态 store（启动时已从 sessionStorage 同步，零延迟）
   const auth = useAuthStore(pinia)
   auth.init()
-  const adminToken = localStorage.getItem('adminToken')
+  const adminToken = sessionStorage.getItem('adminToken')
   if (to.meta.needLogin && !auth.isLogin) {
     next('/login')
   }

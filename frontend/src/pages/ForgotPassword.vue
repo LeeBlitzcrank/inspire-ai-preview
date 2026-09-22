@@ -19,7 +19,7 @@
 </template>
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { forgotPassword } from '@/api/inspire.js'
 const email = ref(''); const loading = ref(false); const sent = ref(false)
 const handleSubmit = async () => {

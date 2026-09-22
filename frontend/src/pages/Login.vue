@@ -65,7 +65,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { login } from '@/api/auth.js'
 import { setRememberMe } from '@/utils/tokenStorage.js'
 import { useAuthStore } from '@/stores/auth'
@@ -96,22 +96,22 @@ const handleLogin = async () => {
     const data = res?.data || {}
     if (res?.code === 200 && data.accessToken) {
       // 先写本地登录信息，再更新 Pinia 状态，确保首页首次挂载时能同步读取到用户 ID。
-      localStorage.removeItem('adminToken')
-      localStorage.removeItem('adminUser')
-      localStorage.setItem('token', data.accessToken)
-      localStorage.setItem('isLogin', '1')
-      localStorage.setItem('userAccount', data.username || form.value.account)
-      localStorage.setItem('userNickname', data.nickname || data.username || form.value.account)
-      if (data.avatar) localStorage.setItem('userAvatar', data.avatar)
+      sessionStorage.removeItem('adminToken')
+      sessionStorage.removeItem('adminUser')
+      sessionStorage.setItem('token', data.accessToken)
+      sessionStorage.setItem('isLogin', '1')
+      sessionStorage.setItem('userAccount', data.username || form.value.account)
+      sessionStorage.setItem('userNickname', data.nickname || data.username || form.value.account)
+      if (data.avatar) sessionStorage.setItem('userAvatar', data.avatar)
 
       const userId = data.userId || parseJwtUserId(data.accessToken)
-      if (userId) localStorage.setItem('userId', String(userId))
+      if (userId) sessionStorage.setItem('userId', String(userId))
 
       auth.setLoggedIn()
       ElMessage.success('登录成功')
 
-      const redirect = localStorage.getItem('redirectPath')
-      localStorage.removeItem('redirectPath')
+      const redirect = sessionStorage.getItem('redirectPath')
+      sessionStorage.removeItem('redirectPath')
       await router.replace(redirect || '/')
     } else {
       ElMessage.error(res?.msg || '登录失败')

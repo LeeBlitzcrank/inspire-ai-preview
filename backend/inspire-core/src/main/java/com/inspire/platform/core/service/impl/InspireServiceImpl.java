@@ -204,6 +204,9 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public void collectToFolder(Long userId, Long inspireId, Long folderId) {
         checkUserExists(userId);
+        if (folderId == null) {
+            folderId = ensureUnclassifiedFolder(userId).getId();
+        }
         ShardContext.setByUserId(userId);
         try {
             if (collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
@@ -211,9 +214,7 @@ public class InspireServiceImpl implements InspireService {
                 throw new BusinessException("已收藏");
             }
             CollectAction a = new CollectAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
-            if (folderId != null) {
-                a.setFolderId(folderId);
-            }
+            a.setFolderId(folderId);
             collectMapper.insert(a);
         } finally { ShardContext.clear(); }
         InspireMain inspireForMsg = mainMapper.selectById(inspireId);
@@ -238,6 +239,26 @@ public class InspireServiceImpl implements InspireService {
                     myName, "收藏了你的灵感", inspireId, title);
             }
         } catch (Exception e) { log.warn("收藏通知发送失败", e); }
+    }
+
+    /** 没有显式选择文件夹时，自动把收藏放进真实存在的「未分类」文件夹。 */
+    private CollectFolder ensureUnclassifiedFolder(Long userId) {
+        CollectFolder folder = collectFolderMapper.selectOne(Wrappers.lambdaQuery(CollectFolder.class)
+                .eq(CollectFolder::getUserId, userId)
+                .eq(CollectFolder::getName, "未分类")
+                .last("LIMIT 1"));
+        if (folder != null) {
+            return folder;
+        }
+        CollectFolder created = new CollectFolder();
+        created.setId(nextId());
+        created.setUserId(userId);
+        created.setName("未分类");
+        created.setIcon("📂");
+        created.setSortOrder(999);
+        created.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
+        collectFolderMapper.insert(created);
+        return created;
     }
 
     @Override @Transactional
@@ -412,11 +433,36 @@ public class InspireServiceImpl implements InspireService {
     public List<CollectFolder> getCollectFolders(Long userId) {
         List<CollectFolder> folders = collectFolderMapper.selectList(Wrappers.lambdaQuery(CollectFolder.class)
                 .eq(CollectFolder::getUserId, userId).orderByAsc(CollectFolder::getSortOrder));
+        int shard = (int) Math.floorMod(userId, 10);
+        Integer nullFolderCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM collect_" + shard
+                        + " WHERE user_id = ? AND folder_id IS NULL",
+                Integer.class, userId);
+        if (nullFolderCount != null && nullFolderCount > 0) {
+            CollectFolder uncategorized = folders.stream()
+                    .filter(f -> "未分类".equals(f.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (uncategorized == null) {
+                uncategorized = new CollectFolder();
+                uncategorized.setId(nextId());
+                uncategorized.setUserId(userId);
+                uncategorized.setName("未分类");
+                uncategorized.setIcon("📂");
+                uncategorized.setSortOrder(999);
+                uncategorized.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
+                collectFolderMapper.insert(uncategorized);
+                folders.add(uncategorized);
+            }
+            jdbcTemplate.update(
+                    "UPDATE collect_" + shard + " SET folder_id = ? "
+                            + "WHERE user_id = ? AND folder_id IS NULL",
+                    uncategorized.getId(), userId);
+        }
         if (folders.isEmpty()) {
             return folders;
         }
 
-        int shard = (int) Math.floorMod(userId, 10);
         Map<Long, Integer> counts = new HashMap<>();
         try {
             jdbcTemplate.query(

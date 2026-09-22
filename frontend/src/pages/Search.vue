@@ -98,7 +98,7 @@
 import { ref, computed, onMounted } from 'vue'
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { searchInspires, getInspireList, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
 import { thumbOf, srcsetOf } from '@/utils/media.js'
 const router = useRouter()
@@ -108,11 +108,11 @@ const goDetail = (id) => {
   }
 }
 const goCreate = () => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
   router.push('/create')
 }
 const goPersonal = () => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/personal')
 }
 const keyword = ref(''); const searched = ref(false); const searchResult = ref([])
@@ -162,7 +162,7 @@ const doSearch = async (loadMore) => {
   }
 }
 const handleCollect = async (id) => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
   try {
     pendingCollectId.value = id
     const res = await getCollectFolders()

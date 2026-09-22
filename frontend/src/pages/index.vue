@@ -5,8 +5,8 @@
       <div id="nav-icon-group" class="right-icons">
         <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
         <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
-        <div v-if="isLogin" id="icon-message" class="icon-item" @click="$router.push('/messages')" style="position:relative;">💬</div>
-        <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
+        <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>
+        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
     <!-- 选项卡 -->
@@ -146,7 +146,7 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder, getCategoryTree } from '@/api/inspire.js'
 import { startConversation } from '@/api/message.js'
 import { thumbOf } from '@/utils/media.js'
@@ -205,15 +205,15 @@ const selectFollowee = (u) => {
 }
 
 const goCreate = () => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
   router.push('/create')
 }
 const goPersonal = () => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/personal')
 }
 const goNotifications = () => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/notifications')
 }
 const goDetail = (id) => {
@@ -342,7 +342,7 @@ const resetCategory = () => { activeCategory.value = ''; currentSubList.value = 
 const resetSubItem = () => { activeSubItem.value = ''; inspireList.value = [] }
 
 const handleCollect = async (targetId) => {
-  if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
+  if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); return }
   try {
     const res = await collectInspire(targetId)
     if (res.code === 200) ElMessage.success('收藏成功')

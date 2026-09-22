@@ -177,9 +177,14 @@
 
       <div v-if="isLogin && commentState === 'ready'" class="comment-load-status">
         <span v-if="commentLoading">正在加载评论...</span>
-        <span v-else-if="commentHasMore" @click="loadMoreComments">
-          下滑加载 20 条评论 · 当前显示 {{ loadedCommentCount }}/{{ commentTotal }}
-        </span>
+        <button
+          v-else-if="commentHasMore"
+          class="comment-load-btn"
+          type="button"
+          @click="loadMoreComments"
+        >
+          点击加载下一批 20 条 · 当前显示 {{ loadedCommentCount }}/{{ commentTotal }}
+        </button>
         <span v-else>已显示全部 {{ commentTotal }} 条评论</span>
       </div>
       </article>
@@ -243,9 +248,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
+import { useAuthStore } from '@/stores/auth'
 // 注意：qrcode 体积不小，改成命中「生成海报」时再动态加载，避免进详情页就打包进去
 import {
   collectInspire,
@@ -267,6 +273,7 @@ const posterCoverProxy = (url) => `${API_BASE}/file/poster-cover?url=${encodeURI
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const FALLBACK_IMAGE = 'https://picsum.photos/id/102/900/650'
 const DEFAULT_DESC = '把此刻的灵感慢慢写下来，给图片、文字和评论区留出舒服的呼吸感。'
 
@@ -295,12 +302,12 @@ const replyText = ref('')
 const replyTarget = ref(null)
 const replyToUser = ref(null)
 const submittingComment = ref(false)
-let scrollTicking = false
 let detailRequestSeq = 0
 let commentRequestSeq = 0
+let loadingDetailId = ''
 
-const isLogin = computed(() => localStorage.getItem('isLogin'))
-const currentUserId = computed(() => localStorage.getItem('userId'))
+const isLogin = computed(() => auth.isLogin)
+const currentUserId = computed(() => sessionStorage.getItem('userId'))
 const detailState = computed(() => {
   if (detailLoading.value && !detail.value.id) return 'loading'
   if (detailError.value && !detail.value.id) return 'error'
@@ -311,7 +318,7 @@ const isOwnInspire = computed(() => {
   if (!detail.value.userId || !isLogin.value) return false
   let jwtUserId = ''
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1]))
       jwtUserId = String(payload.sub)
@@ -402,7 +409,7 @@ const formatRelativeTime = (value) => {
  * 并把当前灵感写入 redirectPath，登录成功后自动回到这里。
  */
 const requireLogin = () => {
-  localStorage.setItem('redirectPath', detail.value.id ? `/detail/${detail.value.id}` : '/')
+  sessionStorage.setItem('redirectPath', detail.value.id ? `/detail/${detail.value.id}` : '/')
   router.push('/login')
 }
 
@@ -491,7 +498,8 @@ const loadComments = async (reset = false, inspireIdOverride = null) => {
   const targetPage = reset ? 1 : commentPage.value
   try {
     const res = await getComments(inspireId, { page: targetPage, size: 20 })
-    if (requestSeq !== commentRequestSeq || String(detail.value.id) !== inspireId) return
+    if (requestSeq !== commentRequestSeq
+        || (!inspireIdOverride && String(detail.value.id) !== inspireId)) return
     if (res.code !== 200) return
     const data = res.data || {}
     const records = Array.isArray(data) ? data : (data.records || [])
@@ -502,7 +510,8 @@ const loadComments = async (reset = false, inspireIdOverride = null) => {
     commentPage.value = targetPage + 1
     regroupComments()
   } catch (e) {
-    if (requestSeq !== commentRequestSeq || String(detail.value.id) !== inspireId) return
+    if (requestSeq !== commentRequestSeq
+        || (!inspireIdOverride && String(detail.value.id) !== inspireId)) return
     commentError.value = e?.message || 'load comments failed'
     ElMessage.error('评论加载失败')
   } finally {
@@ -528,12 +537,16 @@ const resetDetailState = () => {
   commentError.value = ''
 }
 
-const loadData = async (rawId) => {
+const loadData = async (rawId, force = false) => {
   const id = String(rawId || '').trim()
   if (!id) {
     detailError.value = '灵感地址无效'
     return
   }
+  if (!force && detailLoading.value && loadingDetailId === id) {
+    return
+  }
+  loadingDetailId = id
 
   const requestSeq = ++detailRequestSeq
   commentRequestSeq += 1
@@ -560,6 +573,10 @@ const loadData = async (rawId) => {
     detailError.value = e?.response?.data?.msg || e?.message || '灵感加载失败'
     detailLoading.value = false
     return
+  } finally {
+    if (requestSeq === detailRequestSeq) {
+      loadingDetailId = ''
+    }
   }
 
   if (requestSeq !== detailRequestSeq) return
@@ -567,7 +584,7 @@ const loadData = async (rawId) => {
 }
 
 const reloadDetail = () => {
-  if (route.params.id) loadData(route.params.id)
+  if (route.params.id) loadData(route.params.id, true)
 }
 
 watch(() => route.params.id, id => { if (id) loadData(id) }, { immediate: true })
@@ -669,21 +686,9 @@ const loadMoreComments = () => {
   if (commentHasMore.value) loadComments(false)
 }
 
-const handleScroll = () => {
-  if (scrollTicking) return
-  scrollTicking = true
-  requestAnimationFrame(() => {
-    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 260
-    if (nearBottom) loadMoreComments()
-    scrollTicking = false
-  })
-}
-
-onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }))
 onBeforeUnmount(() => {
   detailRequestSeq += 1
   commentRequestSeq += 1
-  window.removeEventListener('scroll', handleScroll)
 })
 
 const likeComment = (commentItem) => {
@@ -1395,6 +1400,19 @@ h1 {
   font-size: 12.5px;
   font-weight: 600;
 }
+.comment-load-btn {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid #e8bd94;
+  border-radius: 999px;
+  background: #fff8f0;
+  color: #a85b25;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.comment-load-btn:active { transform: scale(.985); }
 
 .bottom-action-bar {
   position: fixed;

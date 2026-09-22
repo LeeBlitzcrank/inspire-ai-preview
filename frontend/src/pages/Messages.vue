@@ -98,7 +98,8 @@
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { getAccessToken } from '@/utils/tokenStorage.js'
 import { getConversations, getMessages, sendMessage, markMessageRead, sendByUsername, deleteConversation, startConversation, deleteAllConversations } from '@/api/message.js'
 
@@ -106,13 +107,13 @@ const route = useRoute()
 const router = useRouter()
 /**
  * 当前用户 id。
- * 以 token 的 sub 为准（当前 token 才是身份来源），localStorage.userId 只作兜底。
- * 之前只读 localStorage.userId，一旦它和当前登录的 token 不一致（例如换过账号、
+ * 以 token 的 sub 为准（当前 token 才是身份来源），sessionStorage.userId 只作兜底。
+ * 之前只读 sessionStorage.userId，一旦它和当前登录的 token 不一致（例如换过账号、
  * 或被其他流程写脏），算出来的收件人会变成自己，后端直接拒绝
  * 「不能给自己发消息」，表现就是「发出去了但消息窗口没反应」。
  */
 const myId = computed(() => {
-  const tokens = [getAccessToken(), localStorage.getItem('token')]
+  const tokens = [getAccessToken(), sessionStorage.getItem('token')]
   for (const tk of tokens) {
     if (!tk) continue
     try {
@@ -120,9 +121,9 @@ const myId = computed(() => {
       if (payload?.sub) return String(payload.sub)
     } catch (e) { /* 解析失败就试下一个 */ }
   }
-  return String(localStorage.getItem('userId') || '')
+  return String(sessionStorage.getItem('userId') || '')
 })
-const myFirstChar = (localStorage.getItem('username') || '我')[0]
+const myFirstChar = (sessionStorage.getItem('username') || '我')[0]
 const isMobile = ref(window.innerWidth <= 768)
 const conversations = ref([])
 const conversationLoading = ref(false)

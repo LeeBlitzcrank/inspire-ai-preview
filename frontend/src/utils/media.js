@@ -19,7 +19,13 @@ export function thumbOf(url, width = 400) {
 
   // 1) 本站上传图 → 换成已生成好的缩略图
   const m = /^(.*\/uploads\/)(?!thumb_)([^/?]+)(\?.*)?$/.exec(url)
-  if (m) return `${m[1]}thumb_${m[2]}${m[3] || ''}`
+  if (m) {
+    const filename = m[2]
+    // WebP 已经足够小；后端 Java ImageIO 在部分环境中不能解码 WebP，
+    // 因此不存在 thumb_*.webp，直接使用原 WebP，避免 404。
+    if (/\.webp$/i.test(filename)) return url
+    return `${m[1]}thumb_${filename}${m[3] || ''}`
+  }
 
   // 2) 图片 CDN → 交给 Nginx 动态缩放
   if (url.includes('img.20sherry.com')) {

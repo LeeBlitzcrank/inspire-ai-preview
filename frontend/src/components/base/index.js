@@ -3,8 +3,9 @@ import AppEmpty from './AppEmpty.vue'
 import AppSkeleton from './AppSkeleton.vue'
 import AppState from './AppState.vue'
 import AppTag from './AppTag.vue'
+import AppErrorDialog from './AppErrorDialog.vue'
 
-const components = { AppCard, AppEmpty, AppSkeleton, AppState, AppTag }
+const components = { AppCard, AppEmpty, AppSkeleton, AppState, AppTag, AppErrorDialog }
 
 export default {
   install(app) {
@@ -14,4 +15,4 @@ export default {
   }
 }
 
-export { AppCard, AppEmpty, AppSkeleton, AppState, AppTag }
+export { AppCard, AppEmpty, AppSkeleton, AppState, AppTag, AppErrorDialog }

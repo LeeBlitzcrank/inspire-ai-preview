@@ -144,7 +144,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import InspireCard from '@/components/InspireCard.vue'
 import { thumbOf } from '@/utils/media.js'
 import { getCollectFolders, createCollectFolder, deleteCollectFolder, renameCollectFolder, getCollectListByFolder, collectInspire, moveCollectToFolder } from '@/api/inspire.js'

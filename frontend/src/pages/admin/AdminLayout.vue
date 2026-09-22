@@ -24,9 +24,9 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 const router = useRouter()
-const adminName = ref(localStorage.getItem('adminUser') || '管理员')
+const adminName = ref(sessionStorage.getItem('adminUser') || '管理员')
 const showSidebar = ref(window.innerWidth > 768)
 const navs = [
   { path: '/admin/dashboard', label: '监控大屏', icon: '📊' },
@@ -37,7 +37,7 @@ const navs = [
   { path: '/admin/config', label: '推送配置', icon: '⚙️' },
 ]
 const go = (path) => { router.push(path); if (window.innerWidth <= 768) showSidebar.value = false }
-const doLogout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser'); router.push('/admin/login') }
+const doLogout = () => { sessionStorage.removeItem('adminToken'); sessionStorage.removeItem('adminUser'); router.push('/admin/login') }
 const onResize = () => { if (window.innerWidth > 768) showSidebar.value = true }
 onMounted(() => window.addEventListener('resize', onResize))
 onBeforeUnmount(() => window.removeEventListener('resize', onResize))

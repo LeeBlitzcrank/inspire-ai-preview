@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from './uiFeedback.js'
 import { getAccessToken, getRefreshToken, clearAllTokens, saveTokens, saveLastActive, isSessionExpired } from './tokenStorage.js'
 
 const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
@@ -42,7 +42,7 @@ service.interceptors.request.use(async config => {
   // 后台管理接口走独立的管理员令牌，不参与前台登录态的过期判断
   const reqUrl = config.url || ''
   if (reqUrl.startsWith('/admin/') && !reqUrl.startsWith('/admin/public/')) {
-    const adminToken = localStorage.getItem('adminToken')
+    const adminToken = sessionStorage.getItem('adminToken')
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`
       return config
@@ -66,7 +66,7 @@ service.interceptors.request.use(async config => {
 
   let token = getAccessToken()
 
-  // 内存无 accessToken 但 localStorage 有 refreshToken → 自动续期（页面刷新后 / accessToken 过期后）
+  // 内存无 accessToken 但 sessionStorage 有 refreshToken → 自动续期（页面刷新后 / accessToken 过期后）
   if (!token) {
     const rt = getRefreshToken()
     if (rt) {
@@ -132,8 +132,8 @@ service.interceptors.response.use(
     const code = data.code
     const path = err.config?.url || ''
 
-    // ===== 401004：AccessToken 过期 → 无感刷新 =====
-    if (code === 401004) {
+    // ===== 缺令牌 / 无效令牌 / AccessToken 过期 → 有 refreshToken 就无感刷新一次 =====
+    if (code === 401001 || code === 401002 || code === 401004) {
       const rt = getRefreshToken()
       if (!rt) {
         clearAllTokens()

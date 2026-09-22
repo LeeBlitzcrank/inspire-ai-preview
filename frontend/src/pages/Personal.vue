@@ -5,6 +5,7 @@
       <div class="right">
         <div class="ico" id="p-icon-create" @click="$router.push('/create')">✨</div>
         <div class="ico" id="p-icon-search" @click="$router.push('/search')">🔍</div>
+        <div class="ico" id="p-icon-message" @click="$router.push('/messages')">💬</div>
       </div>
     </div>
 
@@ -45,8 +46,8 @@
       <button :class="{ on: activeTab === 'drafts' }" @click="switchTab('drafts')">
         我的草稿<span class="cnt">{{ draftTotal }}</span>
       </button>
-      <button :class="{ on: activeTab === 'collects' }" @click="switchTab('collects')">
-        我的收藏夹<span class="cnt">{{ folders.length }}</span>
+        <button :class="{ on: activeTab === 'collects' }" @click="switchTab('collects')">
+        我的收藏夹<span class="cnt">{{ collTotal }}</span>
       </button>
     </div>
 
@@ -128,7 +129,9 @@
       <!-- 我的收藏夹：先看文件夹，点进去才看该夹下的灵感 -->
       <template v-else>
         <div v-if="!activeFolder" class="folders" id="p-folders">
-          <div class="grid-hint" id="p-folders-hint">点文件夹查看其中灵感</div>
+          <div class="grid-hint" id="p-folders-hint">
+            {{ folders.length ? '点文件夹查看其中灵感' : '还没有收藏夹，先进入管理收藏夹创建' }}
+          </div>
           <AppCard v-for="f in folders" :key="f.id" class="folder" id="p-folder"
                padding="14px 12px"
                clickable
@@ -150,7 +153,7 @@
             <span class="ttl">{{ activeFolder.icon }} {{ activeFolder.name }}</span>
             <span class="c">共 {{ folderTotal }} 条</span>
           </div>
-          <template>
+          <div class="folder-list">
             <AppCard
               v-for="(item, idx) in folderCollects"
               :key="item.id"
@@ -174,7 +177,7 @@
             <div v-if="folderHasMore" class="virt-foot" @click="loadMoreFolder">
               {{ folderLoadingMore ? '加载中…' : `加载更多 · 已显示 ${folderCollects.length}/${folderTotal}` }}
             </div>
-          </template>
+          </div>
         </template>
       </template>
       </AppState>
@@ -264,9 +267,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { getUserInfo, getMyInspires, getMyDrafts, getMyCollects,
          uncollectInspire, updateUserInfo, changePassword,
          getCollectFolders, getCollectListByFolder, getFollowing } from '@/api/inspire.js'
@@ -366,7 +369,8 @@ const personalState = computed(() => {
     return folderCollects.value.length ? 'ready' : 'empty'
   }
   if (foldersError.value && !folders.value.length) return 'error'
-  return folders.value.length ? 'ready' : 'empty'
+  // 收藏夹为空时也要保留「管理收藏夹」入口，不能落进 empty 插槽把入口隐藏。
+  return 'ready'
 })
 const reloadActiveTab = async () => {
   pageError.value = ''
@@ -655,7 +659,7 @@ const detectLocation = async () => {
   autoDetecting.value = true
   try {
     const res = await fetch('/api/auth/ip-location', {
-      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+      headers: { 'Authorization': 'Bearer ' + (sessionStorage.getItem('token') || '') }
     })
     if (res.ok) {
       const body = await res.json()
@@ -692,16 +696,19 @@ onMounted(async () => {
   loading.value = true
   const foldersPromise = loadFolders()
   try {
-    const [userRes, pubRes, colRes, folRes] = await Promise.all([
-      getUserInfo(), getMyInspires(1, PUB_PAGE_SIZE), getMyCollects(1, pageSize.value),
+    const [userRes, pubRes, draftRes, colRes, folRes] = await Promise.all([
+      getUserInfo(), getMyInspires(1, PUB_PAGE_SIZE), getMyDrafts(1, pageSize.value),
+      getMyCollects(1, pageSize.value),
       getFollowing().catch(() => ({ data: [] })), foldersPromise
     ])
     userInfo.value = userRes.data || {}
-    if (userRes.data?.avatar) localStorage.setItem('userAvatar', userRes.data.avatar)
+    if (userRes.data?.avatar) sessionStorage.setItem('userAvatar', userRes.data.avatar)
     publishedList.value = pubRes.data?.records || []
     pubTotal.value = pubRes.data?.total || 0
     pubLoadedPage.value = 1
     pubHasMore.value = (pubRes.data?.records || []).length >= PUB_PAGE_SIZE
+    draftList.value = draftRes.data?.records || []
+    draftTotal.value = draftRes.data?.total || 0
     statList.value[3].num = (folRes.data || []).length
     collectList.value = colRes.data?.records || []
     collTotal.value = colRes.data?.total || 0
@@ -713,6 +720,52 @@ onMounted(async () => {
     pageError.value = e?.message || 'load personal failed'
   }
   finally { loading.value = false }
+  window.addEventListener('focus', refreshPersonalData)
+  document.addEventListener('visibilitychange', handleVisibilityRefresh)
+})
+
+let personalRefreshPromise = null
+const refreshPersonalData = () => {
+  if (personalRefreshPromise || loading.value) return personalRefreshPromise
+  personalRefreshPromise = Promise.all([
+    getMyInspires(1, PUB_PAGE_SIZE),
+    getMyDrafts(1, pageSize.value),
+    getMyCollects(1, pageSize.value),
+    getFollowing().catch(() => ({ data: [] }))
+  ]).then(([pubRes, draftRes, colRes, folRes]) => {
+    if (pubRes?.data) {
+      publishedList.value = pubRes.data.records || []
+      pubTotal.value = pubRes.data.total || 0
+      pubLoadedPage.value = 1
+      pubHasMore.value = (pubRes.data.records || []).length >= PUB_PAGE_SIZE
+      statList.value[0].num = pubTotal.value
+      statList.value[2].num = publishedList.value.reduce((sum, item) => sum + (item.viewCount || 0), 0)
+    }
+    if (draftRes?.data) {
+      draftList.value = draftRes.data.records || []
+      draftTotal.value = draftRes.data.total || 0
+    }
+    if (colRes?.data) {
+      collTotal.value = colRes.data.total || 0
+      statList.value[1].num = collTotal.value
+    }
+    if (folRes?.data) statList.value[3].num = folRes.data.length
+    return loadFolders()
+  }).catch(e => {
+    console.error('[personal refresh]', e)
+  }).finally(() => {
+    personalRefreshPromise = null
+  })
+  return personalRefreshPromise
+}
+
+const handleVisibilityRefresh = () => {
+  if (!document.hidden) refreshPersonalData()
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('focus', refreshPersonalData)
+  document.removeEventListener('visibilitychange', handleVisibilityRefresh)
 })
 
 const switchTab = async (tab) => {
@@ -753,12 +806,16 @@ const handleSaveProfile = async () => {
       userInfo.value.nickname = editForm.value.nickname
       userInfo.value.city = editForm.value.city
       userInfo.value.avatar = editForm.value.avatar
-      if (editForm.value.avatar) localStorage.setItem('userAvatar', editForm.value.avatar)
-      if (editForm.value.nickname) localStorage.setItem('userAccount', editForm.value.nickname)
+      if (editForm.value.avatar) sessionStorage.setItem('userAvatar', editForm.value.avatar)
+      if (editForm.value.nickname) sessionStorage.setItem('userAccount', editForm.value.nickname)
       ElMessage.success('资料已更新')
       showProfileDialog.value = false
+    } else {
+      ElMessage.error(res.msg || '资料更新失败')
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '资料更新失败')
+  }
   finally { savingProfile.value = false }
 }
 
@@ -773,8 +830,12 @@ const handleChangePassword = async () => {
       ElMessage.success('密码修改成功')
       pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
       showPwdDialog.value = false
+    } else {
+      ElMessage.error(res.msg || '密码修改失败')
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '密码修改失败')
+  }
   finally { savingPwd.value = false }
 }
 
@@ -785,9 +846,9 @@ const formatTime = (t) => {
 }
 
 const handleLogout = () => {
-  localStorage.removeItem('token'); localStorage.removeItem('isLogin')
-  localStorage.removeItem('userAccount'); localStorage.removeItem('userId')
-  localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser')
+  sessionStorage.removeItem('token'); sessionStorage.removeItem('isLogin')
+  sessionStorage.removeItem('userAccount'); sessionStorage.removeItem('userId')
+  sessionStorage.removeItem('adminToken'); sessionStorage.removeItem('adminUser')
   auth.setLoggedOut()
   ElMessage.success('已退出登录'); router.push('/login')
 }

@@ -21,7 +21,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { resetPassword } from '@/api/inspire.js'
 import { saveTokens } from '@/utils/tokenStorage.js'
 import { useAuthStore } from '@/stores/auth'
@@ -52,9 +52,9 @@ const handleSubmit = async () => {
     if (res.code === 200 && res.data) {
       // 后端返回双Token → 保存并自动登录
       saveTokens(res.data)
-      localStorage.setItem('isLogin', '1')
-      if (res.data.userId) localStorage.setItem('userId', String(res.data.userId))
-      if (res.data.username) localStorage.setItem('userAccount', res.data.username)
+      sessionStorage.setItem('isLogin', '1')
+      if (res.data.userId) sessionStorage.setItem('userId', String(res.data.userId))
+      if (res.data.username) sessionStorage.setItem('userAccount', res.data.username)
       auth.setLoggedIn()
       success.value = true
       ElMessage.success('密码重置成功，正在进入首页…')

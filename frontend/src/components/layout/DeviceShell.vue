@@ -1,6 +1,7 @@
 <template>
   <div class="device-shell" :class="{ 'is-bare': !enabled }">
-    <div class="device-frame">
+    <div ref="stageRef" class="device-stage">
+    <div ref="frameRef" class="device-frame">
       <div v-if="enabled" class="device-statusbar">
         <span class="status-time">9:41</span>
         <div class="status-icons">
@@ -30,6 +31,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -42,14 +44,40 @@ const props = defineProps({
 
 const LOGICAL_WIDTH = 390
 const LOGICAL_HEIGHT = 844
+const FRAME_WIDTH = 412
+const FRAME_HEIGHT = 866
+const OUTER_GUTTER = 24
 const viewportRef = ref(null)
 const canvasRef = ref(null)
+const stageRef = ref(null)
+const frameRef = ref(null)
 let resizeObserver = null
 
-function fitCanvas() {
+function fitLayout() {
+  const stage = stageRef.value
+  const frame = frameRef.value
   const viewport = viewportRef.value
   const canvas = canvasRef.value
-  if (!viewport || !canvas) return
+  if (!stage || !frame || !viewport || !canvas) return
+
+  if (!props.enabled) {
+    stage.style.width = ''
+    stage.style.height = ''
+    frame.style.transform = ''
+    return
+  }
+
+  const availableWidth = (window.visualViewport?.width || window.innerWidth) - OUTER_GUTTER
+  const availableHeight = (window.visualViewport?.height || window.innerHeight) - OUTER_GUTTER
+  const frameScale = Math.min(
+    availableWidth / FRAME_WIDTH,
+    availableHeight / FRAME_HEIGHT,
+    1
+  )
+  stage.style.width = `${FRAME_WIDTH * frameScale}px`
+  stage.style.height = `${FRAME_HEIGHT * frameScale}px`
+  frame.style.transform = `scale(${frameScale})`
+
   const width = viewport.clientWidth
   const height = viewport.clientHeight
   const scale = Math.min(width / LOGICAL_WIDTH, height / LOGICAL_HEIGHT)
@@ -60,22 +88,24 @@ function fitCanvas() {
 
 onMounted(async () => {
   await nextTick()
-  fitCanvas()
-  if (window.ResizeObserver && viewportRef.value) {
-    resizeObserver = new ResizeObserver(fitCanvas)
-    resizeObserver.observe(viewportRef.value)
+  fitLayout()
+  if (window.ResizeObserver && stageRef.value) {
+    resizeObserver = new ResizeObserver(fitLayout)
+    resizeObserver.observe(stageRef.value)
   }
-  window.addEventListener('resize', fitCanvas)
+  window.addEventListener('resize', fitLayout)
+  window.visualViewport?.addEventListener('resize', fitLayout)
 })
 
 watch(() => props.enabled, async () => {
   await nextTick()
-  fitCanvas()
+  fitLayout()
 })
 
 onBeforeUnmount(() => {
   if (resizeObserver) resizeObserver.disconnect()
-  window.removeEventListener('resize', fitCanvas)
+  window.removeEventListener('resize', fitLayout)
+  window.visualViewport?.removeEventListener('resize', fitLayout)
 })
 </script>
 
@@ -85,12 +115,17 @@ onBeforeUnmount(() => {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 24px;
+  align-items: center;
+  padding: 12px;
+  overflow: hidden;
   background:
     radial-gradient(circle at 12% 8%, rgba(50,124,240,.13), transparent 30%),
     radial-gradient(circle at 88% 18%, rgba(30,170,122,.11), transparent 28%),
     #e9eef4;
+}
+.device-stage {
+  position: relative;
+  flex: 0 0 auto;
 }
 .device-frame {
   --screen-w: 390px;
@@ -105,6 +140,7 @@ onBeforeUnmount(() => {
   box-shadow:
     0 30px 70px rgba(25, 42, 64, .24),
     inset 0 0 0 1px rgba(255,255,255,.08);
+  transform-origin: top left;
 }
 .device-statusbar {
   position: absolute;
@@ -192,6 +228,11 @@ onBeforeUnmount(() => {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  transform: none !important;
+}
+.is-bare .device-stage {
+  width: 100% !important;
+  height: auto !important;
 }
 .is-bare .device-statusbar { display: none; }
 .is-bare .device-viewport,
@@ -213,31 +254,4 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
-@media (max-width: 520px) {
-  .device-shell { padding: 0; background: #10161d; }
-  .device-frame {
-    --screen-w: 100vw;
-    --screen-h: 100dvh;
-    width: 100%;
-    height: 100dvh;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-  .device-statusbar {
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(var(--status-h) + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-    border-radius: 0;
-  }
-  .device-viewport {
-    top: calc(var(--status-h) + env(safe-area-inset-top));
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 0;
-  }
-}
 </style>

@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 /**
  * Redis 会话操作工具类
@@ -26,7 +27,7 @@ public class RedisSessionUtil {
     private static final Logger log = LoggerFactory.getLogger(RedisSessionUtil.class);
 
     private static final String REFRESH_PREFIX = RedisKeyConstant.REFRESH_PREFIX;
-    private static final String USER_REFRESH_PREFIX = RedisKeyConstant.USER_REFRESH_PREFIX;
+    private static final String USER_SESSIONS_PREFIX = "user_sessions:";
     private static final String BLACKLIST_PREFIX = RedisKeyConstant.BLACKLIST_PREFIX;
 
     private final StringRedisTemplate redisTemplate;
@@ -44,10 +45,14 @@ public class RedisSessionUtil {
      * 存入 refresh:{refreshToken} → userId，有效期 7 天
      */
     public void saveRefreshToken(String refreshToken, Long userId) {
+        saveRefreshToken(refreshToken, userId, refreshTokenTtlMs);
+    }
+
+    public void saveRefreshToken(String refreshToken, Long userId, long ttlMs) {
         String key = REFRESH_PREFIX + refreshToken;
         redisTemplate.opsForValue().set(key, String.valueOf(userId),
-                refreshTokenTtlMs, TimeUnit.MILLISECONDS);
-        log.debug("RefreshToken存入: key={}, userId={}, ttl={}ms", key, userId, refreshTokenTtlMs);
+                ttlMs, TimeUnit.MILLISECONDS);
+        log.debug("RefreshToken存入: key={}, userId={}, ttl={}ms", key, userId, ttlMs);
     }
 
     /**
@@ -76,10 +81,14 @@ public class RedisSessionUtil {
      * 存入 user_refresh:{userId} → refreshToken，有效期 7 天
      */
     public void saveUserRefreshMapping(Long userId, String refreshToken) {
-        String key = USER_REFRESH_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, refreshToken,
-                refreshTokenTtlMs, TimeUnit.MILLISECONDS);
-        log.debug("用户Refresh绑定: key={}, refreshToken={}", key, maskToken(refreshToken));
+        saveUserRefreshMapping(userId, refreshToken, refreshTokenTtlMs);
+    }
+
+    public void saveUserRefreshMapping(Long userId, String refreshToken, long ttlMs) {
+        String key = USER_SESSIONS_PREFIX + userId;
+        redisTemplate.opsForSet().add(key, refreshToken);
+        redisTemplate.expire(key, ttlMs, TimeUnit.MILLISECONDS);
+        log.debug("用户会话集合加入: key={}, refreshToken={}", key, maskToken(refreshToken));
     }
 
     /**
@@ -88,17 +97,33 @@ public class RedisSessionUtil {
      * @return refreshToken，不存在返回 null
      */
     public String getUserRefreshToken(Long userId) {
-        String key = USER_REFRESH_PREFIX + userId;
-        return redisTemplate.opsForValue().get(key);
+        Set<String> tokens = redisTemplate.opsForSet().members(USER_SESSIONS_PREFIX + userId);
+        return tokens == null || tokens.isEmpty() ? null : tokens.iterator().next();
     }
 
     /**
      * 删除 user_refresh:{userId} 缓存
      */
     public void deleteUserRefreshMapping(Long userId) {
-        String key = USER_REFRESH_PREFIX + userId;
+        invalidateAllSessions(userId);
+    }
+
+    /** 退出单个标签页时只移除当前 refreshToken，不影响其他设备/标签页。 */
+    public void removeUserRefreshToken(Long userId, String refreshToken) {
+        if (refreshToken == null) return;
+        redisTemplate.opsForSet().remove(USER_SESSIONS_PREFIX + userId, refreshToken);
+        log.debug("用户会话集合移除: userId={}, refreshToken={}", userId, maskToken(refreshToken));
+    }
+
+    /** 管理员踢人或账号冻结时清理该用户全部会话。 */
+    public void invalidateAllSessions(Long userId) {
+        String key = USER_SESSIONS_PREFIX + userId;
+        Set<String> tokens = redisTemplate.opsForSet().members(key);
+        if (tokens != null) {
+            tokens.forEach(this::deleteRefreshToken);
+        }
         redisTemplate.delete(key);
-        log.debug("用户Refresh绑定删除: key={}", key);
+        log.info("用户全部会话已清理: userId={}, count={}", userId, tokens == null ? 0 : tokens.size());
     }
 
     // ========== 单点登录（文档 4.1.2 第6步） ==========
@@ -113,11 +138,7 @@ public class RedisSessionUtil {
      * @param userId 用户ID
      */
     public void invalidateOldSession(Long userId) {
-        String oldRefreshToken = getUserRefreshToken(userId);
-        if (oldRefreshToken != null) {
-            deleteRefreshToken(oldRefreshToken);
-            log.info("单点登录挤旧: userId={}, 旧refreshToken已删除", userId);
-        }
+        // 多设备登录模式下不再挤掉旧会话。
     }
 
     // ========== 黑名单操作 ==========
@@ -142,8 +163,8 @@ public class RedisSessionUtil {
      */
     public void clearUserSession(Long userId, String refreshToken) {
         deleteRefreshToken(refreshToken);
-        deleteUserRefreshMapping(userId);
-        log.info("用户会话清除: userId={}", userId);
+        removeUserRefreshToken(userId, refreshToken);
+        log.info("当前用户会话清除: userId={}", userId);
     }
 
     // ========== 辅助方法 ==========

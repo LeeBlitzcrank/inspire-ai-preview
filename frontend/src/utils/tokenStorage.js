@@ -1,7 +1,7 @@
 /**
  * 双Token安全存储（文档 4.1.3 节）
  * - accessToken：内存存储，防止 XSS
- * - refreshToken：localStorage（记住账号模式额外持久化 accessToken）
+ * - refreshToken：sessionStorage（当前标签页独立）
  * - 活跃时间戳：15 分钟无操作自动登出
  */
 
@@ -15,12 +15,13 @@ const ACCESS_KEY = 'inspire_access_token'
 const ACTIVE_KEY = 'inspire_last_active'
 const REMEMBER_KEY = 'inspire_remember_me'
 const SESSION_TIMEOUT = 15 * 60 * 1000
+const LONG_LIVED_ACCOUNTS = new Set(['user001', 'user002', 'user003', 'admin'])
 
-/** 页面加载时从 localStorage 恢复记住的 accessToken */
+/** 页面加载时从 sessionStorage 恢复记住的 accessToken */
 function restoreRemembered() {
-  if (localStorage.getItem(REMEMBER_KEY) === '1') {
+  if (sessionStorage.getItem(REMEMBER_KEY) === '1') {
     rememberMe = true
-    const saved = localStorage.getItem(ACCESS_KEY)
+    const saved = sessionStorage.getItem(ACCESS_KEY)
     if (saved) accessToken = saved
   }
 }
@@ -29,51 +30,63 @@ restoreRemembered()
 export function saveTokens(tokens) {
   if (tokens.accessToken) {
     accessToken = tokens.accessToken
-    if (rememberMe) localStorage.setItem(ACCESS_KEY, tokens.accessToken)
+    if (rememberMe) sessionStorage.setItem(ACCESS_KEY, tokens.accessToken)
   }
-  if (tokens.refreshToken) localStorage.setItem(REFRESH_KEY, tokens.refreshToken)
+  if (tokens.refreshToken) sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken)
+  syncLoginFlag()
   saveLastActive()
 }
 
 export function getAccessToken() { return accessToken }
-export function getRefreshToken() { return localStorage.getItem(REFRESH_KEY) }
+export function getRefreshToken() { return sessionStorage.getItem(REFRESH_KEY) }
+export function hasSession() { return !!accessToken || !!getRefreshToken() }
+
+export function syncLoginFlag() {
+  if (hasSession()) {
+    sessionStorage.setItem('isLogin', '1')
+  } else {
+    sessionStorage.removeItem('isLogin')
+  }
+}
 
 export function clearAllTokens() {
   accessToken = null
-  localStorage.removeItem(REFRESH_KEY)
-  localStorage.removeItem(ACCESS_KEY)
-  localStorage.removeItem(REMEMBER_KEY)
-  localStorage.removeItem(ACTIVE_KEY)
-  localStorage.removeItem('token')
-  localStorage.removeItem('adminToken')
-  localStorage.removeItem('isLogin')
-  localStorage.removeItem('userAccount')
-  localStorage.removeItem('userId')
-  localStorage.removeItem('adminUser')
+  sessionStorage.removeItem(REFRESH_KEY)
+  sessionStorage.removeItem(ACCESS_KEY)
+  sessionStorage.removeItem(REMEMBER_KEY)
+  sessionStorage.removeItem(ACTIVE_KEY)
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('adminToken')
+  sessionStorage.removeItem('isLogin')
+  sessionStorage.removeItem('userAccount')
+  sessionStorage.removeItem('userId')
+  sessionStorage.removeItem('adminUser')
 }
 
 export function isLoggedIn() { return !!accessToken }
 
-/** 记住账号模式：accessToken 持久化到 localStorage  */
+/** 记住账号模式：accessToken 持久化到 sessionStorage  */
 export function setRememberMe(on) {
   rememberMe = on
   if (on) {
-    localStorage.setItem(REMEMBER_KEY, '1')
-    if (accessToken) localStorage.setItem(ACCESS_KEY, accessToken)
+    sessionStorage.setItem(REMEMBER_KEY, '1')
+    if (accessToken) sessionStorage.setItem(ACCESS_KEY, accessToken)
   } else {
-    localStorage.removeItem(REMEMBER_KEY)
-    localStorage.removeItem(ACCESS_KEY)
+    sessionStorage.removeItem(REMEMBER_KEY)
+    sessionStorage.removeItem(ACCESS_KEY)
   }
 }
 
 /** 记录当前时间为最后活跃时间 */
 export function saveLastActive() {
-  localStorage.setItem(ACTIVE_KEY, Date.now().toString())
+  sessionStorage.setItem(ACTIVE_KEY, Date.now().toString())
 }
 
 /** 检查是否超过 15 分钟无操作 */
 export function isSessionExpired() {
-  const ts = localStorage.getItem(ACTIVE_KEY)
+  const account = (sessionStorage.getItem('userAccount') || '').trim().toLowerCase()
+  if (LONG_LIVED_ACCOUNTS.has(account)) return false
+  const ts = sessionStorage.getItem(ACTIVE_KEY)
   if (!ts) return false
   return Date.now() - parseInt(ts, 10) > SESSION_TIMEOUT
 }

@@ -44,8 +44,13 @@ public class JwtUtil {
 
     /** 生成 AccessToken（auth 签发用） */
     public String generateToken(Long userId, String userName, String role) {
+        return generateToken(userId, userName, role, expirationMs);
+    }
+
+    /** 生成指定有效期的 AccessToken（白名单测试账号支持长期会话）。 */
+    public String generateToken(Long userId, String userName, String role, long ttlMs) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationMs);
+        Date expiry = new Date(now.getTime() + ttlMs);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("userName", userName)

@@ -7,7 +7,50 @@
 // =============================================
 
 import request from '@/utils/request.js'
-import { getRefreshToken, saveTokens, clearAllTokens } from '@/utils/tokenStorage.js'
+import axios from 'axios'
+import {
+  getAccessToken,
+  getRefreshToken,
+  hasSession,
+  saveTokens,
+  clearAllTokens,
+  syncLoginFlag
+} from '@/utils/tokenStorage.js'
+
+const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
+let bootstrapPromise = null
+
+/**
+ * 页面启动恢复会话：
+ * accessToken 只在内存里，新标签页/刷新后如果只有 refreshToken，先刷新一次再挂载页面。
+ * 同一标签内并发初始化复用同一个 Promise，不会重复请求。
+ */
+export function bootstrapSession() {
+  if (getAccessToken() || !getRefreshToken()) {
+    syncLoginFlag()
+    return Promise.resolve(hasSession())
+  }
+  if (bootstrapPromise) return bootstrapPromise
+
+  bootstrapPromise = axios.post(`${API_BASE}/auth/refresh`, null, {
+    headers: { 'Refresh-Token': getRefreshToken() },
+    timeout: 8000
+  }).then(res => {
+    if (res.data?.code === 200 && res.data.data) {
+      saveTokens(res.data.data)
+      syncLoginFlag()
+      return true
+    }
+    clearAllTokens()
+    return false
+  }).catch(() => {
+    clearAllTokens()
+    return false
+  }).finally(() => {
+    bootstrapPromise = null
+  })
+  return bootstrapPromise
+}
 
 // ========== API 接口 ==========
 

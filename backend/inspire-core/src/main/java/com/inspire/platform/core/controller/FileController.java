@@ -360,19 +360,23 @@ public class FileController {
             }
             conn.disconnect();
             String urlPath = "/uploads/" + filename;
-            // 生成缩略图
-            try {
-                BufferedImage original = ImageIO.read(new File(dir, filename));
-                int tw = 400;
-                int th = (int)(tw * (double)original.getHeight() / original.getWidth());
-                BufferedImage thumb = new BufferedImage(tw, Math.max(th, 1), BufferedImage.TYPE_INT_RGB);
-                Graphics2D g2d = thumb.createGraphics();
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2d.drawImage(original, 0, 0, tw, th, null);
-                g2d.dispose();
-                ImageIO.write(thumb, "jpg", new File(dir, "thumb_" + filename));
-            } catch (Exception e) { log.warn("缩略图生成失败: {}", e.getMessage()); }
-            return Result.success(Map.of("url", urlPath, "thumbUrl", "/uploads/thumb_" + filename, "name", filename));
+            String thumbUrl = urlPath;
+            // WebP 保持自身地址；Java ImageIO 不能稳定解码 WebP。
+            if (!".webp".equalsIgnoreCase(ext)) {
+                try {
+                    BufferedImage original = ImageIO.read(new File(dir, filename));
+                    int tw = 400;
+                    int th = (int)(tw * (double)original.getHeight() / original.getWidth());
+                    BufferedImage thumb = new BufferedImage(tw, Math.max(th, 1), BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g2d = thumb.createGraphics();
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.drawImage(original, 0, 0, tw, th, null);
+                    g2d.dispose();
+                    ImageIO.write(thumb, "jpg", new File(dir, "thumb_" + filename));
+                    thumbUrl = "/uploads/thumb_" + filename;
+                } catch (Exception e) { log.warn("缩略图生成失败: {}", e.getMessage()); }
+            }
+            return Result.success(Map.of("url", urlPath, "thumbUrl", thumbUrl, "name", filename));
         } catch (Exception e) {
             log.error("从URL上传图片失败: {}", e.getMessage(), e);
             return Result.error("从URL上传失败: " + e.getMessage());

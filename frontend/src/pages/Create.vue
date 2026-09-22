@@ -240,7 +240,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/uiFeedback.js'
 import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo, suggestImages as suggestImagesApi, compressVideo, trimVideo, getWordCloud, getCategoryTree } from '@/api/inspire.js'
 import { autoFormatHtml } from '@/utils/autoFormat.js'
 import { thumbOf } from '@/utils/media.js'
