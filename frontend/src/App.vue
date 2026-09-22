@@ -73,3 +73,17 @@ html, body {
   }
 }
 </style>
+
+<!-- 路由进度条配色跟随站点主色（薄荷绿） -->
+<style>
+/* 全局盒模型 reset：避免「width:100% + padding」把元素横向撑出容器 */
+*, *::before, *::after { box-sizing: border-box; }
+
+#nprogress .bar {
+  background: #4f8a48;
+  height: 3px;
+}
+#nprogress .peg {
+  box-shadow: 0 0 10px #4f8a48, 0 0 5px #4f8a48;
+}
+</style>

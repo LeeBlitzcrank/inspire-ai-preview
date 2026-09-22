@@ -1,6 +1,9 @@
 package com.inspire.platform.core.seed;
 
 import com.inspire.platform.core.config.ShardContext;
+import com.inspire.platform.core.config.MinioConfig;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import com.inspire.platform.core.entity.CollectAction;
 import com.inspire.platform.core.entity.CollectFolder;
 import com.inspire.platform.core.entity.InspireComment;
@@ -22,9 +25,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -65,6 +77,8 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final CollectFolderMapper folderMapper;
     private final MessageConversationMapper conversationMapper;
     private final MessageMapper messageMapper;
+    private final MinioClient minioClient;
+    private final MinioConfig minioConfig;
 
     /** 固定 ID 段：当前雪花 ID 约 2.27e17，这里从 1e17 起，绝不会撞号 */
     private static final long ID_BASE = 100_000_000_000_000_000L;
@@ -89,6 +103,15 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     /** 固定随机种子，保证每次生成的数据一致、可复现 */
     private final Random rnd = new Random(20260920L);
+
+    /** 演示账号密码的加密器，必须与 inspire-auth 的校验方式一致（BCrypt） */
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+    /** 全新重置时自动创建的 admin 账号 ID */
+    private static final long ADMIN_ID = ID_BASE - 1L;
+
+    /** 演示环境 admin 的默认密码，可用环境变量 INSPIRE_DEMO_ADMIN_PASSWORD 覆盖 */
+    @Value("${inspire.demo.admin-password:112233}")
+    private String demoAdminPassword;
 
     private long inspireSeq = 0, folderSeq = 0, collectSeq = 0, likeSeq = 0;
     private long commentSeq = 0, convSeq = 0, msgSeq = 0, notifySeq = 0, followSeq = 0;
@@ -269,9 +292,9 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private void seed() {
-        String adminPwd = findAdminPassword();
+        String adminPwd = ensureAdminPassword();
         if (adminPwd == null) {
-            log.warn("[DemoSeeder] 找不到 admin 账号，跳过。请先注册 admin 用户再开启种子数据");
+            log.warn("[DemoSeeder] 无法准备 admin 账号，跳过演示数据生成");
             return;
         }
 
@@ -284,6 +307,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         log.info("[DemoSeeder] 用户就绪: {}", userIds);
 
         List<Long> allUsers = new ArrayList<>(userIds.values());
+
+        // 先把演示图生成进 MinIO，后面的灵感直接引用（不依赖外部图源）
+        ensureDemoImages();
 
         Map<Long, List<Long>> userFolders = new HashMap<>();
         for (Long uid : allUsers) {
@@ -311,12 +337,35 @@ public class DemoDataSeeder implements ApplicationRunner {
         log.info("[DemoSeeder] 演示数据生成完成");
     }
 
-    private String findAdminPassword() {
+    /**
+     * 准备 admin 账号并返回其密码 hash（演示账号统一用这个密码）。
+     *
+     * <p>原来这里只「读取」admin 的密码：而 reset-data.sh 会清空整库，重置后库里根本没有 admin，
+     * 种子就会整体跳过、什么都不生成（表现为 user 表 0 行）。
+     * 现在改成：没有 admin 就自动建一个，保证一条 reset 命令就能得到可用系统。
+     */
+    private String ensureAdminPassword() {
         try {
-            return jdbcTemplate.queryForObject(
+            String pwd = jdbcTemplate.queryForObject(
                     "SELECT password FROM `user` WHERE LOWER(username) = 'admin' AND deleted = 0 LIMIT 1",
                     String.class);
+            if (pwd != null && !pwd.isBlank()) {
+                return pwd;
+            }
+        } catch (Exception ignored) {
+            // 没查到，走下面的自动创建
+        }
+        try {
+            String encoded = PASSWORD_ENCODER.encode(demoAdminPassword);
+            jdbcTemplate.update(
+                    "INSERT INTO `user`(id, username, password, email, avatar, nickname, city, deleted) "
+                            + "VALUES(?,?,?,?,?,?,?,0)",
+                    ADMIN_ID, "admin", encoded, "admin@demo.local", "🌙", "甜蜜小鹿", "杭州");
+            log.warn("[DemoSeeder] 库里没有 admin 账号，已自动创建：admin / {}"
+                    + "（可用环境变量 INSPIRE_DEMO_ADMIN_PASSWORD 覆盖）", demoAdminPassword);
+            return encoded;
         } catch (Exception e) {
+            log.warn("[DemoSeeder] 自动创建 admin 账号失败: {}", e.getMessage());
             return null;
         }
     }
@@ -402,12 +451,12 @@ public class DemoDataSeeder implements ApplicationRunner {
             int likeCnt = likers.size();
             int collectCnt = collectors.size();
 
-            String img = picsum(inspireId);
+            String img = demoImage(inspireId);
             InspireMain m = new InspireMain();
             m.setId(inspireId);
             m.setTitle(buildTitle(topic));
             m.setImg(img);
-            m.setImages("[\"" + img + "\",\"" + picsum(inspireId + 7) + "\"]");
+            m.setImages("[\"" + img + "\",\"" + demoImage(inspireId + 7) + "\"]");
             m.setTag(tag);
             m.setUserId(ownerId);
             m.setStatus(1);
@@ -637,6 +686,83 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private String picsum(long seed) {
         return "https://picsum.photos/seed/inspire" + seed + "/800/600";
+    }
+
+    // ==================== 演示图片：本地生成 + 存入 MinIO ====================
+
+    /** 预生成多少张演示图；灵感按 ID 轮询复用，避免往 MinIO 灌两千张图 */
+    private static final int DEMO_IMAGE_COUNT = 60;
+    private static final String DEMO_IMAGE_PREFIX = "upload/demo/";
+
+    /** 已就绪的演示图访问地址（走本站取图接口，不依赖 img.20sherry.com） */
+    private final List<String> demoImageUrls = new ArrayList<>();
+
+    /**
+     * 确保 MinIO 里有演示图。图片由代码本地画出来，不依赖 picsum 等外部图源，
+     * 这样演示环境完全自包含，离线也能看到图。
+     */
+    private void ensureDemoImages() {
+        if (!demoImageUrls.isEmpty()) return;
+        for (int i = 0; i < DEMO_IMAGE_COUNT; i++) {
+            String key = DEMO_IMAGE_PREFIX + i + ".jpg";
+            try {
+                if (!demoImageExists(key)) {
+                    byte[] jpg = buildPlaceholderJpeg(i);
+                    minioClient.putObject(PutObjectArgs.builder()
+                            .bucket(minioConfig.getBucket())
+                            .object(key)
+                            .stream(new ByteArrayInputStream(jpg), jpg.length, -1)
+                            .contentType("image/jpeg")
+                            .build());
+                }
+                demoImageUrls.add("/api/file/view?key=" + key);
+            } catch (Exception e) {
+                log.warn("[DemoSeeder] 演示图生成失败 key={}: {}", key, e.getMessage());
+            }
+        }
+        log.info("[DemoSeeder] 演示图就绪 {} 张（已存入 MinIO）", demoImageUrls.size());
+    }
+
+    private boolean demoImageExists(String key) {
+        try {
+            minioClient.statObject(io.minio.StatObjectArgs.builder()
+                    .bucket(minioConfig.getBucket())
+                    .object(key)
+                    .build());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** 生成一张确定性的渐变占位图 */
+    private byte[] buildPlaceholderJpeg(int index) throws Exception {
+        int w = 800, h = 600;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        float hue = (index * 37f) % 360f / 360f;
+        g.setPaint(new java.awt.GradientPaint(0, 0, Color.getHSBColor(hue, 0.32f, 0.96f),
+                w, h, Color.getHSBColor((hue + 0.12f) % 1f, 0.45f, 0.72f)));
+        g.fillRect(0, 0, w, h);
+        g.setColor(new Color(255, 255, 255, 55));
+        for (int x = -h; x < w; x += 90) {
+            g.fillPolygon(new int[]{x, x + 30, x + 30 + h, x + h}, new int[]{0, 0, h, h}, 4);
+        }
+        g.setColor(new Color(255, 255, 255, 165));
+        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 42));
+        g.drawString("Inspire " + (index + 1), 48, h - 54);
+        g.dispose();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(img, "jpg", out);
+        return out.toByteArray();
+    }
+
+    /** 按灵感 ID 取一张演示图（轮询复用） */
+    private String demoImage(long seed) {
+        if (demoImageUrls.isEmpty()) return "";
+        int idx = (int) Math.abs(seed % demoImageUrls.size());
+        return demoImageUrls.get(idx);
     }
 
     private String nickOf(Long uid) {

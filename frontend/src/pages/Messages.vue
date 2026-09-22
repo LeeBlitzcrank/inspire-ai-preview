@@ -83,11 +83,29 @@ import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getAccessToken } from '@/utils/tokenStorage.js'
 import { getConversations, getMessages, sendMessage, markMessageRead, sendByUsername, deleteConversation, startConversation, deleteAllConversations } from '@/api/message.js'
 
 const route = useRoute()
 const router = useRouter()
-const myId = computed(() => localStorage.getItem('userId') || '')
+/**
+ * 当前用户 id。
+ * 以 token 的 sub 为准（当前 token 才是身份来源），localStorage.userId 只作兜底。
+ * 之前只读 localStorage.userId，一旦它和当前登录的 token 不一致（例如换过账号、
+ * 或被其他流程写脏），算出来的收件人会变成自己，后端直接拒绝
+ * 「不能给自己发消息」，表现就是「发出去了但消息窗口没反应」。
+ */
+const myId = computed(() => {
+  const tokens = [getAccessToken(), localStorage.getItem('token')]
+  for (const tk of tokens) {
+    if (!tk) continue
+    try {
+      const payload = JSON.parse(atob(String(tk).split('.')[1]))
+      if (payload?.sub) return String(payload.sub)
+    } catch (e) { /* 解析失败就试下一个 */ }
+  }
+  return String(localStorage.getItem('userId') || '')
+})
 const myFirstChar = (localStorage.getItem('username') || '我')[0]
 const isMobile = ref(window.innerWidth <= 768)
 const conversations = ref([])
@@ -136,10 +154,29 @@ const closeChat = () => {
   }
 }
 
+/** 从会话对象里算出「对方 userId」；兼容只有 id 的兜底对象 */
+const resolveOtherId = (c) => {
+  if (!c) return null
+  const mine = String(myId.value || '')
+  const u1 = c.user1Id != null ? String(c.user1Id) : ''
+  const u2 = c.user2Id != null ? String(c.user2Id) : ''
+  if (u1 && u2) {
+    if (!mine) return null        // 不知道我是谁就不猜，避免发给自己
+    return u1 === mine ? u2 : u1
+  }
+  return c.targetUserId || c.otherUserId || null
+}
+
 const sendMsg = async () => {
   if (!inputMsg.value.trim()) return
-  const otherId = activeConversation.value.user1Id === myId.value
-    ? activeConversation.value.user2Id : activeConversation.value.user1Id
+  // 直接进入聊天时若没找到会话，activeConversation 里可能只有 id，
+  // user1Id/user2Id 都是 undefined，这时算出来的 otherId 是 undefined，
+  // 请求会带 toUserId:"undefined" 出去，表现为「发出去了但界面没反应」。
+  const otherId = resolveOtherId(activeConversation.value)
+  if (!otherId) {
+    ElMessage.error('会话信息不完整，请从左侧会话列表重新进入')
+    return
+  }
   try {
     await sendMessage(otherId, inputMsg.value.trim())
     inputMsg.value = ''

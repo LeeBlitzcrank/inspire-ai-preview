@@ -35,6 +35,8 @@ sleep 20
 
 # 4. 起全部
 echo "==> 启动全部服务 …"
+# 打开演示数据开关：清库后会重新生成用户/灵感/评论/互动，以及 MinIO 里的演示图
+export INSPIRE_DEMO_SEED=true
 docker compose up -d --build
 sleep 5
 
@@ -45,4 +47,13 @@ docker exec inspire-minio mc mb local/inspire-img || true
 docker exec inspire-minio mc version enable local/inspire-img || true
 
 docker compose ps
+
+# 前端：重新打包 +（重新）启动 dev server
+if [[ "${SKIP_FRONTEND:-0}" != "1" ]]; then
+  echo "==> 构建并启动前端 …"
+  bash "$(dirname "$0")/frontend-up.sh"
+else
+  echo "==> 已跳过前端（SKIP_FRONTEND=1）"
+fi
+
 echo "==> 完成（数据库与缓存已重置）。"

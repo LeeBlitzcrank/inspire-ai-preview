@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { fileURLToPath } from 'node:url'
 import { copyFileSync } from 'node:fs'
 
@@ -7,6 +10,9 @@ export default defineConfig({
   base: '/',
   plugins: [
     vue(),
+    // Element Plus 按需引入：模板里的 el-xxx 组件与消息弹窗按需打包 + 自动引入样式
+    AutoImport({ resolvers: [ElementPlusResolver()] }),
+    Components({ resolvers: [ElementPlusResolver()] }),
     {
       name: 'copy-404',
       closeBundle() {
@@ -30,7 +36,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'element-plus': ['element-plus'],
           vendor: ['vue', 'vue-router']
         }
       }

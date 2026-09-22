@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>个人页列表 · 当前 vs 虚拟列表</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 60px;
+    background: #f5f8f7; color: #1f2937;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  .hint { font-size: 13px; color: #6b7280; margin-bottom: 18px; line-height: 1.7; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border: 1px solid #e6f2ef; border-radius: 14px; overflow: hidden; }
+  .panel-head {
+    padding: 12px 14px; border-bottom: 1px solid #eef4f2;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-title small { display: block; font-weight: 400; font-size: 12px; color: #8a94a6; margin-top: 2px; }
+  .badge { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #eef7f0; color: #3f7f52; white-space: nowrap; }
+  .badge.warn { background: #fff3e0; color: #b26a00; }
+  /* 当前方案：整页滚动，全部卡片都在 DOM 里 */
+  .list-normal { max-height: 420px; overflow-y: auto; padding: 10px; }
+  /* 虚拟列表：只渲染可视区 */
+  .list-virtual { height: 420px; overflow-y: auto; position: relative; padding: 0 10px; }
+  .virt-spacer { position: relative; width: 100%; }
+  .virt-window { position: absolute; left: 0; right: 0; top: 0; }
+  .card {
+    display: flex; align-items: center; gap: 12px;
+    height: 84px; padding: 10px 12px; margin-bottom: 10px;
+    background: #fff; border: 1px solid #e9f1ef; border-radius: 12px;
+  }
+  .thumb {
+    width: 64px; height: 64px; border-radius: 10px; flex: 0 0 auto;
+  }
+  .t { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .m { font-size: 12px; color: #8a94a6; display: flex; gap: 6px; align-items: center; }
+  .tag { background: #eef7f0; color: #3f7f52; border-radius: 6px; padding: 1px 6px; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: #6b7280; padding: 10px 14px; background: #fafcfb; border-top: 1px solid #eef4f2; }
+  .stats b { color: #1f2937; }
+  .foot { margin-top: 20px; font-size: 13px; color: #6b7280; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>个人页「我的发布」· 当前方案 vs 虚拟列表</h1>
+  <div class="hint">
+    两边数据完全一样，都是 500 条。左边是现在线上跑的做法（一次性全部渲染进 DOM）；
+    右边是虚拟列表（只渲染可视区那几条，滚动时实时替换）。两边都可以滚动，注意看下面「DOM 节点数」的变化。
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">A · 当前方案<small>整页滚动 · content-visibility 跳过屏外渲染</small></div>
+        <span class="badge warn">全部入 DOM</span>
+      </div>
+      <div class="list-normal" id="normalList"></div>
+      <div class="stats">
+        <span>DOM 节点：<b id="normalNodes">-</b></span>
+        <span>首次渲染：<b id="normalTime">-</b></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">B · 虚拟列表<small>列表内滚动 · 只渲染可视区</small></div>
+        <span class="badge">按需渲染</span>
+      </div>
+      <div class="list-virtual" id="virtScroll">
+        <div class="virt-spacer" id="virtSpacer">
+          <div class="virt-window" id="virtWindow"></div>
+        </div>
+      </div>
+      <div class="stats">
+        <span>DOM 节点：<b id="virtNodes">-</b></span>
+        <span>首次渲染：<b id="virtTime">-</b></span>
+        <span>可视区渲染：<b id="virtRange">-</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>怎么理解这两个数字：</b><br>
+    · A 方案 DOM 节点始终是 500 张卡片（约 3000+ 节点），滚动到后面浏览器要处理的对象一直这么多 —— 靠 <code>content-visibility</code> 跳过屏外的「渲染/布局」，但节点本身还在。<br>
+    · B 方案 DOM 节点永远只有可视区那 10 来张（约 70 个节点），滚动时复用同一批 DOM。<br>
+    · 代价：B 方案「我的发布」这块会变成一个自己的滚动区（页面滚动条 + 列表滚动条），也就是常说的双层滚动。
+  </div>
+</div>
+
+<script>
+  const TOTAL = 500
+  const ITEM_H = 94          // 卡片 84 + 间距 10
+  const TAGS = ['家居', '美食', '旅行', '摄影', '穿搭', '手作', '运动', '文案']
+  const TITLES = [
+    '小户型收纳清单：有这几样就够了', '一人食快手菜｜我的真实体验',
+    '秋日露营复盘：做对了什么，也踩过哪些坑', '通勤穿搭的6个实用思路',
+    '手机摄影入门：从零开始的完整记录', '情绪管理的7个实用思路',
+    '周末短途清单：有这几样就够了', '桌面整理｜我的真实体验'
+  ]
+  const items = Array.from({ length: TOTAL }, (_, i) => ({
+    title: TITLES[i % TITLES.length] + (i > 7 ? ' #' + (i + 1) : ''),
+    tag: TAGS[i % TAGS.length],
+    time: `${(i % 12) + 1}月${(i % 27) + 1}日`,
+    view: 30 + ((i * 37) % 3000)
+  }))
+
+  const hue = (i) => (i * 37) % 360
+  function cardHtml(item, i, absoluteTop) {
+    const style = absoluteTop == null ? '' : ` style="position:absolute;top:${absoluteTop}px;left:0;right:0;"`
+    return `<div class="card"${style}>
+      <div class="thumb" style="background:linear-gradient(135deg,hsl(${hue(i)} 45% 88%),hsl(${(hue(i)+40)%360} 45% 78%))"></div>
+      <div>
+        <div class="t">${item.title}</div>
+        <div class="m"><span class="tag">${item.tag}</span><span>·</span><span>${item.time}</span><span>·</span><span>👁 ${item.view}</span></div>
+      </div>
+    </div>`
+  }
+
+  /* ---------- A：当前方案，一次性渲染全部 ---------- */
+  const t0 = performance.now()
+  const normalList = document.getElementById('normalList')
+  normalList.innerHTML = items.map((it, i) => cardHtml(it, i, null)).join('')
+  document.getElementById('normalTime').textContent = Math.round(performance.now() - t0) + ' ms'
+  document.getElementById('normalNodes').textContent =
+    normalList.querySelectorAll('*').length + ' 个（' + TOTAL + ' 张卡片）'
+
+  /* ---------- B：虚拟列表，只渲染可视区 ---------- */
+  const scrollEl = document.getElementById('virtScroll')
+  const spacer = document.getElementById('virtSpacer')
+  const win = document.getElementById('virtWindow')
+  const BUFFER = 4                       // 上下各多渲染几条，滚动更顺
+  spacer.style.height = TOTAL * ITEM_H + 'px'
+  win.style.height = scrollEl.clientHeight + 'px'
+
+  let tv0 = performance.now()
+  let firstPaint = true
+  function renderVirtual() {
+    const scrollTop = scrollEl.scrollTop
+    const viewH = scrollEl.clientHeight
+    const start = Math.max(0, Math.floor(scrollTop / ITEM_H) - BUFFER)
+    const end = Math.min(TOTAL, Math.ceil((scrollTop + viewH) / ITEM_H) + BUFFER)
+
+    let html = ''
+    for (let i = start; i < end; i++) {
+      html += cardHtml(items[i], i, i * ITEM_H)
+    }
+    win.innerHTML = html
+    document.getElementById('virtRange').textContent = `${start + 1} - ${end}`
+    document.getElementById('virtNodes').textContent =
+      win.querySelectorAll('*').length + ' 个（实际渲染 ' + (end - start) + ' 张）'
+    if (firstPaint) {
+      document.getElementById('virtTime').textContent = Math.round(performance.now() - tv0) + ' ms'
+      firstPaint = false
+    }
+  }
+  scrollEl.addEventListener('scroll', renderVirtual, { passive: true })
+  window.addEventListener('resize', () => {
+    win.style.height = scrollEl.clientHeight + 'px'
+    renderVirtual()
+  })
+  renderVirtual()
+</script>
+</body>
+</html>

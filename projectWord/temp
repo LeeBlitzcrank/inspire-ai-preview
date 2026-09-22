@@ -1000,7 +1000,8 @@ POST http://localhost:5173/api/file/upload net::ERR_CONNECTION_RESET
 
 抱歉，这条确实被我漏了。补上，我按「投入产出比」排了一下。
 一、性能（收益最直接）
-1. Element Plus 按需引入 — 现在整包引入，element-plus 那个 chunk 有 922KB（gzip 298KB），是首屏最大的负担。换成 unplugin-vue-components 自动按需引入，预计能砍掉 40%~60%。收益大、改动小，我最推荐先做这个。
+1. Element Plus 按需引入 — 现在整包引入，element-plus 那个 chunk 有 922KB（gzip 298KB），是首屏最大的负担。
+换成 unplugin-vue-components 自动按需引入，预计能砍掉 40%~60%。收益大、改动小，我最推荐先做这个。
 2. 长列表虚拟滚动 — 你的评论区现在有 200+ 条、个人页有 500 条灵感，现在是一次次追加 DOM，滚动到后面会明显卡。用虚拟列表只渲染可视区，几百条也丝滑。
 3. 图片走 Nginx 缩略图 — 你这套已经装了 nginx image_filter 模块，但前台还在加载原图。列表里改成 ?w=400 让 Nginx 出缩略图 + 自动 WebP，列表首屏能快一大截，流量也省。
 4. qrcode 懒加载 — 现在进详情页就把二维码库打包进去了，改成点「生成海报」时再 import()，详情页首包更小。
@@ -1127,3 +1128,9 @@ POST http://localhost:5173/api/file/upload net::ERR_CONNECTION_RESET
 - 「图生灵感」把创作门槛降到"拍张照"，配合已有的多风格生成，是最可能拉新的一种入口
 
 这两个做完，产品感知会从"又一个内容社区"变成"一个有自己概念的创作工具"。要做哪个直接说。
+
+
+
+jev
+
+

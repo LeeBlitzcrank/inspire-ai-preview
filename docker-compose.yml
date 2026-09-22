@@ -22,6 +22,11 @@ x-common-env: &common-env
   ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
   INSPIRE_REDIS_HOST: redis
   INSPIRE_REDIS_PORT: 6379
+  # MinIO：容器内必须用 service 名访问，默认值 localhost:9000 在容器里连不通
+  INSPIRE_MINIO_ENDPOINT: http://minio:9000
+  INSPIRE_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+  INSPIRE_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+  INSPIRE_MINIO_BUCKET: inspire-img
   # 邮件重置密码链接的前端域名（生产改为 https://ai.20sherry.com）
   INSPIRE_APP_FRONTEND_URL: https://ai.20sherry.com
   # 网关 CORS 来源白名单（逗号分隔），必须与前端访问域名一致

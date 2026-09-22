@@ -1,37 +1,44 @@
 <template>
   <div class="personal-page">
-    <div class="topbar">
-      <div class="ico" @click="$router.push('/')">🍎</div>
+    <div class="topbar" id="p-topbar">
+      <div class="ico" id="p-logo" @click="$router.push('/')">🍎</div>
       <div class="right">
-        <div class="ico" @click="$router.push('/create')">✨</div>
-        <div class="ico" @click="$router.push('/search')">🔍</div>
+        <div class="ico" id="p-icon-create" @click="$router.push('/create')">✨</div>
+        <div class="ico" id="p-icon-search" @click="$router.push('/search')">🔍</div>
       </div>
     </div>
 
-    <!-- 通栏 Banner -->
-    <div class="banner">
-      <div class="av">{{ avatarText }}</div>
-      <h2>{{ userInfo.nickname || userInfo.username || '灵感爱好者' }}</h2>
-      <div class="mail" v-if="userInfo.email">{{ userInfo.email }}</div>
-      <div v-if="userInfo.city"><span class="tagchip">📍 {{ userInfo.city }}</span></div>
+    <!-- 个人信息：头像/昵称一行，右侧编辑资料与修改密码（v2 版式） -->
+    <div class="banner" id="p-banner">
+      <div class="av" id="p-avatar">{{ avatarText }}</div>
+      <div class="who" id="p-who">
+        <h2 id="p-name">{{ userInfo.nickname || userInfo.username || '灵感爱好者' }}</h2>
+        <div class="mail" id="p-account">@{{ userInfo.username || 'user' }}</div>
+        <div v-if="userInfo.city" id="p-city"><span class="tagchip">📍 {{ userInfo.city }}</span></div>
+      </div>
+      <div class="banner-ops" id="p-ops">
+        <button id="p-btn-edit" @click="showProfileDialog = true">编辑资料</button>
+        <button id="p-btn-pwd" @click="showPwdDialog = true">修改密码</button>
+      </div>
     </div>
 
     <!-- 统计 -->
-    <div class="stats">
-      <div class="stat" v-for="item in statList" :key="item.id">
+    <div class="stats" id="p-stats">
+      <div
+        class="stat"
+        id="p-stat"
+        :class="{ clickable: !!item.to }"
+        v-for="item in statList"
+        :key="item.id"
+        @click="item.to && $router.push(item.to)"
+      >
         <div class="n">{{ item.num }}</div>
-        <div class="l">{{ item.label }}</div>
+        <div class="l">{{ item.label }}<template v-if="item.to"> ›</template></div>
       </div>
     </div>
 
-    <!-- 快捷操作 -->
-    <div class="quick">
-      <div class="q" @click="showProfileDialog = true"><i>👤</i>编辑资料</div>
-      <div class="q" @click="showPwdDialog = true"><i>🔒</i>修改密码</div>
-    </div>
-
     <!-- 选项卡 -->
-    <div class="tabs">
+    <div class="tabs" id="p-tabs">
       <button :class="{ on: activeTab === 'published' }" @click="switchTab('published')">
         我的发布<span class="cnt">{{ pubTotal }}</span>
       </button>
@@ -55,22 +62,46 @@
 
       <!-- 我的发布 -->
       <template v-else-if="activeTab === 'published'">
-        <div v-for="(item, idx) in publishedList" :key="item.id" class="card" @click="goDetail(item.id)">
-          <div class="item">
-            <div class="thumb" :style="thumbStyle(item, idx)"></div>
-            <div>
-              <div class="t">{{ item.title || '无标题' }}</div>
-              <div class="m">
-                <span class="tag" v-if="item.tag">{{ tagText(item.tag) }}</span>
-                <span class="sep" v-if="item.tag">·</span>
-                <span>{{ formatTime(item.createTime) }}</span>
-                <span class="sep">·</span>
-                <span>👁 {{ item.viewCount || 0 }}</span>
+        <!-- 虚拟列表：500 条也只渲染可视区那十几张卡片 -->
+        <div
+          v-if="publishedList.length"
+          :ref="setPubContainer"
+          class="virt-scroll"
+          id="p-virt"
+          @scroll.passive="onPubScroll"
+        >
+          <div class="virt-spacer" :style="{ height: (publishedList.length * PUB_ITEM_H) + 'px' }">
+            <div
+              v-for="row in pubVisible"
+              :key="row.data.id"
+              class="card"
+              :style="{ position: 'absolute', left: 0, right: 0, top: (row.index * PUB_ITEM_H) + 'px' }"
+              @click="goDetail(row.data.id)"
+            >
+              <div class="item">
+                <div class="thumb" :style="thumbStyle(row.data, row.index)"></div>
+                <div class="txt">
+                  <div class="t">{{ row.data.title || '无标题' }}</div>
+                  <div class="m">
+                    <span class="tag" v-if="row.data.tag">{{ tagText(row.data.tag) }}</span>
+                    <span class="sep" v-if="row.data.tag">·</span>
+                    <span>{{ formatTime(row.data.createTime) }}</span>
+                    <span class="sep">·</span>
+                    <span>👁 {{ row.data.viewCount || 0 }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
         <div v-if="!publishedList.length" class="empty">✍️ 还没有发布过灵感</div>
+        <div v-if="publishedList.length" class="virt-foot" id="p-virt-foot">
+          <template v-if="pubHasMore">
+            滚到底自动加载… 已显示 {{ publishedList.length }} / {{ pubTotal }} 条
+            <div class="bar"><i :style="{ width: Math.round(publishedList.length / (pubTotal || 1) * 100) + '%' }"></i></div>
+          </template>
+          <template v-else>— 已经到底啦，共 {{ pubTotal }} 条 —</template>
+        </div>
       </template>
 
       <!-- 我的草稿 -->
@@ -89,14 +120,18 @@
 
       <!-- 我的收藏夹：先看文件夹，点进去才看该夹下的灵感 -->
       <template v-else>
-        <div v-if="!activeFolder" class="folders">
-          <div v-for="f in folders" :key="f.id" class="folder" @click="openFolder(f)">
-            <span class="fi">{{ f.icon || '📁' }}</span>
-            <div class="fn">{{ f.name }}</div>
-            <div class="fc">{{ folderCounts[f.id] || 0 }} 条灵感</div>
+        <div v-if="!activeFolder" class="folders" id="p-folders">
+          <div class="grid-hint" id="p-folders-hint">点文件夹查看其中灵感</div>
+          <div v-for="f in folders" :key="f.id" class="folder" id="p-folder"
+               :class="{ on: String(activeFolder?.id) === String(f.id) }" @click="openFolder(f)">
+            <div class="ico">{{ f.icon || '📁' }}</div>
+            <div>
+              <div class="fn">{{ f.name }}</div>
+              <div class="fc">{{ folderCounts[f.id] || 0 }} 条灵感</div>
+            </div>
           </div>
-          <div class="folder add" @click="$router.push('/collections')">
-            <span class="plus">+</span><span>新建收藏夹</span>
+          <div class="folder add" id="p-folder-add" @click="$router.push('/collections')">
+            <span class="plus">＋</span><span>管理收藏夹</span>
           </div>
           <div v-if="!folders.length" class="empty" style="grid-column:1/-1">⭐ 还没有收藏夹</div>
         </div>
@@ -131,7 +166,8 @@
     </div>
 
     <!-- 分页（我的发布 / 我的草稿） -->
-    <template v-if="(activeTab === 'published' || activeTab === 'drafts') && totalPages > 1">
+    <!-- 我的发布改成无限滚动，不再需要页码；草稿量小，保留分页 -->
+    <template v-if="activeTab === 'drafts' && totalPages > 1">
       <div class="pager">
         <button :disabled="pagerPage <= 1" @click="goPage(pagerPage - 1)">‹</button>
         <button v-for="p in totalPages" :key="p" :class="{ on: p === pagerPage }" @click="goPage(p)">{{ p }}</button>
@@ -143,7 +179,7 @@
       共 {{ folders.length }} 个收藏夹
     </div>
 
-    <button class="logout" @click="handleLogout">退出登录</button>
+    <button class="logout" id="p-logout" @click="handleLogout">退出登录</button>
 
     <!-- 编辑资料对话框 -->
     <el-dialog v-model="showProfileDialog" title="编辑资料" width="90%">
@@ -207,7 +243,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserInfo, getMyInspires, getMyCollects,
          uncollectInspire, updateUserInfo, changePassword,
-         getCollectFolders, getCollectListByFolder } from '@/api/inspire.js'
+         getCollectFolders, getCollectListByFolder, getFollowing } from '@/api/inspire.js'
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
 import { randomNickname } from '@/utils/nickname.js'
 import { useAuthStore } from '@/stores/auth'
@@ -216,6 +252,43 @@ const auth = useAuthStore()
 const router = useRouter()
 const userInfo = ref({})
 const publishedList = ref([])
+
+// ===== 我的发布：虚拟列表 =====
+// 500 条灵感如果全部渲染成 DOM，滚动到底部时浏览器要维护 5000+ 节点；
+// 这里只渲染可视区 + 上下各 4 条的缓冲，滚动时复用同一批 DOM。
+const PUB_ITEM_H = 86         // 卡片高 76 + 间距 10（与预览一致）
+const PUB_OVERSCAN = 4
+// 列表可视高度用固定常量，和 .virt-scroll 的 CSS 高度保持一致。
+// 之前是运行时读 clientHeight，首次挂载时样式还没生效、量到 0，
+// 结果只渲染 4 条（ceil(0/86)+4）——现在彻底不依赖测量。
+const PUB_VIEW_H = 340
+const pubScrollTop = ref(0)
+
+const pubVisible = computed(() => {
+  const total = publishedList.value.length
+  if (!total) return []
+  const start = Math.max(0, Math.floor(pubScrollTop.value / PUB_ITEM_H) - PUB_OVERSCAN)
+  const end = Math.min(total, Math.ceil((pubScrollTop.value + PUB_VIEW_H) / PUB_ITEM_H) + PUB_OVERSCAN)
+  const rows = []
+  for (let i = start; i < end; i++) rows.push({ index: i, data: publishedList.value[i] })
+  return rows
+})
+
+const onPubScroll = (e) => {
+  pubScrollTop.value = e.target.scrollTop
+  // 无限滚动：离底部还有 240px 就补下一页
+  const el = e.target
+  if (!pubLoading.value && pubHasMore.value &&
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 240) {
+    loadPublished(false)
+  }
+}
+
+const setPubContainer = (el) => {
+  if (!el) return
+  // 可视高度用常量 PUB_VIEW_H，这里只需要把滚动位置同步过来
+  pubScrollTop.value = el.scrollTop
+}
 const draftList = ref([])
 const collectList = ref([])
 const loading = ref(false)
@@ -294,17 +367,32 @@ const thumbStyle = (item, idx) => {
   return { background: GRADS[idx % GRADS.length] }
 }
 
-const loadPublished = async (page) => {
-  if (page !== undefined) pubPage.value = page
+/**
+ * 我的发布：改成「分批追加 + 无限滚动」，配合上面的虚拟列表。
+ * reset=true 时回到第一页（切换 tab / 刷新），否则追加下一页。
+ */
+const PUB_PAGE_SIZE = 20
+const pubLoadedPage = ref(0)
+const pubHasMore = ref(true)
+const pubLoading = ref(false)
+
+const loadPublished = async (reset = false) => {
+  if (pubLoading.value) return
+  if (!reset && !pubHasMore.value) return
+  pubLoading.value = true
+  const nextPage = reset ? 1 : pubLoadedPage.value + 1
   try {
     const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my?page=' + pubPage.value + '&size=' + pageSize.value, {
+    const resp = await fetch(`/api/inspire/my?page=${nextPage}&size=${PUB_PAGE_SIZE}`, {
       headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
     })
     const json = await resp.json()
-    publishedList.value = json.data?.records || []
+    const rows = json.data?.records || []
+    publishedList.value = reset ? rows : [...publishedList.value, ...rows]
     pubTotal.value = json.data?.total || 0
-  } catch (e) { console.error(e) }
+    pubLoadedPage.value = nextPage
+    pubHasMore.value = rows.length >= PUB_PAGE_SIZE
+  } catch (e) { console.error(e) } finally { pubLoading.value = false }
 }
 
 const loadDrafts = async (page) => {
@@ -369,7 +457,9 @@ const openFolder = async (f) => {
 const statList = ref([
   { id: 1, num: 0, label: '总发布' },
   { id: 2, num: 0, label: '总收藏' },
-  { id: 3, num: 0, label: '总浏览量' }
+  { id: 3, num: 0, label: '总浏览量' },
+  // 新增：可点击跳「我的关注」
+  { id: 4, num: 0, label: '关注', to: '/following' }
 ])
 
 // 96 个可选头像：表情 / 动物 / 自然 / 食物 / 物件
@@ -497,13 +587,17 @@ const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 onMounted(async () => {
   loading.value = true
   try {
-    const [userRes, pubRes, colRes] = await Promise.all([
-      getUserInfo(), getMyInspires(1, pageSize.value), getMyCollects(1, pageSize.value)
+    const [userRes, pubRes, colRes, folRes] = await Promise.all([
+      getUserInfo(), getMyInspires(1, PUB_PAGE_SIZE), getMyCollects(1, pageSize.value),
+      getFollowing().catch(() => ({ data: [] }))
     ])
     userInfo.value = userRes.data || {}
     if (userRes.data?.avatar) localStorage.setItem('userAvatar', userRes.data.avatar)
     publishedList.value = pubRes.data?.records || []
     pubTotal.value = pubRes.data?.total || 0
+    pubLoadedPage.value = 1
+    pubHasMore.value = (pubRes.data?.records || []).length >= PUB_PAGE_SIZE
+    statList.value[3].num = (folRes.data || []).length
     collectList.value = colRes.data?.records || []
     collTotal.value = colRes.data?.total || 0
     statList.value[0].num = pubTotal.value
@@ -606,26 +700,30 @@ const handleLogout = () => {
 .topbar .right { display:flex; gap:8px; }
 
 /* ---------- 通栏 Banner ---------- */
-.banner { position:relative; overflow:hidden; border-radius:18px; text-align:center;
-  padding:22px 16px 46px; background:linear-gradient(160deg,#8fd0c3 0%,#b9e5db 55%,#e6f6f2 100%); }
-.banner:before { content:""; position:absolute; width:190px; height:190px; border-radius:50%;
-  background:rgba(255,255,255,.5); filter:blur(30px); left:-50px; top:-70px; }
-.banner .av { position:relative; width:72px; height:72px; margin:0 auto 10px; border-radius:50%;
-  background:#fff; display:flex; align-items:center; justify-content:center; font-size:30px;
-  box-shadow:0 6px 18px rgba(30,90,80,.18); }
-.banner h2 { position:relative; margin:0; font-size:19px; font-weight:700; color:#134e4a; }
-.banner .mail { position:relative; margin-top:4px; font-size:12px; color:#3f7268; }
-.banner .tagchip { position:relative; display:inline-flex; align-items:center; gap:4px; margin-top:9px;
-  padding:2px 9px; border-radius:999px; background:rgba(255,255,255,.88); color:#d98200; font-size:11.5px; }
+/* v2：头像与昵称一行，右侧放两个操作按钮 */
+.banner { display:flex; align-items:center; gap:12px; border-radius:18px; padding:16px;
+  text-align:left; background:linear-gradient(160deg,#f3fbf9,#fff); border:1px solid #e6f2ef; }
+.banner .av { width:60px; height:60px; flex:0 0 auto; border-radius:50%;
+  background:#e6f2e4; color:#4f8a48; display:flex; align-items:center; justify-content:center;
+  font-size:24px; font-weight:700; }
+.banner .who { min-width:0; }
+.banner h2 { margin:0; font-size:16.5px; font-weight:700; color:#134e4a; }
+.banner .mail { margin-top:3px; font-size:12px; color:#3f7268; }
+.banner .tagchip { display:inline-flex; align-items:center; gap:4px; margin-top:7px;
+  padding:2px 9px; border-radius:999px; background:#f3f8f6; color:#d98200; font-size:11.5px; }
+.banner-ops { margin-left:auto; display:flex; flex-direction:column; gap:6px; flex:0 0 auto; }
+.banner-ops button { padding:6px 12px; border-radius:999px; border:1px solid #cfe6e0;
+  background:#fff; color:#0f766e; font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; }
+.banner-ops button:hover { background:#f2faf8; }
 
 /* ---------- 悬浮统计 ---------- */
-.stats { position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,1fr);
-  margin:-30px 24px 12px; padding:14px 8px; background:#fff; border-radius:16px;
-  box-shadow:0 8px 20px rgba(30,90,80,.10); }
+.stats { position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,1fr);
+  margin:12px 8px 12px; padding:12px 6px; background:#fff; border-radius:16px;
+  box-shadow:0 6px 16px rgba(30,90,80,.08); }
 .stat { position:relative; text-align:center; }
 .stat + .stat:before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:1px; background:#e8f3f0; }
-.stat .n { font-size:20px; font-weight:700; color:#0f766e; }
-.stat .l { margin-top:3px; font-size:11.5px; color:#6b8b85; }
+.stat .n { font-size:17px; font-weight:700; color:#0f766e; }
+.stat .l { margin-top:3px; font-size:11px; color:#6b8b85; }
 
 /* ---------- 快捷操作 ---------- */
 .quick { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
@@ -646,8 +744,26 @@ const handleLogout = () => {
 
 /* ---------- 列表卡片 ---------- */
 .list { min-height:200px; }
-.card { padding:14px; margin-bottom:12px; background:#fff; border:1px solid #e6f2ef;
+/* 虚拟列表容器：列表自身滚动，只挂可视区卡片 */
+.virt-scroll { height: 340px; overflow-y: auto; padding-right: 2px; }
+.virt-foot { text-align:center; padding:10px 0; font-size:12px; color:#9aa3b2; }
+.virt-foot .bar { height:4px; border-radius:99px; background:#eef4f2; overflow:hidden; margin-top:8px; }
+.virt-foot .bar i { display:block; height:100%; background:#0f766e; transition:width .2s; }
+.stat.clickable { cursor:pointer; }
+.stat.clickable .l { color:#0f766e; }
+.virt-spacer { position: relative; width: 100%; }
+/* 卡片改成等高（76px，与预览一致），虚拟列表才能精确算偏移 */
+.card { padding:11px 12px; height:76px; margin-bottom:10px; box-sizing:border-box; overflow:hidden;
+  background:#fff; border:1px solid #e6f2ef;
   border-radius:16px; cursor:pointer; transition:.16s; }
+.item { align-items:center; }
+.item .thumb { width:54px; height:54px; border-radius:11px; }
+.item .t { font-size:13.5px; margin-bottom:5px; }
+.item .m { font-size:11.5px; }
+.item .txt { min-width: 0; }
+.item .txt .t {
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
 .card:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .card:active { transform:scale(.985); }
 .item { display:flex; gap:12px; align-items:flex-start; }
@@ -670,17 +786,20 @@ const handleLogout = () => {
 .draft .badge { padding:1px 8px; border-radius:999px; background:#fdf3e3; color:#b3760a; font-size:11px; }
 
 /* ---------- 收藏夹 ---------- */
-.folders { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.folder { padding:14px; background:#fff; border:1px solid #e6f2ef; border-radius:16px;
+.grid-hint { grid-column:1/-1; margin-bottom:2px; font-size:12px; color:#9aa3b2; }
+.folders { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+.folder { display:flex; align-items:center; gap:10px; padding:14px 12px; height:68px; box-sizing:border-box;
+  background:#fff; border:1px solid #e6f2ef; border-radius:15px;
   cursor:pointer; transition:.16s; }
 .folder:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .folder:active { transform:scale(.985); }
-.folder .fi { display:block; margin-bottom:8px; font-size:22px; }
-.folder .fn { margin-bottom:4px; font-size:14px; font-weight:600; color:#1d1d1f;
+.folder .ico { width:38px; height:38px; border-radius:11px; background:#f1f7f5; display:flex;
+  align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
+.folder .fn { margin-bottom:2px; font-size:13px; font-weight:600; color:#1d1d1f;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .folder .fc { font-size:11.5px; color:#9aa3b2; }
-.folder.add { display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:4px; min-height:96px; border-style:dashed; color:#7b9891; font-size:12.5px; }
+/* 与普通文件夹卡片严格等高：高度完全由 .folder 的 height 决定，这里不再单独设 min-height */
+.folder.add { justify-content:center; gap:4px; border-style:dashed; color:#7b9891; font-size:12.5px; }
 .folder.add .plus { font-size:22px; line-height:1; }
 
 .backrow { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
@@ -709,9 +828,11 @@ const handleLogout = () => {
 @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }
 
 /* ---------- 退出登录 ---------- */
-.logout { display:block; width:100%; margin:24px 0 4px; padding:8px 0; border:none; background:none;
-  font-family:inherit; font-size:13px; color:#f56c6c; cursor:pointer; }
-.logout:hover { text-decoration:underline; }
+/* 与预览一致的退出按钮：整条描边胶囊按钮，不再是纯文字链接 */
+.logout { display:block; width:100%; margin:18px 0 6px; height:40px;
+  border-radius:12px; border:1px solid #f0dcd3; background:#fff;
+  color:#c2613a; font-family:inherit; font-size:13.5px; cursor:pointer; transition:.15s; }
+.logout:hover { background:#fff8f5; }
 
 /* ---------- 弹窗表单 ---------- */
 /* 弹窗外观对齐设计稿：薄荷绿主按钮、圆角、自定义关闭按钮 */

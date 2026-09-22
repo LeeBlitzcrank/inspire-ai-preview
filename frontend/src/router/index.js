@@ -1,10 +1,16 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
 import { pinia } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
+
+// 路由级进度条：切换页面时给一个即时反馈（配合路由懒加载）
+NProgress.configure({ showSpinner: false, trickleSpeed: 120, minimum: 0.12 })
 import Index from '@/pages/index.vue'
 const Search = () => import('@/pages/Search.vue')
 const InspireDetail = () => import('@/pages/InspireDetail.vue')
 const Personal = () => import('@/pages/Personal.vue')
+const Following = () => import('@/pages/Following.vue')
 const Login = () => import('@/pages/Login.vue')
 const Register = () => import('@/pages/Register.vue')
 const Create = () => import('@/pages/Create.vue')
@@ -30,6 +36,7 @@ const routes = [
   { path: '/search', name: 'Search', component: Search },
   { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail },
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
+  { path: '/following', name: 'Following', component: Following, meta: { needLogin: true } },
   { path: '/notifications', name: 'Notifications', component: Notifications, meta: { needLogin: true } },
   { path: '/collections', name: 'Collections', component: Collections, meta: { needLogin: true } },
   { path: '/messages', name: 'Messages', component: Messages, meta: { needLogin: true } },
@@ -65,6 +72,7 @@ const router = createRouter({
   scrollBehavior() { return { top: 0, behavior: 'smooth' } }
 })
 router.beforeEach((to, from, next) => {
+  NProgress.start()
   // 方案C：读取全局登录态 store（启动时已从 localStorage 同步，零延迟）
   const auth = useAuthStore(pinia)
   auth.init()
@@ -75,4 +83,8 @@ router.beforeEach((to, from, next) => {
   else if (to.meta.needAdmin && !adminToken) next('/admin/login')
   else next()
 })
+router.afterEach(() => { NProgress.done() })
+// 懒加载 chunk 拉取失败等异常也要收掉进度条，避免一直卡在加载态
+router.onError(() => { NProgress.done() })
+
 export default router

@@ -227,7 +227,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import QRCode from 'qrcode'
+// 注意：qrcode 体积不小，改成命中「生成海报」时再动态加载，避免进详情页就打包进去
 import {
   collectInspire,
   createComment,
@@ -867,6 +867,7 @@ const makePoster = async () => {
 
     // 二维码
     const shareUrl = `${window.location.origin}/#/detail/${detail.value.id}`
+    const { default: QRCode } = await import('qrcode')
     const qrDataUrl = await QRCode.toDataURL(shareUrl, {
       width: 300,
       margin: 0,
@@ -1191,6 +1192,11 @@ h1 {
   border-radius: 17px;
   background: rgba(255, 249, 240, .58);
   text-align: left;
+  /* 长列表优化：评论是变高元素，用 content-visibility 让浏览器跳过屏外条目的
+     渲染与布局（等价于浏览器内置的懒渲染），200+ 条评论滚动也不会卡。
+     contain-intrinsic-size 提供占位高度，避免滚动条跳动。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 130px;
 }
 
 .comment-head {

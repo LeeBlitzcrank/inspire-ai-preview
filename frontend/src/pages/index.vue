@@ -13,7 +13,6 @@
     <div class="tab-bar">
      <span class="tab-item" :class="{active: activeTab==='recommend'}" @click="switchTab('recommend')">👇 推荐卡片</span>
      <span class="tab-item" :class="{active: activeTab==='category'}" @click="switchTab('category')">📋 灵感分类</span>
-     <span v-if="isLogin" class="tab-item" :class="{active: activeTab==='following'}" @click="switchTab('following')">👥 关注</span>
    </div>
 
     <div v-if="activeTab === 'category'">
@@ -293,7 +292,6 @@ onMounted(async () => {
   const preload = []
   if (isLogin.value) {
     preload.push(fetchUnreadCount())
-    preload.push(getFollowing().then(r => { followingList.value = r.data || [] }).catch(() => {}))
   }
   await Promise.all([loadSwipeCards(true), loadCategories(), ...preload])
   scheduleAutoAdvance()

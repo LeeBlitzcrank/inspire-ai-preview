@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的收藏夹 v2 · 可点击预览（功能对齐版）</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px 14px 60px;background:#eef4f2;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:460px;margin:0 auto}
+  .phone{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 8px 30px rgba(20,70,60,.10);position:relative;min-height:700px}
+  .tag-keep,.tag-chg{font-size:10px;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .tag-keep{background:#eef7f0;color:#3f7f52}
+  .tag-chg{background:#fff4e5;color:#b26a00}
+
+  .head{height:54px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #eef4f2}
+  .head .back{border:none;background:none;font-size:19px;color:#0f766e;cursor:pointer;padding:0}
+  .head h1{margin:0;font-size:16px;font-weight:700}
+  .head .new{margin-left:auto;padding:7px 14px;border-radius:999px;border:none;background:#0f766e;color:#fff;font-size:12.5px;cursor:pointer}
+
+  .body{padding:14px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-bottom:16px}
+  .folder{padding:13px 12px;background:#fff;border:1px solid #e6f2ef;border-radius:15px;cursor:pointer;position:relative;transition:.16s}
+  .folder:hover{border-color:#a8dcd2;box-shadow:0 4px 14px rgba(30,90,80,.08)}
+  .folder.on{border-color:#0f766e;background:#f2faf8;box-shadow:0 0 0 2px rgba(15,118,110,.10)}
+  .folder .top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .folder .ico{width:34px;height:34px;border-radius:10px;background:#f1f7f5;display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+  .folder .fn{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .folder .fc{font-size:11px;color:#9aa3b2}
+  .folder .edit{position:absolute;right:9px;top:9px;border:none;background:none;color:#9bb5b0;font-size:13px;cursor:pointer}
+  .folder .edit:hover{color:#0f766e}
+  .folder.unc{background:#fbfdfc;border-style:dashed}
+
+  .list-head{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
+  .list-head .t2{font-size:14px;font-weight:700}
+  .list-head .n{font-size:11.5px;color:#9aa3b2}
+
+  .virt{height:330px;overflow-y:auto;padding-right:2px}
+  .spacer{position:relative}
+  .card{position:absolute;left:0;right:0;height:88px;padding:11px 12px;margin-bottom:8px;background:#fff;border:1px solid #e6f2ef;border-radius:14px;display:flex;align-items:center;gap:11px}
+  .card:hover{border-color:#a8dcd2}
+  .thumb{width:56px;height:56px;border-radius:11px;flex:0 0 auto}
+  .txt{min-width:0;flex:1}
+  .t{font-size:13.5px;font-weight:600;line-height:1.4;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .m{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#9aa3b2}
+  .tag{font-size:11px;padding:1px 7px;border-radius:999px;background:#f1f7f5;color:#4b7a72}
+  .move{border:none;background:#f2f8f6;color:#0f766e;font-size:11.5px;padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .move:hover{background:#e6f3ef}
+
+  .loading{text-align:center;padding:11px 0;font-size:12px;color:#9aa3b2}
+  .bar{height:4px;border-radius:99px;background:#eef4f2;overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;background:#0f766e}
+  .empty{text-align:center;padding:56px 0;color:#b6c2c0;font-size:13px}
+
+  .mask{position:absolute;inset:0;background:rgba(20,40,36,.35);display:none;align-items:center;justify-content:center;padding:18px}
+  .mask.on{display:flex}
+  .dialog{width:100%;max-width:320px;background:#fff;border-radius:16px;padding:16px;max-height:80%;overflow-y:auto}
+  .dialog h3{margin:0 0 12px;font-size:15px}
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-size:12.5px;color:#5b6b68;margin-bottom:6px}
+  .fld input{width:100%;height:38px;padding:0 12px;border:1px solid #e3ecea;border-radius:10px;font-family:inherit;font-size:13px}
+  .opt{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid #e6f2ef;border-radius:11px;margin-bottom:8px;cursor:pointer;font-size:13px}
+  .opt.on{border-color:#0f766e;background:#f2faf8}
+  .dlg-ops{display:flex;gap:8px;margin-top:8px}
+  .dlg-ops button{flex:1;height:40px;border-radius:11px;border:none;font-family:inherit;font-size:13.5px;cursor:pointer}
+  .dlg-ops .ghost{background:#f2f6f5;color:#5b6b68}
+  .dlg-ops .main{background:#0f766e;color:#fff}
+  .tip{margin-top:14px;font-size:12px;color:#8a94a6;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone">
+    <div class="head">
+      <button class="back" onclick="toast('返回个人中心')">←</button>
+      <h1>我的收藏夹</h1>
+      <button class="new" onclick="openCreate()">+ 新建<span class="tag-keep">保留</span></button>
+    </div>
+
+    <div class="body">
+      <div class="grid" id="grid"></div>
+      <div id="listWrap"></div>
+    </div>
+
+    <div class="mask" id="mCreate">
+      <div class="dialog">
+        <h3>新建收藏夹</h3>
+        <div class="fld"><label>名称</label><input id="newName" placeholder="给收藏夹起个名字"></div>
+        <div class="fld"><label>图标</label><input id="newIcon" value="📁"></div>
+        <div class="dlg-ops"><button class="ghost" onclick="close_('mCreate')">取消</button>
+          <button class="main" onclick="doCreate()">确定</button></div>
+      </div>
+    </div>
+
+    <div class="mask" id="mRename">
+      <div class="dialog">
+        <h3>重命名收藏夹</h3>
+        <div class="fld"><label>名称</label><input id="rnName"></div>
+        <div class="dlg-ops"><button class="ghost" onclick="close_('mRename')">取消</button>
+          <button class="main" onclick="doRename()">确定</button></div>
+      </div>
+    </div>
+
+    <div class="mask" id="mMove">
+      <div class="dialog">
+        <h3>移动到文件夹</h3>
+        <div id="moveOpts"></div>
+        <div class="dlg-ops"><button class="ghost" onclick="close_('mMove')">取消</button>
+          <button class="main" onclick="doMove()">移动到此处</button></div>
+      </div>
+    </div>
+
+    <div class="mask" id="mToast"><div class="dialog" style="max-width:240px;text-align:center;font-size:13.5px" id="toastText"></div></div>
+  </div>
+
+  <div class="tip">
+    角标：<span class="tag-keep">保留</span>原功能不变 · <span class="tag-chg">调整</span>功能保留、样式或交互有变。<br>
+    可点：选中文件夹（含「未分类」）、新建、重命名、每条收藏的「移动到文件夹」、滚到底自动加载。
+  </div>
+</div>
+
+<script>
+const ITEM_H=96, PAGE=20
+const TITLES=['小户型收纳清单：有这几样就够了','一人食快手菜｜我的真实体验','秋日露营复盘：做对了什么，也踩过哪些坑','通勤穿搭的6个实用思路','手机摄影入门：从零开始的完整记录']
+const TAGS=['家居','美食','旅行','摄影','穿搭']
+const it=i=>({title:TITLES[i%5],tag:TAGS[i%5],time:`${(i%12)+1}月${(i%27)+1}日`,view:30+(i*37)%3000,hue:(i*37)%360})
+let FOLDERS=[{id:1,ic:'🏠',n:'家居灵感',c:28},{id:2,ic:'🍜',n:'美食收藏',c:42},{id:3,ic:'🏕',n:'旅行清单',c:16},{id:4,ic:'📷',n:'摄影参考',c:35},{id:5,ic:'👗',n:'穿搭灵感',c:21}]
+const UNCAT={id:-1,ic:'📂',n:'未分类',c:9}
+
+const grid=document.getElementById('grid'), listWrap=document.getElementById('listWrap')
+let active=null, renameTarget=null, moveTarget=null
+
+function renderGrid(){
+  const all=[UNCAT,...FOLDERS]
+  grid.innerHTML=all.map(f=>`<div class="folder ${f.id===-1?'unc':''} ${active===f.id?'on':''}" onclick="selectFolder(${f.id})">
+      <div class="top"><div class="ico">${f.ic}</div><div class="fn">${f.n}</div></div>
+      <div class="fc">${f.c} 条灵感</div>
+      ${f.id===-1?'':`<button class="edit" onclick="event.stopPropagation();openRename(${f.id})" title="重命名">✎</button>`}
+    </div>`).join('')
+}
+
+function mountList(total){
+  listWrap.innerHTML=`<div class="list-head"><span class="t2">${active===-1?'未分类':FOLDERS.find(f=>f.id===active).n}</span>
+      <span class="n">共 ${total} 条</span></div>
+    <div class="virt"><div class="spacer"></div></div><div class="foot"></div>`
+  const v=listWrap.querySelector('.virt'), sp=listWrap.querySelector('.spacer'), ft=listWrap.querySelector('.foot')
+  let loaded=Math.min(PAGE,total)
+  function draw(){
+    const top=v.scrollTop,h=v.clientHeight
+    const s=Math.max(0,Math.floor(top/ITEM_H)-4), e=Math.min(loaded,Math.ceil((top+h)/ITEM_H)+4)
+    let html=''
+    for(let i=s;i<e;i++){const x=it(i)
+      html+=`<div class="card" style="top:${i*ITEM_H}px">
+        <div class="thumb" style="background:linear-gradient(135deg,hsl(${x.hue} 45% 90%),hsl(${(x.hue+40)%360} 45% 80%))"></div>
+        <div class="txt"><div class="t">${x.title}</div>
+        <div class="m"><span class="tag">${x.tag}</span><span>·</span><span>${x.time}</span></div></div>
+        <button class="move" onclick="openMove(${i})">📁 移动<span class="tag-keep">保留</span></button></div>`}
+    sp.innerHTML=html; sp.style.height=loaded*ITEM_H+'px'
+    const pct=Math.round(loaded/total*100)
+    ft.innerHTML = loaded>=total
+      ? `<div class="loading">— 已经到底啦 —</div>`
+      : `<div class="loading">滚到底自动加载… ${loaded} / ${total}<span class="tag-chg">调整</span></div><div class="bar"><i style="width:${pct}%"></i></div>`
+  }
+  v.onscroll=()=>{draw(); if(loaded<total && v.scrollTop+v.clientHeight>=v.scrollHeight-200){loaded=Math.min(loaded+PAGE,total);draw()}}
+  draw()
+}
+
+function selectFolder(id){
+  if(active===id){active=null;renderGrid();listWrap.innerHTML='';return}
+  active=id
+  renderGrid()
+  const f = id===-1?UNCAT:FOLDERS.find(x=>x.id===id)
+  if(f.c===0){listWrap.innerHTML=`<div class="empty">该文件夹还没有收藏灵感</div>`;return}
+  mountList(f.c)
+}
+function openCreate(){document.getElementById('newName').value='';document.getElementById('newIcon').value='📁';open_('mCreate')}
+function doCreate(){
+  const n=document.getElementById('newName').value.trim(); if(!n){toast('请输入名称');return}
+  FOLDERS.push({id:Date.now(),ic:document.getElementById('newIcon').value||'📁',n,c:0})
+  close_('mCreate');renderGrid();toast('已新建「'+n+'」')
+}
+function openRename(id){renameTarget=id;document.getElementById('rnName').value=FOLDERS.find(f=>f.id===id).n;open_('mRename')}
+function doRename(){
+  const f=FOLDERS.find(x=>x.id===renameTarget); const n=document.getElementById('rnName').value.trim()
+  if(!n){toast('请输入名称');return}
+  f.n=n;close_('mRename');renderGrid();if(active===f.id)selectFolder(f.id);toast('已重命名')
+}
+function openMove(i){moveTarget=i;const all=[UNCAT,...FOLDERS]
+  document.getElementById('moveOpts').innerHTML=all.map(f=>`<div class="opt" data-id="${f.id}" onclick="pickMove(this)"><span>${f.ic}</span><span>${f.n}</span></div>`).join('')
+  open_('mMove')}
+function pickMove(el){document.querySelectorAll('#moveOpts .opt').forEach(o=>o.classList.remove('on'));el.classList.add('on')}
+function doMove(){close_('mMove');toast('已移动到你选的文件夹')}
+function open_(id){document.getElementById(id).classList.add('on')}
+function close_(id){document.getElementById(id).classList.remove('on')}
+let tm
+function toast(msg){const m=document.getElementById('mToast');document.getElementById('toastText').textContent=msg
+  m.classList.add('on');clearTimeout(tm);tm=setTimeout(()=>m.classList.remove('on'),1200)}
+renderGrid()
+selectFolder(1)
+</script>
+</body>
+</html>

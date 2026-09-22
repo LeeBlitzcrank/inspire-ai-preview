@@ -61,6 +61,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminCategoryList, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '@/api/inspire.js'
+import { clearGetCache } from '@/utils/request.js'
 
 const tree = ref([])
 const loading = ref(false)
@@ -116,6 +117,7 @@ const save = async () => {
     if (res.code === 200) {
       ElMessage.success(form.value.id ? '已更新' : '已新增')
       dialogVisible.value = false
+      clearGetCache()
       await load()
     } else {
       ElMessage.error(res.msg || '保存失败')
@@ -140,6 +142,7 @@ const removeItem = async (item, level) => {
     const res = await adminDeleteCategory(item.id)
     if (res.code === 200) {
       ElMessage.success('已删除')
+      clearGetCache()
       await load()
     } else {
       ElMessage.error(res.msg || '删除失败')

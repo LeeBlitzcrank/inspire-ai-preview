@@ -66,24 +66,32 @@ service.interceptors.request.use(async config => {
 
   let token = getAccessToken()
 
-  // 内存无 accessToken 但 localStorage 有 refreshToken → 自动续期（页面刷新后）
+  // 内存无 accessToken 但 localStorage 有 refreshToken → 自动续期（页面刷新后 / accessToken 过期后）
   if (!token) {
     const rt = getRefreshToken()
-    if (rt && !isRefreshing) {
-      isRefreshing = true
-      try {
-        const res = await axios.post(`${API_BASE}/auth/refresh`, null, {
-          headers: { 'Refresh-Token': rt },
-          timeout: 5000
-        })
-        if (res.data.code === 200 && res.data.data) {
-          saveTokens(res.data.data)
-          token = res.data.data.accessToken
+    if (rt) {
+      if (isRefreshing) {
+        // 关键修复：已经有刷新在飞时必须挂起等待，不能裸发无 token 的请求。
+        // 否则并发请求会带上空 Authorization，被网关判为「未携带登录令牌」，
+        // 进而触发前端清空登录态并跳回登录页。
+        token = await new Promise(resolve => pendingQueue.push(resolve))
+      } else {
+        isRefreshing = true
+        try {
+          const res = await axios.post(`${API_BASE}/auth/refresh`, null, {
+            headers: { 'Refresh-Token': rt },
+            timeout: 8000
+          })
+          if (res.data.code === 200 && res.data.data) {
+            saveTokens(res.data.data)
+            token = res.data.data.accessToken
+          }
+        } catch {
+          // 刷新失败：token 保持为空，唤醒等待者，后续按未登录处理
+        } finally {
+          isRefreshing = false
+          resolvePending(token)
         }
-      } catch {
-        // 刷新失败，不阻塞请求
-      } finally {
-        isRefreshing = false
       }
     }
   }
@@ -104,6 +112,16 @@ service.interceptors.response.use(
     return data
   },
   async err => {
+    const cfg = err.config || {}
+    // GET 是幂等的：网络抖动或服务端 5xx 时自动重试一次，避免偶发失败直接弹错误
+    const status = err.response?.status
+    const isGet = String(cfg.method || '').toLowerCase() === 'get'
+    if (isGet && !cfg.__retried && (!err.response || status >= 500)) {
+      cfg.__retried = true
+      await new Promise(resolve => setTimeout(resolve, 600))
+      return service(cfg)
+    }
+
     const res = err.response
     if (!res) {
       ElMessage.error('网络异常，请检查连接')
@@ -184,3 +202,42 @@ function redirectToLogin(path) {
 }
 
 export default service
+
+// ============================================================================
+// GET 请求内存缓存 + 并发去重
+// 用于「分类」「词云」这类基本不变、又在多个页面被反复请求的公开数据：
+//   - 5 分钟内重复请求直接命中内存，切页面零等待
+//   - 同一时刻的并发请求只发一次，其余复用同一个 Promise
+// 后台修改数据后请调用 clearGetCache() 让缓存立即失效。
+// ============================================================================
+const GET_CACHE_TTL = 5 * 60 * 1000
+const getCacheMap = new Map()   // key -> { time, payload }
+const inflightMap = new Map()   // key -> Promise
+
+function buildKey(url, params) {
+  return url + '?' + JSON.stringify(params || {})
+}
+
+export function cachedGet(url, params, ttl = GET_CACHE_TTL) {
+  const key = buildKey(url, params)
+  const hit = getCacheMap.get(key)
+  if (hit && Date.now() - hit.time < ttl) {
+    return Promise.resolve(hit.payload)
+  }
+  if (inflightMap.has(key)) {
+    return inflightMap.get(key)
+  }
+  const p = service.get(url, { params })
+    .then(payload => {
+      getCacheMap.set(key, { time: Date.now(), payload })
+      return payload
+    })
+    .finally(() => inflightMap.delete(key))
+  inflightMap.set(key, p)
+  return p
+}
+
+/** 后台改完分类/词云后调用，避免前台还看到 5 分钟内的旧数据 */
+export function clearGetCache() {
+  getCacheMap.clear()
+}

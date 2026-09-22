@@ -1,4 +1,5 @@
 import request from '@/utils/request.js'
+import { cachedGet } from '@/utils/request.js'
 
 // ===== 用户认证 =====
 export const login = (data) => request.post('/auth/login', data)
@@ -12,9 +13,13 @@ export const doLogout = () => request.post('/auth/logout')
 // ===== 灵感核心 =====
 export const getInspireList = (params) => request.get('/inspire/public/list', { params })
 export const getInspireDetail = (id) => request.get(`/inspire/public/${id}`)
-export const getMyInspires = () => request.get('/inspire/my')
+// 注意：这两个接口必须带上 page/size，否则后端会用它自己的默认分页（只返回 5 条），
+// 导致「我的发布」只显示几条、且因为没有更多而直接显示「已经到底啦」。
+export const getMyInspires = (page = 1, size = 20) =>
+  request.get('/inspire/my', { params: { page, size } })
 export const getMyDrafts = () => request.get('/inspire/my/drafts')
-export const getMyCollects = () => request.get('/inspire/my/collects')
+export const getMyCollects = (page = 1, size = 20) =>
+  request.get('/inspire/my/collects', { params: { page, size } })
 export const createInspire = (data) => request.post('/inspire', data)
 export const updateInspire = (id, data) => request.put(`/inspire/${id}`, data)
 export const deleteInspire = (id) => request.delete(`/inspire/${id}`)
@@ -106,8 +111,9 @@ export const moveCollectToFolder = (inspireId, folderId) => request.put(`/inspir
 export const uploadFromUrl = (url) => request.post('/file/upload-from-url', { url })
 
 // ===== 分类（两级）与 AI 探索词云 =====
-export const getCategoryTree = () => request.get('/inspire/public/categories')
-export const getWordCloud = () => request.get('/inspire/public/word-cloud')
+// 分类与词云基本不变又被多页反复请求，走 5 分钟内存缓存 + 并发去重
+export const getCategoryTree = () => cachedGet('/inspire/public/categories')
+export const getWordCloud = () => cachedGet('/inspire/public/word-cloud')
 
 export const adminCategoryList = () => request.get('/admin/category/list')
 export const adminCreateCategory = (data) => request.post('/admin/category', data)

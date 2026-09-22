@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分页设计 · 4 个方案对比</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 16px 60px; background:#f5f8f7; color:#1f2937;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width: 980px; margin:0 auto; }
+  h1 { font-size:18px; margin:0 0 6px; }
+  .hint { font-size:13px; color:#6b7280; line-height:1.75; margin-bottom:20px; }
+  .block { background:#fff; border:1px solid #e6f2ef; border-radius:16px; padding:16px 18px; margin-bottom:18px; }
+  .block h2 { font-size:14.5px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+  .block h2 em { font-style:normal; font-size:11.5px; font-weight:400; color:#8a94a6; }
+  .block .desc { font-size:12.5px; color:#8a94a6; margin-bottom:14px; line-height:1.7; }
+
+  /* 模拟列表 */
+  .mini-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .mini { display:flex; gap:10px; align-items:center; padding:10px 12px; border:1px solid #eef4f2; border-radius:10px; }
+  .mini .th { width:46px; height:46px; border-radius:8px; flex:0 0 auto;
+    background:linear-gradient(135deg,#dff0e8,#cfe7dd); }
+  .mini .tt { font-size:13px; font-weight:600; margin-bottom:4px; }
+  .mini .mm { font-size:11.5px; color:#9aa3b2; }
+
+  /* 通用按钮 */
+  .pg-btn { min-width:30px; height:30px; padding:0 9px; border:1px solid #e3ecea; background:#fff;
+    border-radius:8px; font-family:inherit; font-size:12.5px; color:#5b6b68; cursor:pointer; }
+  .pg-btn:hover { border-color:#a8dcd2; color:#0f766e; }
+  .pg-btn.on { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:700; }
+  .pg-btn.dots { border:none; background:transparent; cursor:default; color:#b6c2c0; }
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .spacer { flex:1; }
+  .tiny { font-size:11.5px; color:#9aa3b2; }
+  select.pg-sel { height:30px; border:1px solid #e3ecea; border-radius:8px; font-family:inherit; font-size:12.5px; color:#5b6b68; }
+
+  /* A 紧凑页码 */
+  .page-num { display:flex; align-items:center; gap:6px; }
+
+  /* B 加载更多 */
+  .load-more { width:100%; height:38px; border:1px dashed #cfe0dc; background:#fafdfc;
+    border-radius:10px; font-family:inherit; font-size:13px; color:#0f766e; cursor:pointer; }
+  .load-more:hover { background:#f2faf8; border-color:#a8dcd2; }
+  .progress-line { height:4px; border-radius:99px; background:#eef4f2; overflow:hidden; margin-top:10px; }
+  .progress-line i { display:block; height:100%; width:25%; background:#0f766e; }
+
+  /* C 区间导航 */
+  .range-chip { padding:5px 12px; border:1px solid #e3ecea; border-radius:999px; background:#fff;
+    font-size:12.5px; color:#5b6b68; cursor:pointer; }
+  .range-chip.on { background:#0f766e; border-color:#0f766e; color:#fff; }
+
+  /* D 极简 */
+  .pager-slim { display:flex; align-items:center; gap:10px; }
+  .pager-slim .nav { width:32px; height:32px; border-radius:50%; border:1px solid #e3ecea;
+    background:#fff; cursor:pointer; font-size:15px; color:#5b6b68; }
+  .pager-slim .nav:hover { border-color:#a8dcd2; color:#0f766e; }
+  .pager-slim .cur { font-size:13px; color:#374151; }
+  .pager-slim .cur b { color:#0f766e; }
+
+  .rec { margin-top:20px; background:#f0f9f6; border:1px solid #d8ece5; border-radius:14px; padding:14px 16px;
+    font-size:13px; color:#3c5c56; line-height:1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>列表分页 · 4 个设计方案</h1>
+  <div class="hint">
+    现在的分页在页码多的时候会铺满一整行（比如 40 页），又长又难看。下面 4 个方案都能解决，
+    风格差别比较大，你挑一个（个人页和收藏夹页可以各选一个）。
+  </div>
+
+  <!-- A -->
+  <div class="block">
+    <h2>A · 紧凑页码 + 省略号 <em>最稳、最通用</em></h2>
+    <div class="desc">只显示「首页、上一页、当前页附近、末页」，中间用省略号折叠。页码永远只占一行，不会随总数变长。</div>
+    <div class="mini-list" id="listA"></div>
+    <div class="row">
+      <div class="page-num">
+        <button class="pg-btn">首页</button>
+        <button class="pg-btn">‹</button>
+        <button class="pg-btn">1</button>
+        <button class="pg-btn dots">…</button>
+        <button class="pg-btn">8</button>
+        <button class="pg-btn on">9</button>
+        <button class="pg-btn">10</button>
+        <button class="pg-btn dots">…</button>
+        <button class="pg-btn">40</button>
+        <button class="pg-btn">›</button>
+        <button class="pg-btn">末页</button>
+      </div>
+      <div class="spacer"></div>
+      <span class="tiny">共 40 页 · 386 条</span>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="block">
+    <h2>B · 加载更多 + 进度 <em>最适合「我的发布」这种长列表</em></h2>
+    <div class="desc">不分页，一屏一屏往下加载。底部一个按钮 + 一条进度，滚到底自动加载也可以。手机上体验最好。</div>
+    <div class="mini-list" id="listB"></div>
+    <button class="load-more">↓ 加载更多（已显示 40 / 386 条）</button>
+    <div class="progress-line"><i></i></div>
+  </div>
+
+  <!-- C -->
+  <div class="block">
+    <h2>C · 区间分段 <em>页数极多时的替代方案</em></h2>
+    <div class="desc">不按页码，按「每 10 页一段」分成区间；适合几百页的场景。对正常几十页来说反而多一次点击。</div>
+    <div class="mini-list" id="listC"></div>
+    <div class="row">
+      <span class="range-chip on">1 - 10 页</span>
+      <span class="range-chip">11 - 20 页</span>
+      <span class="range-chip">21 - 30 页</span>
+      <span class="range-chip">31 - 40 页</span>
+      <div class="spacer"></div>
+      <span class="tiny">当前第 9 页</span>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="block">
+    <h2>D · 极简「‹ 9 / 40 ›」 <em>最克制</em></h2>
+    <div class="desc">只留左右箭头和「当前页 / 总页数」，配一条进度。视觉最干净，但跳页不方便。</div>
+    <div class="mini-list" id="listD"></div>
+    <div class="row">
+      <div class="pager-slim">
+        <button class="nav">‹</button>
+        <span class="cur">第 <b>9</b> / 40 页</span>
+        <button class="nav">›</button>
+      </div>
+      <div class="spacer"></div>
+      <span class="tiny">每页 10 条 · 共 386 条</span>
+    </div>
+    <div class="progress-line"><i style="width:22%"></i></div>
+  </div>
+
+  <div class="rec">
+    <b>我的建议</b><br>
+    · <b>个人页「我的发布」</b>：选 <b>B</b>。你已经上了虚拟列表，本身就是往下滚的场景，再配分页反而割裂；B 和虚拟列表也是天然搭的。<br>
+    · <b>收藏夹列表</b>：选 <b>A</b>。收藏夹内容相对少、需要来回找，页码 + 跳转更直接。<br>
+    · <b>D</b> 适合放在详情页那种"上一条/下一条"的场景，不适合列表。<br>
+    · <b>C</b> 只有在页码上百时才值得，你这个量级用不上。
+  </div>
+</div>
+
+<script>
+  const TITLES = ['小户型收纳清单：有这几样就够了','一人食快手菜｜我的真实体验','秋日露营复盘：做对了什么，也踩过哪些坑','通勤穿搭的6个实用思路','手机摄影入门：从零开始的完整记录']
+  const TAGS = ['家居','美食','旅行','摄影','穿搭']
+  function fill(id, n) {
+    document.getElementById(id).innerHTML = Array.from({length:n}, (_,i)=>`
+      <div class="mini">
+        <div class="th"></div>
+        <div>
+          <div class="tt">${TITLES[i % TITLES.length]}</div>
+          <div class="mm">${TAGS[i % TAGS.length]} · 9月${(i%27)+1}日 · 👁 ${30 + i*37}</div>
+        </div>
+      </div>`).join('')
+  }
+  fill('listA', 3); fill('listB', 4); fill('listC', 3); fill('listD', 3)
+</script>
+</body>
+</html>

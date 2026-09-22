@@ -18,4 +18,13 @@ fi
 echo "==> 启动容器（保留数据卷）…"
 docker compose up -d --build
 docker compose ps
-echo "==> 完成。前端本地开发： cd frontend && npm run dev"
+
+# 前端：重新打包 +（重新）启动 dev server
+if [[ "${SKIP_FRONTEND:-0}" != "1" ]]; then
+  echo "==> 构建并启动前端 …"
+  bash "$(dirname "$0")/frontend-up.sh"
+else
+  echo "==> 已跳过前端（SKIP_FRONTEND=1）"
+fi
+
+echo "==> 完成。"

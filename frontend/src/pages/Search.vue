@@ -51,7 +51,15 @@
       <div v-if="loadingHot" class="hot-card-list"><div v-for="n in 3" :key="n" class="hot-card"><div class="card-img skeleton-img"></div><div class="card-content"><div class="s-line s-w-60"></div><div class="s-line s-w-90"></div></div></div></div>
       <div v-else class="hot-card-list">
         <div class="hot-card" v-for="item in hotList" :key="item.id" @click="goDetail(item.id)">
-          <div class="card-img"><img loading="lazy" :src="item.img || 'https://picsum.photos/id/102/300/160'" /></div>
+          <div class="card-img">
+            <img
+              loading="lazy"
+              decoding="async"
+              :src="thumbOf(item.img) || 'https://picsum.photos/id/102/300/160'"
+              :srcset="srcsetOf(item.img)"
+              sizes="(max-width: 640px) 45vw, 300px"
+            />
+          </div>
           <div class="card-content">
             <div class="card-top"><h3 class="card-title">{{ item.title }}</h3><span class="heat">{{ item.heat }} 热度</span></div>
             <p class="card-desc">{{ item.content || item.title }}</p>
@@ -89,6 +97,7 @@ import InspireCard from '@/components/InspireCard.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { searchInspires, getInspireList, collectInspire, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
+import { thumbOf, srcsetOf } from '@/utils/media.js'
 const router = useRouter()
 const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
 const goCreate = () => {

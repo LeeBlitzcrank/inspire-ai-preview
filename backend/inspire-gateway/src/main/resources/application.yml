@@ -122,7 +122,7 @@ inspire:
     # 6. 文档          /swagger-ui/**, /v3/api-docs/**
     # 7. 匿名公开接口   /api/inspire/public/**, /api/search/public/**, /api/admin/public/**
     # ====================================================================
-    white-list: /api/auth/login,/api/auth/register,/api/auth/refresh,/api/auth/logout,/api/auth/forgot-password,/api/auth/reset-password,/api/admin/login,/api/file/poster-cover,/uploads/**,/favicon.ico,/actuator/health/**,/actuator/info,/swagger-ui/**,/v3/api-docs/**,/api/inspire/public/**,/api/search/public/**,/api/admin/public/**
+    white-list: /api/auth/login,/api/auth/register,/api/auth/refresh,/api/auth/logout,/api/auth/forgot-password,/api/auth/reset-password,/api/admin/login,/api/file/poster-cover,/api/file/view,/uploads/**,/favicon.ico,/actuator/health/**,/actuator/info,/swagger-ui/**,/v3/api-docs/**,/api/inspire/public/**,/api/search/public/**,/api/admin/public/**
 
 logging:
   level:
