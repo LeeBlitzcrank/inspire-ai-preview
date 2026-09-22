@@ -718,7 +718,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                             .contentType("image/jpeg")
                             .build());
                 }
-                demoImageUrls.add(cdnDomain.replaceAll("/+$", "") + "/" + key);
+                demoImageUrls.add(cdnDomain.replaceAll("/+$", "") + "/" + key + "?v=2");
             } catch (Exception e) {
                 log.warn("[DemoSeeder] 演示图生成失败 key={}: {}", key, e.getMessage());
             }

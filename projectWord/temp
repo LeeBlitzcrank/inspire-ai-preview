@@ -1172,4 +1172,31 @@ jev
 
 1、当前隧道启动需要我自己手动启动，可以随项目去启动么？
 2、目前生产和本地有的时候图片都是403
+3、ai配图时
+images.unsplash.com/photo-1773332611628-9e1bdce4881b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&
+ixid=M3w5OTM3NTZ8MXwxfHNlYXJjaHwxfHxpbnNwaXJhdGlvbnxlbnwwfHx8fDE3OTAwOTk0MTB8MA&ixlib=rb-4.1.0&q=80&w=400:1
+ GET https://images.unsplash.com/photo-1773332611628-9e1bdce4881b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5OTM3NTZ8MXwxfHNlYXJjaHwxfHxpbnNwaXJhdGlvbnxlbnwwfHx8fDE3OTAwOTk0MTB8MA&ixlib=rb-4.1.0&q=80&w=400 net::ERR_CONNECTION_CLOSED
 
+
+1、Request URL
+  https://img.20sherry.com/upload/demo/4.jpg
+  Request Method
+  GET
+  Status Code
+  403 Forbidden
+  Referrer Policy
+  strict-origin-when-cross-origin
+2、 Request URL
+   https://ai.20sherry.com/api/file/poster-cover?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1564410267841-915d8e4d71ea%3Fcrop%3Dentropy%26cs%3Dtinysrgb%26fit%3Dmax%26fm%3Djpg%26ixid%3DM3w5OTM3NTZ8MHwxfHNlYXJjaHw1fHxpbnNwaXJhdGlvbnxlbnwwfHx8fDE3OTAwOTk0MTB8MA%26ixlib%3Drb-4.1.0%26q%3D80%26w%3D400
+   Request Method
+   GET
+   Status Code
+   502 Bad Gateway
+   Remote Address
+   127.0.0.1:6789
+   Referrer Policy
+   strict-origin-when-cross-origin
+
+   1、从我发布的灵感点击灵感详情渲染有问题， （偶发事件）
+   2、之前种子数据 是否有导入es等这些。我之前说的，虚拟数据一定要按照用户真实的样貌，贯穿整个系统。
+    3、GET https://fonts.gstatic.com/s/mashanzheng/v18/NaPecZTRCLxvwo41b4gvzkXadMPmDaZRbrw.woff2 net::ERR_CONNECTION_CLOSED

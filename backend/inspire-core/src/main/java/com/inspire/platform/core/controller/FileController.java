@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -246,38 +247,49 @@ public class FileController {
                 return ResponseEntity.badRequest().build();
             }
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            if ("https".equalsIgnoreCase(protocol)) {
-                SSLSocketFactory ssf = getTrustAllSslFactory();
-                if (ssf != null && conn instanceof HttpsURLConnection httpsConn) {
-                    httpsConn.setSSLSocketFactory(ssf);
-                    httpsConn.setHostnameVerifier((h, session) -> true);
+            Exception lastException = null;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                HttpURLConnection conn = null;
+                try {
+                    conn = (HttpURLConnection) url.openConnection();
+                    if ("https".equalsIgnoreCase(protocol)) {
+                        SSLSocketFactory ssf = getTrustAllSslFactory();
+                        if (ssf != null && conn instanceof HttpsURLConnection httpsConn) {
+                            httpsConn.setSSLSocketFactory(ssf);
+                            httpsConn.setHostnameVerifier((h, session) -> true);
+                        }
+                    }
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                    conn.setConnectTimeout(8000);
+                    conn.setReadTimeout(15000);
+                    conn.connect();
+                    if (conn.getResponseCode() != 200) {
+                        lastException = new IOException("upstream status " + conn.getResponseCode());
+                        continue;
+                    }
+                    String contentType = conn.getContentType();
+                    byte[] bytes;
+                    try (InputStream in = conn.getInputStream()) {
+                        bytes = in.readAllBytes();
+                    }
+                    if (bytes.length == 0 || bytes.length > 12 * 1024 * 1024) {
+                        return ResponseEntity.status(413).build();
+                    }
+                    if (contentType == null || !contentType.startsWith("image/")) {
+                        contentType = "image/jpeg";
+                    }
+                    return ResponseEntity.ok()
+                            .header("Access-Control-Allow-Origin", "*")
+                            .header("Cache-Control", "public, max-age=86400")
+                            .contentType(MediaType.parseMediaType(contentType))
+                            .body(bytes);
+                } catch (Exception e) {
+                    lastException = e;
+                } finally {
+                    if (conn != null) conn.disconnect();
                 }
             }
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(15000);
-            conn.connect();
-            if (conn.getResponseCode() != 200) {
-                return ResponseEntity.status(502).build();
-            }
-            String contentType = conn.getContentType();
-            byte[] bytes;
-            try (InputStream in = conn.getInputStream()) {
-                bytes = in.readAllBytes();
-            }
-            conn.disconnect();
-            if (bytes.length == 0 || bytes.length > 12 * 1024 * 1024) {
-                return ResponseEntity.status(413).build();
-            }
-            if (contentType == null || !contentType.startsWith("image/")) {
-                contentType = "image/jpeg";
-            }
-            return ResponseEntity.ok()
-                    .header("Access-Control-Allow-Origin", "*")
-                    .header("Cache-Control", "public, max-age=86400")
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .body(bytes);
+            throw lastException == null ? new IOException("image fetch failed") : lastException;
         } catch (Exception e) {
             log.warn("海报封面代理失败: {}", e.getMessage());
             return ResponseEntity.status(502).build();

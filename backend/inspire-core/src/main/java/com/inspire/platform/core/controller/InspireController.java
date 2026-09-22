@@ -3,6 +3,7 @@ package com.inspire.platform.core.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.config.MinioConfig;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.entity.CollectFolder;
@@ -14,11 +15,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PostConstruct;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
+import io.minio.StatObjectArgs;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.security.MessageDigest;
+import java.time.Duration;
+import java.util.HexFormat;
 
 @Tag(name = "灵感核心", description = "灵感列表、详情、创建、收藏、点赞")
 @RestController
@@ -28,9 +36,14 @@ import java.util.Map;
 public class InspireController {
 
     private final InspireService inspireService;
+    private final MinioClient minioClient;
+    private final MinioConfig minioConfig;
 
     @Value("${inspire.unsplash.access-key:}")
     private String unsplashAccessKey;
+
+    @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
+    private String cdnDomain;
 
     private static final java.net.http.HttpClient HTTP_CLIENT = java.net.http.HttpClient.newBuilder()
             .version(java.net.http.HttpClient.Version.HTTP_1_1)
@@ -352,7 +365,66 @@ public class InspireController {
                 urls.add("https://picsum.photos/seed/" + (seed + i) + "/400/300");
             }
         }
-        return Result.success(urls);
+        // 外部图源在国内网络下经常 ERR_CONNECTION_CLOSED。
+        // 首次使用后下载进 MinIO，之后直接返回 img.20sherry.com 地址。
+        java.util.List<String> cached = urls.parallelStream()
+                .map(this::cacheRemoteImage)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!cached.isEmpty()) {
+            return Result.success(cached);
+        }
+
+        // 全部缓存失败时才退回实时代理，保证接口仍可用。
+        java.util.List<String> proxied = urls.stream()
+                .map(url -> "/api/file/poster-cover?url="
+                        + java.net.URLEncoder.encode(url, java.nio.charset.StandardCharsets.UTF_8))
+                .toList();
+        return Result.success(proxied);
+    }
+
+    private String cacheRemoteImage(String sourceUrl) {
+        try {
+            String hash = HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(sourceUrl.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+            ).substring(0, 40);
+            String key = "upload/ai-suggest/" + hash + ".jpg";
+            String cdnUrl = cdnDomain.replaceAll("/+$", "") + "/" + key;
+
+            try {
+                minioClient.statObject(StatObjectArgs.builder()
+                        .bucket(minioConfig.getBucket())
+                        .object(key)
+                        .build());
+                return cdnUrl;
+            } catch (Exception ignored) {
+                // 尚未缓存，继续下载
+            }
+
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(sourceUrl))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("User-Agent", "Mozilla/5.0 (compatible; InspireAI/1.0)")
+                    .GET()
+                    .build();
+            java.net.http.HttpResponse<byte[]> resp = HTTP_CLIENT.send(
+                    req, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            if (resp.statusCode() != 200 || resp.body() == null || resp.body().length == 0) {
+                return null;
+            }
+
+            byte[] bytes = resp.body();
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioConfig.getBucket())
+                    .object(key)
+                    .stream(new java.io.ByteArrayInputStream(bytes), bytes.length, -1)
+                    .contentType("image/jpeg")
+                    .build());
+            return cdnUrl;
+        } catch (Exception e) {
+            log.warn("AI配图缓存失败: url={}, error={}", sourceUrl, e.getMessage());
+            return null;
+        }
     }
 
 }

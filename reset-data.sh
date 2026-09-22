@@ -46,6 +46,7 @@ docker exec inspire-minio mc alias set local http://localhost:9000 minioadmin mi
 docker exec inspire-minio mc mb local/inspire-img || true
 docker exec inspire-minio mc version enable local/inspire-img || true
 bash "$(dirname "$0")/docker/minio/init-public-policy.sh"
+bash "$(dirname "$0")/docker/cloudflare/start-tunnel.sh"
 
 docker compose ps
 
