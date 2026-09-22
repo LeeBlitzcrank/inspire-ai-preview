@@ -6,6 +6,7 @@ import com.inspire.platform.core.dto.image.UploadImageVO;
 import com.inspire.platform.core.entity.UploadImage;
 import com.inspire.platform.core.mapper.UploadImageMapper;
 import com.inspire.platform.core.service.ImageUploadService;
+import com.inspire.platform.core.service.ImageVariantService;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -26,6 +27,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -68,16 +70,19 @@ public class ImageUploadServiceImpl implements ImageUploadService {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final UploadImageMapper uploadImageMapper;
+    private final ImageVariantService imageVariantService;
 
     /** 文档 7.1 节：CDN 域名（不含末尾斜杠） */
     @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
     private String cdnDomain;
 
     public ImageUploadServiceImpl(MinioClient minioClient, MinioConfig minioConfig,
-                                   UploadImageMapper uploadImageMapper) {
+                                   UploadImageMapper uploadImageMapper,
+                                   ImageVariantService imageVariantService) {
         this.minioClient = minioClient;
         this.minioConfig = minioConfig;
         this.uploadImageMapper = uploadImageMapper;
+        this.imageVariantService = imageVariantService;
     }
 
     // ========================================================================
@@ -110,8 +115,9 @@ public class ImageUploadServiceImpl implements ImageUploadService {
         // ---- 上传清洗后的图片到 MinIO（文档5.2节第5步） ----
         uploadToMinio(fileKey, cleanedBytes, getMimeType(ext));
 
-        // ---- 拼接 CDN 地址 ----
-        String cdnUrl = cdnDomain + "/" + fileKey;
+        // ---- 生成多尺寸 WebP，并优先把 800px 版本作为详情图 ----
+        Map<Integer, String> variants = imageVariantService.uploadMinioVariants(fileKey, cleanedBytes);
+        String cdnUrl = variants.getOrDefault(800, cdnDomain + "/" + fileKey);
 
         // ---- 元数据入库（文档5.2节第7步） ----
         UploadImage record = new UploadImage();

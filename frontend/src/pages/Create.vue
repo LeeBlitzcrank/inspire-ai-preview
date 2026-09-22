@@ -134,7 +134,7 @@
             @click="selectedImage = img"
           >
             <video v-if="isVideoUrl(img)" :src="img" muted playsinline preload="metadata"></video>
-            <img v-else loading="lazy" :src="img" alt="" />
+            <img v-else loading="lazy" decoding="async" :src="thumbOf(img, 400)" alt="" />
             <span v-if="isVideoUrl(img)" class="video-badge">▶</span>
             <div v-if="imageProgress[img] !== undefined" class="thumb-mask">{{ imageProgress[img] }}%</div>
             <span class="del" @click.stop="removeImage(idx)">✕</span>
@@ -199,7 +199,7 @@
           <div v-if="imageSuggestions.length" class="suggest-grid">
             <div v-for="(url, i) in imageSuggestions" :key="i" class="suggest-img"
                  :class="{ selected: selectedSuggests.includes(url) }" @click="toggleSuggestPick(url)">
-              <img :src="url" alt="" />
+              <img :src="thumbOf(url, 400)" alt="" loading="lazy" decoding="async" />
               <span class="check">✓</span>
             </div>
           </div>
@@ -243,6 +243,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createInspire, updateInspire, getInspireDetail, exploreInspiration, uploadFile, uploadFromUrl, getUserInfo, suggestImages as suggestImagesApi, compressVideo, trimVideo, getWordCloud, getCategoryTree } from '@/api/inspire.js'
 import { autoFormatHtml } from '@/utils/autoFormat.js'
+import { thumbOf } from '@/utils/media.js'
 const router = useRouter()
 const route = useRoute()
 const editId = computed(() => route.params.id)

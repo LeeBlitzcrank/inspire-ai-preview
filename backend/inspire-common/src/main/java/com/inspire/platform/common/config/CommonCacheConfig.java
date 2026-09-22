@@ -58,7 +58,8 @@ public class CommonCacheConfig {
                 "publicList", base.entryTtl(Duration.ofMinutes(1)),
                 "recommend", base.entryTtl(Duration.ofMinutes(1)),
                 "categories", base.entryTtl(Duration.ofMinutes(10)),
-                "wordCloud", base.entryTtl(Duration.ofMinutes(10))
+                "wordCloud", base.entryTtl(Duration.ofMinutes(10)),
+                "suggestImages", base.entryTtl(Duration.ofHours(24))
         );
 
         return RedisCacheManager.builder(factory)

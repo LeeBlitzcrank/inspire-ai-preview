@@ -5,17 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 生产性能优化">
-      <change afterPath="$PROJECT_DIR$/docker/cloudflare/start-tunnel.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/config/CommonCacheConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/config/CommonCacheConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/FileController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/ImageUploadServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/ImageUploadServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/cloudflare/worker.js" beforeDir="false" afterPath="$PROJECT_DIR$/docker/cloudflare/worker.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker/minio/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker/minio/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/media.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/media.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/生产性能优化操作清单.md" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/生产性能优化操作清单.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reset-data.sh" beforeDir="false" afterPath="$PROJECT_DIR$/reset-data.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start.sh" beforeDir="false" afterPath="$PROJECT_DIR$/start.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -186,15 +193,7 @@
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
       <workItem from="1789909706268" duration="17014000" />
-      <workItem from="1789976086790" duration="41754000" />
-    </task>
-    <task id="LOCAL-00022" summary="init 首页推荐卡片左滑右滑&amp;首页简化">
-      <option name="closed" value="true" />
-      <created>1783050297554</created>
-      <option name="number" value="00022" />
-      <option name="presentableId" value="LOCAL-00022" />
-      <option name="project" value="LOCAL" />
-      <updated>1783050297554</updated>
+      <workItem from="1789976086790" duration="43096000" />
     </task>
     <task id="LOCAL-00023" summary="init 收藏夹&amp;私信系统服务开发">
       <option name="closed" value="true" />
@@ -580,7 +579,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790099084592</updated>
     </task>
-    <option name="localTasksCounter" value="71" />
+    <task id="LOCAL-00071" summary="feat(create): 生产性能优化">
+      <option name="closed" value="true" />
+      <created>1790101231706</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1790101231706</updated>
+    </task>
+    <option name="localTasksCounter" value="72" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

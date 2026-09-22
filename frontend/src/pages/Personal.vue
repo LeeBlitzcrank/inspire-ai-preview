@@ -269,6 +269,7 @@ import { getUserInfo, getMyInspires, getMyCollects,
          getCollectFolders, getCollectListByFolder, getFollowing } from '@/api/inspire.js'
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
 import { randomNickname } from '@/utils/nickname.js'
+import { thumbOf } from '@/utils/media.js'
 import { useAuthStore } from '@/stores/auth'
 import { THEMES, currentTheme, applyTheme } from '@/utils/theme.js'
 const auth = useAuthStore()
@@ -428,8 +429,9 @@ const firstImage = (item) => {
 const thumbStyle = (item, idx) => {
   const url = firstImage(item)
   if (url) {
+    const displayUrl = thumbOf(url, 200)
     return {
-      backgroundImage: `url("${url}")`,
+      backgroundImage: `url("${displayUrl}")`,
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }

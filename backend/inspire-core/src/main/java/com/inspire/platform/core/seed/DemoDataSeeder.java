@@ -20,6 +20,7 @@ import com.inspire.platform.core.mapper.InspireMainMapper;
 import com.inspire.platform.core.mapper.LikeMapper;
 import com.inspire.platform.core.mapper.MessageConversationMapper;
 import com.inspire.platform.core.mapper.MessageMapper;
+import com.inspire.platform.core.service.ImageVariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -79,6 +80,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MessageMapper messageMapper;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
+    private final ImageVariantService imageVariantService;
 
     @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
     private String cdnDomain;
@@ -718,7 +720,9 @@ public class DemoDataSeeder implements ApplicationRunner {
                             .contentType("image/jpeg")
                             .build());
                 }
-                demoImageUrls.add(cdnDomain.replaceAll("/+$", "") + "/" + key + "?v=2");
+                Map<Integer, String> variants = imageVariantService.ensureMinioVariants(key);
+                demoImageUrls.add(variants.getOrDefault(
+                        800, cdnDomain.replaceAll("/+$", "") + "/" + key + "?v=2"));
             } catch (Exception e) {
                 log.warn("[DemoSeeder] 演示图生成失败 key={}: {}", key, e.getMessage());
             }

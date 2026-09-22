@@ -99,7 +99,7 @@
            @mousemove="onSwipeMove" @touchmove="onSwipeMove"
            @mouseup="onSwipeEnd" @touchend="onSwipeEnd"
            @click="goDetailSwipe">
-        <img v-if="currentCard && currentCard.img" :src="currentCard.img" class="card-bg">
+        <img v-if="currentCard && currentCard.img" :src="thumbOf(currentCard.img)" class="card-bg">
         <div v-else class="card-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div>
         <div class="card-mask">
           <span class="tag-label" :class="currentCard.type">{{ currentCard.tag }}</span>
@@ -149,6 +149,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getInspireList, collectInspire, getRecommendList, getFollowingFeed, getFollowing, getUnreadCount, getCollectFolders, createCollectFolder, collectToFolder, getCategoryTree } from '@/api/inspire.js'
 import { startConversation } from '@/api/message.js'
+import { thumbOf } from '@/utils/media.js'
 const router = useRouter()
 const unreadCount = ref(0)
 const isLogin = computed(() => auth.isLogin)
@@ -365,7 +366,7 @@ const newFolderName = ref('')
   }))
   const bgStyle = computed(() => {
     var c = currentCard.value
-    if (c && c.img) return { backgroundImage: 'url(' + c.img + ')' }
+    if (c && c.img) return { backgroundImage: 'url(' + thumbOf(c.img) + ')' }
     return { background: 'linear-gradient(135deg,#667eea,#764ba2)' }
   })
 

@@ -72,7 +72,7 @@
           @click="goDetail(row.data.id)"
         >
           <div class="cthumb" :style="thumbStyle(row.data)">
-            <img v-if="row.data.img" :src="row.data.img" alt="">
+            <img v-if="row.data.img" :src="thumbOf(row.data.img, 200)" alt="" loading="lazy" decoding="async">
           </div>
           <div class="ctxt">
             <div class="ct">{{ row.data.title || '无标题' }}</div>
@@ -146,6 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import InspireCard from '@/components/InspireCard.vue'
+import { thumbOf } from '@/utils/media.js'
 import { getCollectFolders, createCollectFolder, deleteCollectFolder, renameCollectFolder, getCollectListByFolder, collectInspire, moveCollectToFolder } from '@/api/inspire.js'
 const router = useRouter()
 const folders = ref([])

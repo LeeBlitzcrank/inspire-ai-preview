@@ -8,6 +8,7 @@ import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.entity.CollectFolder;
 import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.core.service.ImageVariantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +37,7 @@ import java.util.HexFormat;
 public class InspireController {
 
     private final InspireService inspireService;
+    private final ImageVariantService imageVariantService;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
 
@@ -295,6 +297,9 @@ public class InspireController {
 
 
     @PostMapping("/public/suggest-images")
+    @org.springframework.cache.annotation.Cacheable(
+            value = "suggestImages",
+            key = "#body['keyword'] + ':' + #body['page']")
     @Operation(summary = "AI 配图建议", description = "配置了 Unsplash Access Key 则搜索真实图片，否则回退到 picsum 随机占位图")
     public Result<java.util.List<String>> suggestImages(@RequestBody Map<String, String> body) {
         String keyword = body.getOrDefault("keyword", "");
@@ -420,7 +425,8 @@ public class InspireController {
                     .stream(new java.io.ByteArrayInputStream(bytes), bytes.length, -1)
                     .contentType("image/jpeg")
                     .build());
-            return cdnUrl;
+            Map<Integer, String> variants = imageVariantService.uploadMinioVariants(key, bytes);
+            return variants.getOrDefault(800, cdnUrl);
         } catch (Exception e) {
             log.warn("AI配图缓存失败: url={}, error={}", sourceUrl, e.getMessage());
             return null;

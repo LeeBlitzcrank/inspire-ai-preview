@@ -180,6 +180,7 @@ services:
       # 演示数据生成开关（幂等：目标用户已有数据会自动跳过）
       # 需要灌数据时：INSPIRE_DEMO_SEED=true docker compose up -d --force-recreate inspire-core
       INSPIRE_DEMO_SEED: ${INSPIRE_DEMO_SEED:-false}
+      INSPIRE_IMAGE_BACKFILL_VARIANTS: ${INSPIRE_IMAGE_BACKFILL_VARIANTS:-false}
     volumes:
       - ./log/inspire-core:/logs
       # 上传文件放在项目目录内，避免 macOS 定期清理 /tmp 导致图片/视频丢失
@@ -257,6 +258,7 @@ services:
       - "8088:80"
     volumes:
       - ./docker/minio/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/minio/nginx/nginx-main.conf:/etc/nginx/nginx.conf:ro
       - nginx-cache:/var/cache/nginx/images
     depends_on:
       minio: { condition: service_started }

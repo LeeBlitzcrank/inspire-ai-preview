@@ -14,10 +14,10 @@
 
 const API_HOST = 'api.20sherry.com'
 const PUBLIC_CACHE_TTL = [
-  { prefix: '/api/inspire/public/categories', ttl: 600 },
-  { prefix: '/api/inspire/public/word-cloud', ttl: 600 },
-  { prefix: '/api/inspire/public/recommend', ttl: 60 },
-  { prefix: '/api/inspire/public/list', ttl: 60 },
+  { prefix: '/api/inspire/public/categories', ttl: 3600 },
+  { prefix: '/api/inspire/public/word-cloud', ttl: 3600 },
+  { prefix: '/api/inspire/public/recommend', ttl: 300 },
+  { prefix: '/api/inspire/public/list', ttl: 300 },
   { prefix: '/api/file/poster-cover', ttl: 86400 }
 ]
 

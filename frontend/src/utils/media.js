@@ -10,13 +10,20 @@
 export function thumbOf(url, width = 400) {
   if (!url || typeof url !== 'string') return url
 
+  // 0) 上传时已生成 _w200/_w400/_w800 WebP：直接切换到最接近的档位
+  const variant = /^(.*)_w(200|400|800)\.webp(\?.*)?$/.exec(url)
+  if (variant) {
+    const target = width <= 200 ? 200 : (width <= 400 ? 400 : 800)
+    return `${variant[1]}_w${target}.webp${variant[3] || ''}`
+  }
+
   // 1) 本站上传图 → 换成已生成好的缩略图
   const m = /^(.*\/uploads\/)(?!thumb_)([^/?]+)(\?.*)?$/.exec(url)
   if (m) return `${m[1]}thumb_${m[2]}${m[3] || ''}`
 
   // 2) 图片 CDN → 交给 Nginx 动态缩放
   if (url.includes('img.20sherry.com')) {
-    return url + (url.includes('?') ? '&' : '?') + 'w=' + width
+    return url + (url.includes('?') ? '&' : '?') + 'w=' + width + '&rs=2'
   }
 
   // 3) 站内取图接口（/api/file/view?key=...）→ 由后端 thumbnailator 出缩略图

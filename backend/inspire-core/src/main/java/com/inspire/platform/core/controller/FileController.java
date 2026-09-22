@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Arrays;
 import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
 import java.awt.image.BufferedImage;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -34,6 +35,8 @@ import java.awt.RenderingHints;
 @RequestMapping("/file")
 @Slf4j
 public class FileController {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.inspire.platform.core.service.ImageVariantService imageVariantService;
 
     /** 视频：单文件最大 50MB */
     private static final long MAX_VIDEO_SIZE = 50 * 1024 * 1024L;
@@ -92,7 +95,8 @@ public class FileController {
                 dir.mkdirs();
             }
             // 一次性读入内存，避免多次磁盘 IO
-            BufferedImage img = ImageIO.read(file.getInputStream());
+            byte[] sourceBytes = file.getBytes();
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(sourceBytes));
             if (img == null) {
                 return Result.error("图片解析失败，请上传有效图片");
             }
@@ -122,8 +126,18 @@ public class FileController {
             g2.dispose();
             ImageIO.write(thumb, format, new File(dir, "thumb_" + filename));
 
-            String url = "/uploads/" + filename;
-            return Result.success(Map.of("url", url, "thumbUrl", "/uploads/thumb_" + filename, "name", name));
+            // 生成 200/400/800 三档 WebP，列表和详情直接取对应尺寸。
+            Map<Integer, String> variants = imageVariantService.writeLocalVariants(dir, filename, sourceBytes);
+            String url = variants.getOrDefault(800, "/uploads/" + filename);
+            String thumbUrl = variants.getOrDefault(400, "/uploads/thumb_" + filename);
+            Map<String, String> result = new java.util.LinkedHashMap<>();
+            result.put("url", url);
+            result.put("thumbUrl", thumbUrl);
+            result.put("url200", variants.getOrDefault(200, thumbUrl));
+            result.put("url400", thumbUrl);
+            result.put("url800", url);
+            result.put("name", name == null ? "" : name);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("上传失败", e);
             return Result.error("上传失败: " + e.getMessage());
