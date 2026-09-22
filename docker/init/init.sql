@@ -71,11 +71,13 @@ CREATE TABLE IF NOT EXISTS `inspire_comment_0` (
   `reply_user_id` BIGINT DEFAULT 0,
   `reply_username` VARCHAR(60) DEFAULT '',
   `content` VARCHAR(500) NOT NULL,
+  `like_count` INT DEFAULT 0,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted` TINYINT DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_inspire_deleted_time` (`inspire_id`,`deleted`,`create_time`)
+  KEY `idx_inspire_deleted_time` (`inspire_id`,`deleted`,`create_time`),
+  KEY `idx_inspire_deleted_hot` (`inspire_id`,`deleted`,`like_count`,`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `inspire_comment_1` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `inspire_comment_2` LIKE `inspire_comment_0`;
@@ -86,6 +88,26 @@ CREATE TABLE IF NOT EXISTS `inspire_comment_6` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `inspire_comment_7` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `inspire_comment_8` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `inspire_comment_9` LIKE `inspire_comment_0`;
+
+-- 评论点赞明细按 user_id % 10 分表，避免用户维度高频查询跨分片
+CREATE TABLE IF NOT EXISTS `comment_like_0` (
+  `id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `comment_id` BIGINT NOT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_comment` (`user_id`,`comment_id`),
+  KEY `idx_comment_id` (`comment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `comment_like_1` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_2` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_3` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_4` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_5` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_6` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_7` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_8` LIKE `comment_like_0`;
+CREATE TABLE IF NOT EXISTS `comment_like_9` LIKE `comment_like_0`;
 CREATE TABLE IF NOT EXISTS `ai_call_log` (
   `id` BIGINT NOT NULL,
   `call_date` DATE NOT NULL,

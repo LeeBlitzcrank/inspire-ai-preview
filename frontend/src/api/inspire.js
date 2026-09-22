@@ -1,5 +1,4 @@
-import request from '@/utils/request.js'
-import { cachedGet } from '@/utils/request.js'
+import request, {cachedGet} from '@/utils/request.js'
 
 // ===== 用户认证 =====
 export const login = (data) => request.post('/auth/login', data)
@@ -71,6 +70,8 @@ export const suggestImages = (keyword, page = 1) =>
 export const getComments = (id, params) => request.get(`/inspire/${id}/comments`, { params })
 export const createComment = (id, data) => request.post(`/inspire/${id}/comment`, data)
 export const deleteComment = (id, commentId) => request.delete(`/inspire/${id}/comment/${commentId}`)
+export const likeComment = (id, commentId) => request.post(`/inspire/${id}/comment/${commentId}/like`)
+export const unlikeComment = (id, commentId) => request.delete(`/inspire/${id}/comment/${commentId}/like`)
 
 
 // ===== 内容审核 =====

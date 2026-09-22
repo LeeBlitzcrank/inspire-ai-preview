@@ -17,6 +17,7 @@ public class InspireComment {
     private Long replyUserId;
     private String replyUsername;
     private String content;
+    private Integer likeCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer deleted;

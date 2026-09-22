@@ -3,8 +3,8 @@ package com.inspire.platform.core.dto;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
+
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.List;
 
 @Data
@@ -23,6 +23,8 @@ public class CommentVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long replyUserId;
     private String replyUsername;
+    private Integer likeCount;
+    private Boolean liked;
     private LocalDateTime createTime;
     private List<CommentVO> children;
 }

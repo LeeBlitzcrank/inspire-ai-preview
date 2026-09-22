@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -29,22 +29,31 @@ public class CommentServiceImpl implements CommentService {
     private static long seq = 0L, lastTs = -1L;
 
     @Override
-    public Page<CommentVO> listByInspireId(Long inspireId, int page, int size) {
+    public Page<CommentVO> listByInspireId(Long inspireId, Long userId, int page, int size, String sort) {
+        boolean hotSort = "hot".equalsIgnoreCase(sort);
         Page<InspireComment> pg;
         ShardContext.setByInspireId(inspireId);
         try {
+            LambdaQueryWrapper<InspireComment> query = new LambdaQueryWrapper<InspireComment>()
+                    .eq(InspireComment::getInspireId, inspireId)
+                    .eq(InspireComment::getDeleted, 0);
+            if (hotSort) {
+                query.orderByDesc(InspireComment::getLikeCount)
+                        .orderByDesc(InspireComment::getCreateTime);
+            } else {
+                query.orderByDesc(InspireComment::getCreateTime);
+            }
             pg = commentMapper.selectPage(
                     new Page<>(page, size),
-                    new LambdaQueryWrapper<InspireComment>()
-                            .eq(InspireComment::getInspireId, inspireId)
-                            .eq(InspireComment::getDeleted, 0)
-                            .orderByDesc(InspireComment::getCreateTime));
+                    query);
         } finally {
             ShardContext.clear();
         }
 
         Page<CommentVO> voPage = new Page<>(pg.getCurrent(), pg.getSize(), pg.getTotal());
-        voPage.setRecords(pg.getRecords().stream().map(c -> toVO(c)).toList());
+        List<CommentVO> records = pg.getRecords().stream().map(this::toVO).toList();
+        fillLikedState(records, userId);
+        voPage.setRecords(records);
         return voPage;
     }
 
@@ -60,8 +69,27 @@ public class CommentServiceImpl implements CommentService {
         vo.setParentId(c.getParentId());
         vo.setReplyUserId(c.getReplyUserId());
         vo.setReplyUsername(c.getReplyUsername());
+        vo.setLikeCount(c.getLikeCount() == null ? 0 : c.getLikeCount());
+        vo.setLiked(false);
         vo.setCreateTime(c.getCreateTime());
         return vo;
+    }
+
+    private void fillLikedState(List<CommentVO> records, Long userId) {
+        if (userId == null || records.isEmpty()) return;
+        List<Object> args = new ArrayList<>();
+        args.add(userId);
+        records.forEach(item -> args.add(item.getId()));
+        String placeholders = String.join(",", Collections.nCopies(records.size(), "?"));
+        try {
+            Set<Long> likedIds = new HashSet<>(jdbcTemplate.queryForList(
+                    "SELECT comment_id FROM comment_like_" + Math.floorMod(userId, 10)
+                            + " WHERE user_id = ? AND comment_id IN (" + placeholders + ")",
+                    Long.class, args.toArray()));
+            records.forEach(item -> item.setLiked(likedIds.contains(item.getId())));
+        } catch (Exception e) {
+            log.warn("评论点赞状态查询失败: userId={}", userId, e);
+        }
     }
 
     @Override
@@ -89,6 +117,7 @@ public class CommentServiceImpl implements CommentService {
         c.setParentId(request.getParentId() != null ? request.getParentId() : 0L);
         c.setReplyUserId(request.getReplyUserId() != null ? request.getReplyUserId() : 0L);
         c.setReplyUsername(request.getReplyUsername() != null ? request.getReplyUsername() : "");
+        c.setLikeCount(0);
         c.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
         int commentShard = (int) Math.floorMod(request.getInspireId(), 10);
         ShardContext.setByInspireId(request.getInspireId());
@@ -152,6 +181,50 @@ public class CommentServiceImpl implements CommentService {
             ShardContext.clear();
         }
         log.info("评论删除: commentId={}, userId={}", commentId, userId);
+    }
+
+    @Override
+    @Transactional
+    public boolean like(Long userId, Long inspireId, Long commentId) {
+        int userShard = Math.floorMod(userId, 10);
+        int inserted = jdbcTemplate.update(
+                "INSERT IGNORE INTO comment_like_" + userShard
+                        + "(id, user_id, comment_id, create_time) VALUES(?,?,?,?)",
+                com.inspire.platform.core.service.impl.InspireServiceImpl.nextId(),
+                userId, commentId, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
+        if (inserted == 0) return false;
+
+        int commentShard = Math.floorMod(inspireId, 10);
+        int updated = jdbcTemplate.update(
+                "UPDATE inspire_comment_" + commentShard
+                        + " SET like_count = COALESCE(like_count, 0) + 1"
+                        + " WHERE id = ? AND inspire_id = ? AND deleted = 0",
+                commentId, inspireId);
+        if (updated == 0) {
+            jdbcTemplate.update(
+                    "DELETE FROM comment_like_" + userShard + " WHERE user_id = ? AND comment_id = ?",
+                    userId, commentId);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean unlike(Long userId, Long inspireId, Long commentId) {
+        int userShard = Math.floorMod(userId, 10);
+        int deleted = jdbcTemplate.update(
+                "DELETE FROM comment_like_" + userShard + " WHERE user_id = ? AND comment_id = ?",
+                userId, commentId);
+        if (deleted == 0) return false;
+
+        int commentShard = Math.floorMod(inspireId, 10);
+        jdbcTemplate.update(
+                "UPDATE inspire_comment_" + commentShard
+                        + " SET like_count = GREATEST(COALESCE(like_count, 0) - 1, 0)"
+                        + " WHERE id = ? AND inspire_id = ? AND deleted = 0",
+                commentId, inspireId);
+        return true;
     }
 
     private static synchronized long nextId() {

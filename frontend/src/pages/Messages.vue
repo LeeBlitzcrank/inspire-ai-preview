@@ -1,12 +1,76 @@
 <template>
-  <div class="chat-container">
-    <!-- 左侧会话列表 -->
-    <div class="sidebar-list" :class="{hide: activeConversation && isMobile}">
-      <div class="list-top">
-        <button @click="goBack" style="font-size:20px;border:none;background:none;cursor:pointer;margin-right:10px;">&larr;</button>
-        私信
-        <button @click="clearAllConversations" style="margin-left:auto;padding:4px 12px;border:none;border-radius:20px;background:#f56c6c22;color:#f56c6c;font-size:12px;cursor:pointer;">清空聊天</button>
+  <div class="messages-page scheme-a" :class="{ 'chat-mode': activeConversation }">
+    <template v-if="!activeConversation">
+      <header class="app-header">
+        <button class="icon-button" type="button" aria-label="返回" @click="goBack">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+          </svg>
+        </button>
+        <div class="header-copy">
+          <div class="app-title">私信</div>
+          <div class="app-sub">{{ conversations.length }} 个会话 · {{ unreadTotal }} 条未读</div>
+        </div>
+        <button
+          class="icon-button action-danger"
+          type="button"
+          aria-label="清空聊天"
+          :disabled="!conversations.length"
+          @click="askClearAll"
+        >
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <path d="m19 6-1 14H6L5 6" />
+            <path d="M10 11v5" />
+            <path d="M14 11v5" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="list-tools">
+        <label class="search-wrap">
+          <svg class="icon search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.6-3.6" />
+          </svg>
+          <input v-model="searchText" data-message-search placeholder="搜索昵称或消息" autocomplete="off">
+          <button
+            v-if="searchText"
+            class="search-clear"
+            type="button"
+            aria-label="清空搜索"
+            @click="searchText = ''"
+          >
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </label>
+        <div class="segment" role="tablist" aria-label="会话筛选">
+          <button
+            type="button"
+            :class="{ on: filter === 'all' }"
+            @click="filter = 'all'"
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            :class="{ on: filter === 'unread' }"
+            @click="filter = 'unread'"
+          >
+            未读{{ unreadTotal ? ` ${unreadTotal}` : '' }}
+          </button>
+        </div>
       </div>
+
       <div class="list-scroll">
         <AppState
           :state="conversationState"
@@ -16,115 +80,210 @@
           error-text="会话加载失败"
           @retry="loadConversations"
         >
-        <div v-for="c in conversations" :key="c.id" class="conv-row">
-          <div class="session-item"
-               :class="{active: activeConversation && activeConversation.id === c.id, swiping: swipedId === c.id}"
-               :style="getSwipeStyle(c.id)"
-               @click="openConversation(c)"
-               @touchstart="onTouchStart($event, c.id)"
-               @touchmove="onTouchMove($event, c.id)"
-               @touchend="onTouchEnd()"
-               @mousedown="onTouchStart($event, c.id)"
-               @mousemove="onTouchMove($event, c.id)"
-               @mouseup="onTouchEnd()"
-               @mouseleave="onTouchEnd()">
-            <div class="avatar">
-              <div style="width:100%;height:100%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;">{{ getOtherName(c)[0] }}</div>
-            </div>
-            <div class="session-info">
-              <div class="name-row">
-                <span class="username">{{ getOtherName(c) }}</span>
-                <span class="msg-time">{{ formatTime(c.lastTime) }}</span>
+          <template v-if="filteredUnreadConversations.length">
+            <div class="list-label">未读消息 · {{ filteredUnreadConversations.length }}</div>
+            <div
+              v-for="c in filteredUnreadConversations"
+              :key="`unread-${c.id}`"
+              class="conv-row"
+              role="button"
+              tabindex="0"
+              @click="openConversation(c)"
+              @keydown.enter.prevent="openConversation(c)"
+            >
+              <div class="avatar" :style="avatarStyle(c)">
+                {{ getOtherName(c)[0] }}
               </div>
-              <div class="last-text">
-                {{ c.lastContent }}
-                <span v-if="getUnread(c) > 0" class="unread-badge">{{ getUnread(c) > 99 ? '99+' : getUnread(c) }}</span>
+              <div class="conv-main">
+                <div class="conv-name-row">
+                  <span class="conv-name truncate">{{ getOtherName(c) }}</span>
+                  <span class="conv-time">{{ formatTime(c.lastTime) }}</span>
+                </div>
+                <div class="conv-preview truncate">{{ c.lastContent || '暂无消息' }}</div>
+              </div>
+              <span class="unread">{{ unreadText(getUnread(c)) }}</span>
+            </div>
+          </template>
+
+          <template v-if="filter === 'all' && filteredRegularConversations.length">
+            <div class="list-label">全部会话</div>
+            <div
+              v-for="c in filteredRegularConversations"
+              :key="`all-${c.id}`"
+              class="conv-row"
+              role="button"
+              tabindex="0"
+              @click="openConversation(c)"
+              @keydown.enter.prevent="openConversation(c)"
+            >
+              <div class="avatar" :style="avatarStyle(c)">
+                {{ getOtherName(c)[0] }}
+              </div>
+              <div class="conv-main">
+                <div class="conv-name-row">
+                  <span class="conv-name truncate">{{ getOtherName(c) }}</span>
+                  <span class="conv-time">{{ formatTime(c.lastTime) }}</span>
+                </div>
+                <div class="conv-preview truncate">{{ c.lastContent || '暂无消息' }}</div>
               </div>
             </div>
+          </template>
+
+          <div v-if="!filteredConversations.length" class="empty-list">
+            <b>{{ searchText ? '没有匹配的会话' : filter === 'unread' ? '未读消息已全部处理完' : '还没有会话' }}</b>
+            <span>{{ searchText ? '换个关键词试试' : filter === 'unread' ? '所有会话都已读' : '发起私信后会显示在这里' }}</span>
           </div>
-          <div class="swipe-delete" @click="handleDelete(c)">删除</div>
-        </div>
         </AppState>
       </div>
-    </div>
+    </template>
 
-    <!-- 右侧聊天窗口 -->
-    <div class="chat-main" :class="{show: activeConversation && isMobile}">
-      <template v-if="!activeConversation">
-        <AppEmpty class="empty-tip" icon="💬" text="请在左侧选择用户开启对话" />
-      </template>
-      <template v-else>
-        <div class="chat-header">
-          <button @click="closeChat" style="font-size:22px;border:none;background:none;cursor:pointer;margin-right:4px;">&larr;</button>
-          <div class="avatar small">
-            <div style="width:100%;height:100%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;">{{ getOtherName(activeConversation)[0] }}</div>
-          </div>
-          <span class="chat-name">{{ getOtherName(activeConversation) }}</span>
+    <template v-else>
+      <header class="chat-head">
+        <button class="icon-button" type="button" aria-label="返回会话列表" @click="backToList">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+          </svg>
+        </button>
+        <div class="avatar sm" :style="avatarStyle(activeConversation)">
+          {{ getOtherName(activeConversation)[0] }}
         </div>
-        <div class="msg-box" ref="msgBox">
-          <AppState
-            :state="messageState"
-            :rows="4"
-            empty-icon="💬"
-            empty-text="暂无消息"
-            error-text="消息加载失败"
-            @retry="reloadMessages"
+        <div class="chat-header-copy">
+          <div class="chat-title truncate">{{ getOtherName(activeConversation) }}</div>
+          <div class="chat-status truncate">{{ chatSubtitle }}</div>
+        </div>
+        <button
+          class="icon-button action-danger"
+          type="button"
+          aria-label="删除会话"
+          @click="askDelete(activeConversation)"
+        >
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <path d="m19 6-1 14H6L5 6" />
+            <path d="M10 11v5" />
+            <path d="M14 11v5" />
+          </svg>
+        </button>
+      </header>
+
+      <div ref="msgBox" class="chat-scroll">
+        <AppState
+          :state="messageState"
+          :rows="4"
+          empty-icon="💬"
+          empty-text="暂无消息"
+          error-text="消息加载失败"
+          @retry="reloadMessages"
+        >
+          <div class="day-label">{{ chatDayLabel }}</div>
+          <div
+            v-for="msg in messages"
+            :key="msg.id"
+            class="msg-row"
+            :class="{ me: isMine(msg) }"
           >
-          <div v-for="msg in messages" :key="msg.id"
-               class="msg-item" :class="msg.fromUserId === myId ? 'msg-right' : 'msg-left'">
-            <div class="msg-avatar">
-              <div :style="{width:'100%',height:'100%',background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px'}">
-                {{ msg.fromUserId === myId ? myFirstChar : getOtherName(activeConversation)[0] }}
-              </div>
+            <div
+              class="avatar message-avatar"
+              :style="isMine(msg) ? { background: '#49645c' } : avatarStyle(activeConversation)"
+            >
+              {{ isMine(msg) ? myFirstChar : getOtherName(activeConversation)[0] }}
             </div>
-            <div class="bubble-wrap">
+            <div class="msg-stack">
               <div class="bubble">{{ msg.content }}</div>
-              <div class="msg-small-time">{{ formatTimeDetail(msg.createTime) }}</div>
+              <div class="msg-time">{{ formatTimeDetail(msg.createTime) }}</div>
             </div>
           </div>
-          </AppState>
-        </div>
-        <div class="input-area">
-          <input id="inputText" v-model="inputMsg" placeholder="输入消息，回车发送" @keydown="onKeydown">
-          <button id="sendBtn" @click="sendMsg" :disabled="!inputMsg.trim()">发送</button>
-        </div>
-      </template>
-    </div>
+        </AppState>
+      </div>
 
+      <div class="composer">
+        <input
+          v-model="inputMsg"
+          data-message-input
+          placeholder="输入消息，回车发送"
+          autocomplete="off"
+          @keydown.enter.exact.prevent="sendMsg"
+        >
+        <button
+          class="send-button"
+          type="button"
+          :disabled="!inputMsg.trim() || sending"
+          @click="sendMsg"
+        >
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m22 2-7 20-4-9-9-4Z" />
+            <path d="M22 2 11 13" />
+          </svg>
+          {{ sending ? '发送中' : '发送' }}
+        </button>
+      </div>
+    </template>
+
+    <div v-if="modal" class="modal-mask" @click.self="closeModal">
+      <div class="sheet" role="dialog" aria-modal="true">
+        <h3>{{ modal.type === 'delete' ? '删除这个会话？' : '清空全部聊天？' }}</h3>
+        <p>
+          {{ modal.type === 'delete'
+            ? `将删除与「${getOtherName(modal.conversation)}」的会话和消息。`
+            : '将删除所有会话和全部消息，该操作不可恢复。' }}
+        </p>
+        <div class="sheet-actions">
+          <button class="ghost" type="button" :disabled="modalBusy" @click="closeModal">取消</button>
+          <button class="danger" type="button" :disabled="modalBusy" @click="confirmModal">
+            {{ modalBusy ? '处理中' : modal.type === 'delete' ? '删除' : '全部清空' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { getAccessToken } from '@/utils/tokenStorage.js'
-import { getConversations, getMessages, sendMessage, markMessageRead, sendByUsername, deleteConversation, startConversation, deleteAllConversations } from '@/api/message.js'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {getAccessToken} from '@/utils/tokenStorage.js'
+import {
+  deleteAllConversations,
+  deleteConversation,
+  getConversations,
+  getMessages,
+  markMessageRead,
+  sendMessage
+} from '@/api/message.js'
 
 const route = useRoute()
 const router = useRouter()
-/**
- * 当前用户 id。
- * 以 token 的 sub 为准（当前 token 才是身份来源），sessionStorage.userId 只作兜底。
- * 之前只读 sessionStorage.userId，一旦它和当前登录的 token 不一致（例如换过账号、
- * 或被其他流程写脏），算出来的收件人会变成自己，后端直接拒绝
- * 「不能给自己发消息」，表现就是「发出去了但消息窗口没反应」。
- */
+
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg,#4f9b83,#1f7560)',
+  'linear-gradient(135deg,#5b7fd6,#3956ae)',
+  'linear-gradient(135deg,#d48c61,#b9653f)',
+  'linear-gradient(135deg,#8d75bd,#6d55a3)',
+  'linear-gradient(135deg,#5f9ea0,#367b7e)',
+  'linear-gradient(135deg,#c66f8d,#9c4364)'
+]
+
 const myId = computed(() => {
   const tokens = [getAccessToken(), sessionStorage.getItem('token')]
-  for (const tk of tokens) {
-    if (!tk) continue
+  for (const token of tokens) {
+    if (!token) continue
     try {
-      const payload = JSON.parse(atob(String(tk).split('.')[1]))
+      const payload = JSON.parse(atob(String(token).split('.')[1]))
       if (payload?.sub) return String(payload.sub)
-    } catch (e) { /* 解析失败就试下一个 */ }
+    } catch (e) {
+      // 当前 token 解析失败时继续尝试兜底来源。
+    }
   }
   return String(sessionStorage.getItem('userId') || '')
 })
-const myFirstChar = (sessionStorage.getItem('username') || '我')[0]
-const isMobile = ref(window.innerWidth <= 768)
+
+const myFirstChar = computed(() => (sessionStorage.getItem('username') || '我')[0])
 const conversations = ref([])
 const conversationLoading = ref(false)
 const conversationError = ref('')
@@ -133,20 +292,102 @@ const messages = ref([])
 const messageLoading = ref(false)
 const messageError = ref('')
 const inputMsg = ref('')
+const searchText = ref('')
+const filter = ref('all')
+const modal = ref(null)
+const modalBusy = ref(false)
+const sending = ref(false)
 const msgBox = ref(null)
 let pollTimer = null
+let pollBusy = false
+
 const conversationState = computed(() => {
   if (conversationLoading.value && !conversations.value.length) return 'loading'
   if (conversationError.value && !conversations.value.length) return 'error'
   return conversations.value.length ? 'ready' : 'empty'
 })
+
 const messageState = computed(() => {
   if (messageLoading.value && !messages.value.length) return 'loading'
   if (messageError.value && !messages.value.length) return 'error'
   return messages.value.length ? 'ready' : 'empty'
 })
 
-const onResize = () => { isMobile.value = window.innerWidth <= 768 }
+const unreadTotal = computed(() => (
+  conversations.value.reduce((total, conversation) => total + getUnread(conversation), 0)
+))
+
+const filteredConversations = computed(() => {
+  const keyword = searchText.value.trim().toLowerCase()
+  return conversations.value.filter(conversation => {
+    const unread = getUnread(conversation)
+    if (filter.value === 'unread' && unread <= 0) return false
+    if (!keyword) return true
+    const name = getOtherName(conversation)
+    return [name, conversation.targetUsername, conversation.lastContent]
+      .some(value => String(value || '').toLowerCase().includes(keyword))
+  })
+})
+
+const filteredUnreadConversations = computed(() => (
+  filteredConversations.value.filter(conversation => getUnread(conversation) > 0)
+))
+
+const filteredRegularConversations = computed(() => (
+  filteredConversations.value.filter(conversation => getUnread(conversation) <= 0)
+))
+
+const chatSubtitle = computed(() => {
+  if (!activeConversation.value) return ''
+  if (activeConversation.value.targetUsername) return `@${activeConversation.value.targetUsername}`
+  return '消息会实时同步'
+})
+
+const chatDayLabel = computed(() => {
+  const first = messages.value[0]
+  if (!first?.createTime) return '今天'
+  const date = new Date(first.createTime)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) return '今天'
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return '昨天'
+  return `${date.getMonth() + 1}月${date.getDate()}日`
+})
+
+const getOtherName = (conversation) => {
+  if (!conversation) return '用户'
+  if (conversation.targetNickname) return conversation.targetNickname
+  if (conversation.targetUsername) return conversation.targetUsername
+  const otherId = String(conversation.user1Id) === String(myId.value)
+    ? conversation.user2Id
+    : conversation.user1Id
+  return otherId ? `用户${String(otherId).slice(-4)}` : '用户'
+}
+
+const getUnread = (conversation) => {
+  if (!conversation) return 0
+  const value = String(conversation.user1Id) === String(myId.value)
+    ? conversation.unreadUser1
+    : conversation.unreadUser2
+  return Number(value || 0)
+}
+
+const unreadText = (count) => count > 99 ? '99+' : String(count)
+
+const avatarStyle = (conversation) => {
+  const seed = String(getOtherName(conversation) || conversation?.id || '')
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return { background: AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length] }
+}
+
+const isMine = (message) => String(message.fromUserId) === String(myId.value)
+
+const scrollMessagesToBottom = async () => {
+  await nextTick()
+  if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
+}
 
 const loadConversations = async () => {
   if (!conversations.value.length) conversationLoading.value = true
@@ -154,6 +395,10 @@ const loadConversations = async () => {
   try {
     const res = await getConversations()
     conversations.value = res.data || []
+    if (activeConversation.value) {
+      const latest = conversations.value.find(item => String(item.id) === String(activeConversation.value.id))
+      if (latest) activeConversation.value = latest
+    }
   } catch (e) {
     conversationError.value = e?.message || 'load conversations failed'
   } finally {
@@ -161,28 +406,20 @@ const loadConversations = async () => {
   }
 }
 
-const getOtherName = (c) => {
-  if (c.targetNickname) return c.targetNickname
-  if (c.targetUsername) return c.targetUsername
-  const otherId = c.user1Id === myId.value ? c.user2Id : c.user1Id
-  return '用户' + String(otherId).slice(-4)
+const loadMessages = async (conversationId) => {
+  const res = await getMessages(conversationId)
+  return (res.data || []).reverse()
 }
 
-const getUnread = (c) => {
-  return c.user1Id === myId.value ? c.unreadUser1 : c.unreadUser2
-}
-
-const openConversation = async (c) => {
-  activeConversation.value = c
+const openConversation = async (conversation) => {
+  activeConversation.value = conversation
   messageLoading.value = true
   messageError.value = ''
   try {
-    await markMessageRead(c.id)
-    const res = await getMessages(c.id)
-    messages.value = (res.data || []).reverse()
-    await nextTick()
-    if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-    loadConversations()
+    await markMessageRead(conversation.id)
+    messages.value = await loadMessages(conversation.id)
+    await scrollMessagesToBottom()
+    await loadConversations()
   } catch (e) {
     messages.value = []
     messageError.value = e?.message || 'load messages failed'
@@ -195,277 +432,677 @@ const reloadMessages = async () => {
   if (activeConversation.value) await openConversation(activeConversation.value)
 }
 
-const closeChat = () => {
-  if (route.query.showList === '1') {
-    activeConversation.value = null
-    loadConversations()
-  } else {
-    router.back()
-  }
+const backToList = () => {
+  activeConversation.value = null
+  messages.value = []
+  messageError.value = ''
+  loadConversations()
 }
 
-/** 从会话对象里算出「对方 userId」；兼容只有 id 的兜底对象 */
-const resolveOtherId = (c) => {
-  if (!c) return null
+const goBack = () => {
+  if (route.query.showList === '1') router.push('/')
+  else router.back()
+}
+
+const resolveOtherId = (conversation) => {
+  if (!conversation) return null
   const mine = String(myId.value || '')
-  const u1 = c.user1Id != null ? String(c.user1Id) : ''
-  const u2 = c.user2Id != null ? String(c.user2Id) : ''
-  if (u1 && u2) {
-    if (!mine) return null        // 不知道我是谁就不猜，避免发给自己
-    return u1 === mine ? u2 : u1
+  const user1 = conversation.user1Id != null ? String(conversation.user1Id) : ''
+  const user2 = conversation.user2Id != null ? String(conversation.user2Id) : ''
+  if (user1 && user2) {
+    if (!mine) return null
+    return user1 === mine ? user2 : user1
   }
-  return c.targetUserId || c.otherUserId || null
+  return conversation.targetUserId || conversation.otherUserId || null
 }
 
 const sendMsg = async () => {
-  if (!inputMsg.value.trim()) return
-  // 直接进入聊天时若没找到会话，activeConversation 里可能只有 id，
-  // user1Id/user2Id 都是 undefined，这时算出来的 otherId 是 undefined，
-  // 请求会带 toUserId:"undefined" 出去，表现为「发出去了但界面没反应」。
+  const content = inputMsg.value.trim()
+  if (!content || sending.value) return
   const otherId = resolveOtherId(activeConversation.value)
   if (!otherId) {
     ElMessage.error('会话信息不完整，请从左侧会话列表重新进入')
     return
   }
+
+  sending.value = true
   try {
-    messageLoading.value = true
-    messageError.value = ''
-    await sendMessage(otherId, inputMsg.value.trim())
+    await sendMessage(otherId, content)
     inputMsg.value = ''
-    const res = await getMessages(activeConversation.value.id)
-    messages.value = (res.data || []).reverse()
-    await nextTick()
-    if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-  } catch (e) { ElMessage.error('发送失败') }
-  finally { messageLoading.value = false }
+    messages.value = await loadMessages(activeConversation.value.id)
+    await scrollMessagesToBottom()
+    loadConversations()
+  } catch (e) {
+    ElMessage.error('发送失败')
+  } finally {
+    sending.value = false
+  }
 }
 
-const onKeydown = (e) => { if (e.key === 'Enter') sendMsg() }
-
-const formatTime = (t) => {
-  if (!t) return ''
-  const d = new Date(t); const now = new Date()
-  if (d.toDateString() === now.toDateString()) return d.toTimeString().slice(0, 5)
-  const diff = (now - d) / 86400000
-  if (diff < 2) return '昨天'
-  if (diff < 7) { const days = ['日','一','二','三','四','五','六']; return '周' + days[d.getDay()] }
-  return (d.getMonth() + 1) + '/' + d.getDate()
+const askDelete = (conversation) => {
+  modal.value = { type: 'delete', conversation }
 }
 
-const formatTimeDetail = (t) => {
-  if (!t) return ''
-  const d = new Date(t)
+const askClearAll = () => {
+  if (!conversations.value.length) return
+  modal.value = { type: 'clear' }
+}
+
+const closeModal = () => {
+  if (modalBusy.value) return
+  modal.value = null
+}
+
+const confirmModal = async () => {
+  if (!modal.value || modalBusy.value) return
+  modalBusy.value = true
+  const current = modal.value
+  try {
+    if (current.type === 'delete') {
+      await deleteConversation(current.conversation.id)
+      ElMessage.success('已删除')
+      if (String(activeConversation.value?.id) === String(current.conversation.id)) {
+        activeConversation.value = null
+        messages.value = []
+        messageError.value = ''
+      }
+      await loadConversations()
+    } else {
+      await deleteAllConversations()
+      ElMessage.success('已清空')
+      conversations.value = []
+      activeConversation.value = null
+      messages.value = []
+    }
+    modal.value = null
+  } catch (e) {
+    ElMessage.error(current.type === 'delete' ? '删除失败' : '清空失败')
+  } finally {
+    modalBusy.value = false
+  }
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
   const now = new Date()
-  const hhmm = d.toTimeString().slice(0, 5)
-  if (d.toDateString() === now.toDateString()) return hhmm
+  if (date.toDateString() === now.toDateString()) return date.toTimeString().slice(0, 5)
+  const diff = (now - date) / 86400000
+  if (diff < 2) return '昨天'
+  if (diff < 7) {
+    const days = ['日', '一', '二', '三', '四', '五', '六']
+    return `周${days[date.getDay()]}`
+  }
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+const formatTimeDetail = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const hhmm = date.toTimeString().slice(0, 5)
+  if (date.toDateString() === now.toDateString()) return hhmm
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return '昨天 ' + hhmm
-  return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hhmm
+  if (date.toDateString() === yesterday.toDateString()) return `昨天 ${hhmm}`
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${hhmm}`
 }
 
-
-
-
-// 滑动删除
-const swipedId = ref(null)
-const swipeStartX = ref(0)
-const swipeCurX = ref(0)
-
-const onTouchStart = (e, convId) => {
-  // 如果已有其他会话被滑出，先复位
-  if (swipedId.value && swipedId.value !== convId) {
-    swipedId.value = null
-  }
-  swipeStartX.value = e.clientX || (e.touches && e.touches[0].clientX)
-  swipeCurX.value = swipeStartX.value
-  swipedId.value = convId
-}
-
-const onTouchMove = (e, convId) => {
-  if (swipedId.value !== convId) return
-  const cx = e.clientX || (e.touches && e.touches[0].clientX)
-  if (!cx) return
-  swipeCurX.value = cx
-}
-
-const onTouchEnd = () => {
-  const diff = swipeStartX.value - swipeCurX.value
-  if (diff > 60) {
-    // 左滑超过阈值，保持删除按钮显示
-  } else {
-    swipedId.value = null
-  }
-}
-
-const getSwipeStyle = (convId) => {
-  if (swipedId.value !== convId) return {}
-  const diff = swipeStartX.value - swipeCurX.value
-  if (diff < 0) return {}
-  const offset = Math.min(diff, 100)
-  return { transform: 'translateX(' + (-offset) + 'px)', transition: swipedId.value ? 'none' : 'transform 0.3s ease' }
-}
-
-const handleDelete = async (c) => {
+const refreshMessagesSilently = async () => {
+  if (!activeConversation.value) return
   try {
-    await ElMessageBox.confirm('确定删除与「' + getOtherName(c) + '」的会话？消息将一并删除', '提示')
-    await deleteConversation(c.id)
-    ElMessage.success('已删除')
-    swipedId.value = null
-    if (activeConversation.value && activeConversation.value.id === c.id) {
-      activeConversation.value = null
+    const latest = await loadMessages(activeConversation.value.id)
+    if (latest.length > messages.value.length) {
+      messages.value = latest
+      await scrollMessagesToBottom()
     }
-    loadConversations()
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    // 轮询失败不打断当前阅读，下一次轮询继续。
+  }
 }
 
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') return
+  loadConversations()
+  refreshMessagesSilently()
+}
 
 onMounted(async () => {
-  window.addEventListener('resize', onResize)
+  await loadConversations()
   if (route.query.convId && route.query.showList !== '1') {
-    // 直接进入聊天，加载会话以获取昵称
-    const convRes = await getConversations()
-    const convs = convRes.data || []
-    const found = convs.find(c => String(c.id) === route.query.convId)
-    const targetConv = found || { id: route.query.convId }
-    activeConversation.value = targetConv
-    messageLoading.value = true
-    messageError.value = ''
-    try {
-      const res = await getMessages(route.query.convId)
-      messages.value = (res.data || []).reverse()
-      await markMessageRead(route.query.convId)
-      await nextTick()
-      if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-    } catch (e) {
-      console.error(e)
-      messageError.value = e?.message || 'load messages failed'
-    } finally {
-      messageLoading.value = false
-    }
-  } else {
-    loadConversations()
+    const found = conversations.value.find(item => String(item.id) === String(route.query.convId))
+    await openConversation(found || { id: route.query.convId })
   }
-  pollTimer = setInterval(() => {
-    if (activeConversation.value) {
-      getMessages(activeConversation.value.id).then(res => {
-        const newMsgs = (res.data || []).reverse()
-        if (newMsgs.length > messages.value.length) {
-          messages.value = newMsgs
-          if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-        }
-      }).catch(e => console.error(e))
-    }
-    loadConversations()
+
+  pollTimer = window.setInterval(() => {
+    if (document.visibilityState !== 'visible' || pollBusy) return
+    pollBusy = true
+    Promise.allSettled([refreshMessagesSilently(), loadConversations()])
+      .finally(() => { pollBusy = false })
   }, 3000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', onResize)
-  if (pollTimer) clearInterval(pollTimer)
+  if (pollTimer) window.clearInterval(pollTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
-
-
-const goBack = () => {
-  if (route.query.showList === '1' && activeConversation.value) {
-    activeConversation.value = null
-    loadConversations()
-  } else if (route.query.showList === '1') {
-    router.push('/')
-  } else {
-    router.back()
-  }
-}
-
-const clearAllConversations = async () => {
-  try {
-    await ElMessageBox.confirm('确定清空所有聊天会话？消息将一并删除', '提示')
-    await deleteAllConversations()
-    ElMessage.success('已清空')
-    conversations.value = []
-    activeConversation.value = null
-    messages.value = []
-  } catch (e) { console.error(e) }
-}
-
 </script>
 
 <style scoped>
-*{ margin:0; padding:0; box-sizing:border-box; }
-.chat-container{
-  display:flex; height:100vh; max-width:1280px; margin:0 auto; background:#ffffff;
-}
-.sidebar-list{
-  width:340px; border-right:1px solid #eee; display:flex; flex-direction:column; flex-shrink:0;
-}
-.list-top{
-  padding:18px 22px; border-bottom:1px solid #eee; font-size:22px; font-weight:600; background:#fff; display:flex; align-items:center;
-}
-.list-scroll{ flex:1; overflow-y:auto; }
-.session-item{
-  display:flex; padding:15px 22px; gap:14px; cursor:pointer; transition:background 0.24s;
-}
-.session-item:hover{ background-color:#f8f9fc; }
-.session-item.active{ background-color:#eff4ff; }
-.avatar{
-  width:50px; height:50px; border-radius:50%; flex-shrink:0; overflow:hidden; background:#e5e7eb;
-}
-.avatar.small{ width:38px; height:38px; }
-.avatar img{ width:100%; height:100%; object-fit:cover; }
-.session-info{ flex:1; overflow:hidden; }
-.name-row{ display:flex; justify-content:space-between; margin-bottom:5px; }
-.username{ font-size:15px; font-weight:500; color:#222; }
-.msg-time{ font-size:12px; color:#999; }
-.last-text{ font-size:13px; color:#777; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.unread-badge{ display:inline-block; margin-left:6px; background:#f56c6c; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px; }
-
-.chat-main{ flex:1; display:flex; flex-direction:column; background:#f8f8fa; }
-.chat-header{
-  padding:15px 22px; border-bottom:1px solid #eee; display:flex; align-items:center; gap:12px; background:#fff;
-}
-.chat-name{ font-size:16px; font-weight:500; }
-.msg-box{ flex:1; padding:24px; overflow-y:auto; }
-.msg-item{ margin-bottom:20px; display:flex; max-width:72%; }
-.msg-left{ flex-direction:row; }
-.msg-right{ flex-direction:row-reverse; margin-left:auto; }
-.msg-avatar{
-  width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden;
-}
-.msg-left .msg-avatar{ margin-right:10px; }
-.msg-right .msg-avatar{ margin-left:10px; }
-.bubble-wrap{ display:flex; flex-direction:column; }
-.bubble{ padding:11px 16px; font-size:14px; line-height:1.6; border-radius:18px; }
-.msg-left .bubble{ background:#ffffff; border:1px solid #e8e8e8; border-top-left-radius:4px; color:#333; }
-.msg-right .bubble{ background:#6366f1; color:#fff; border-top-right-radius:4px; }
-.msg-small-time{ font-size:11px; margin-top:4px; color:#aaa; }
-.msg-right .msg-small-time{ color:#c7c9ff; text-align:right; }
-.msg-left .msg-small-time{ text-align:right; }
-
-.input-area{
-  padding:16px 22px; border-top:1px solid #eee; display:flex; gap:14px; align-items:center; background:#fff;
-}
-#inputText{
-  flex:1; padding:13px 18px; border:1px solid #ddd; border-radius:99px; outline:none; font-size:14px; transition:border 0.2s;
-}
-#inputText:focus{ border-color:#6366f1; }
-#sendBtn{
-  padding:12px 26px; border:none; border-radius:99px; background:linear-gradient(120deg,#6366f1,#a855f7); color:white; font-size:14px; cursor:pointer; transition:all 0.25s;
-}
-#sendBtn:hover{ transform:translateY(-2px); box-shadow:0 4px 12px rgba(99,102,241,0.25); }
-#sendBtn:disabled{ opacity:0.5; cursor:default; transform:none; box-shadow:none; }
-.empty-tip{ flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:15px; }
-
-@media (max-width:768px){
-  .sidebar-list{ width:100%; }
-  .sidebar-list.hide{ display:none; }
-  .chat-main{ position:fixed; top:0; left:100%; width:100%; height:100vh; transition:left 0.3s ease; background:#fff; z-index:100; }
-  .chat-main.show{ left:0; }
+.messages-page {
+  --mint: #1f8a70;
+  --mint-soft: #e8f7f2;
+  --ink: #17201d;
+  --muted: #8b9893;
+  --line: #e7eeeb;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ink);
+  background: #f7faf9;
 }
 
+.messages-page button,
+.messages-page input {
+  font: inherit;
+}
 
-.conv-row{ position:relative; overflow:hidden; }
-.session-item{ position:relative; z-index:1; background:#fff; transition:transform 0s; }
-.swipe-delete{ position:absolute; right:0; top:0; height:100%; width:80px;
-  background:#f56c6c; color:#fff; display:flex; align-items:center; justify-content:center;
-  font-size:14px; cursor:pointer; border-radius:0; z-index:0; }
+.messages-page button {
+  cursor: pointer;
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #24322e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: rgba(23, 32, 29, 0.06);
+}
+
+.icon-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.action-danger {
+  color: #b85c4b;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.app-header,
+.chat-head {
+  height: 62px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 1px solid var(--line);
+}
+
+.app-header {
+  padding-left: 8px;
+}
+
+.header-copy,
+.chat-header-copy,
+.conv-main {
+  min-width: 0;
+}
+
+.header-copy {
+  flex: 1;
+}
+
+.chat-header-copy {
+  flex: 1;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.app-sub {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.list-tools {
+  flex: 0 0 auto;
+  padding: 11px 14px 0;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.search-wrap {
+  height: 39px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e1eae7;
+  border-radius: 12px;
+  background: #fff;
+  color: #83908c;
+}
+
+.search-wrap:focus-within {
+  border-color: #8bc9b9;
+}
+
+.search-icon {
+  flex: 0 0 auto;
+}
+
+.search-wrap input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.search-wrap input::placeholder {
+  color: #a7b1ad;
+}
+
+.search-clear {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #eef3f1;
+  color: #74817d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.search-clear .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.segment {
+  display: flex;
+  gap: 4px;
+  margin-top: 11px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #edf4f1;
+}
+
+.segment button {
+  flex: 1;
+  height: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #73817c;
+  font-size: 12.5px;
+}
+
+.segment button.on {
+  background: #fff;
+  color: var(--mint);
+  font-weight: 800;
+  box-shadow: 0 1px 5px rgba(23, 60, 49, 0.07);
+}
+
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px 20px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.list-label {
+  margin: 4px 2px 8px;
+  color: #97a39f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.conv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.conv-row + .conv-row {
+  margin-top: 2px;
+}
+
+.conv-row:hover,
+.conv-row:focus-visible {
+  outline: 0;
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(31, 70, 58, 0.045);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.avatar.sm {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+}
+
+.conv-main {
+  flex: 1;
+  overflow: hidden;
+}
+
+.conv-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conv-name {
+  flex: 1;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.conv-time {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #9ba6a2;
+  font-size: 11px;
+}
+
+.conv-preview {
+  margin-top: 5px;
+  color: #75827e;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unread {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef6654;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 850;
+}
+
+.empty-list {
+  padding: 54px 20px;
+  text-align: center;
+  color: #9aa6a2;
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+
+.empty-list b {
+  display: block;
+  margin-bottom: 4px;
+  color: #53645e;
+  font-size: 15px;
+}
+
+.chat-head {
+  padding: 0 12px;
+  gap: 9px;
+}
+
+.chat-title {
+  font-size: 14.5px;
+  font-weight: 850;
+}
+
+.chat-status {
+  margin-top: 3px;
+  color: #7f8d88;
+  font-size: 11px;
+}
+
+.chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 14px 18px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(31, 138, 112, 0.06), transparent 26%),
+    #f5f9f7;
+}
+
+.day-label {
+  margin: 4px 0 18px;
+  text-align: center;
+  color: #9aa7a2;
+  font-size: 10.5px;
+}
+
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.msg-row.me {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 31px;
+  height: 31px;
+  font-size: 11px;
+}
+
+.msg-stack {
+  max-width: 73%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.msg-row.me .msg-stack {
+  align-items: flex-end;
+}
+
+.bubble {
+  padding: 10px 13px;
+  border: 1px solid #e6eeeb;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 2px 8px rgba(31, 70, 58, 0.035);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.msg-row.me .bubble {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: #fff;
+}
+
+.msg-time {
+  margin-top: 5px;
+  color: #9ca8a4;
+  font-size: 10px;
+}
+
+.composer {
+  flex: 0 0 auto;
+  padding: 10px 11px 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid var(--line);
+}
+
+.composer input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid #dfe9e5;
+  border-radius: 14px;
+  outline: 0;
+  background: #f9fbfa;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.composer input:focus {
+  border-color: #8bc9b9;
+  background: #fff;
+}
+
+.send-button {
+  height: 42px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--mint);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.send-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.modal-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(14, 28, 24, 0.34);
+}
+
+.sheet {
+  width: 100%;
+  padding: 18px 18px 20px;
+  border-radius: 22px 22px 0 0;
+  background: #fff;
+  box-shadow: 0 -18px 40px rgba(15, 35, 29, 0.18);
+}
+
+.sheet h3 {
+  margin: 0 0 7px;
+  font-size: 16px;
+}
+
+.sheet p {
+  margin: 0;
+  color: #73807c;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 17px;
+}
+
+.sheet-actions button {
+  flex: 1;
+  height: 42px;
+  border: 0;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sheet-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sheet-actions .ghost {
+  background: #eef3f1;
+  color: #52625d;
+}
+
+.sheet-actions .danger {
+  background: #ef6654;
+  color: #fff;
+}
+
+@media screen and (max-width: 620px) {
+  .search-wrap input,
+  .composer input {
+    font-size: 16px !important;
+  }
+}
 </style>

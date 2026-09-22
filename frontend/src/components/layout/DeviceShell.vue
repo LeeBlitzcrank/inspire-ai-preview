@@ -3,7 +3,7 @@
     <div ref="stageRef" class="device-stage">
     <div ref="frameRef" class="device-frame">
       <div v-if="enabled" class="device-statusbar">
-        <span class="status-time">9:41</span>
+        <span class="status-time">{{ currentTime }}</span>
         <div class="status-icons">
           <svg viewBox="0 0 20 12" aria-hidden="true">
             <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 
 const props = defineProps({
   enabled: { type: Boolean, default: true }
@@ -51,7 +51,14 @@ const viewportRef = ref(null)
 const canvasRef = ref(null)
 const stageRef = ref(null)
 const frameRef = ref(null)
+const currentTime = ref('')
 let resizeObserver = null
+let clockTimer = null
+
+function updateClock() {
+  const now = new Date()
+  currentTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
 
 function fitLayout() {
   const stage = stageRef.value
@@ -87,6 +94,8 @@ function fitLayout() {
 }
 
 onMounted(async () => {
+  updateClock()
+  clockTimer = window.setInterval(updateClock, 30000)
   await nextTick()
   fitLayout()
   if (window.ResizeObserver && stageRef.value) {
@@ -104,6 +113,7 @@ watch(() => props.enabled, async () => {
 
 onBeforeUnmount(() => {
   if (resizeObserver) resizeObserver.disconnect()
+  if (clockTimer) window.clearInterval(clockTimer)
   window.removeEventListener('resize', fitLayout)
   window.visualViewport?.removeEventListener('resize', fitLayout)
 })

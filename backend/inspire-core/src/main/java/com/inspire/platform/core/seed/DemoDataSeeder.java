@@ -1,56 +1,33 @@
 package com.inspire.platform.core.seed;
 
-import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.config.MinioConfig;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
-import com.inspire.platform.core.entity.CollectAction;
-import com.inspire.platform.core.entity.CollectFolder;
-import com.inspire.platform.core.entity.InspireComment;
-import com.inspire.platform.core.entity.InspireContent;
-import com.inspire.platform.core.entity.InspireMain;
-import com.inspire.platform.core.entity.LikeAction;
-import com.inspire.platform.core.entity.Message;
-import com.inspire.platform.core.entity.MessageConversation;
-import com.inspire.platform.core.mapper.CollectFolderMapper;
-import com.inspire.platform.core.mapper.CollectMapper;
-import com.inspire.platform.core.mapper.InspireCommentMapper;
-import com.inspire.platform.core.mapper.InspireContentMapper;
-import com.inspire.platform.core.mapper.InspireMainMapper;
-import com.inspire.platform.core.mapper.LikeMapper;
-import com.inspire.platform.core.mapper.MessageConversationMapper;
-import com.inspire.platform.core.mapper.MessageMapper;
+import com.inspire.platform.core.config.ShardContext;
+import com.inspire.platform.core.entity.*;
+import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.ImageVariantService;
 import com.inspire.platform.core.service.es.EsSyncService;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 
 /**
  * 演示数据生成器（方案 B：走后端，自己保证分表路由与计数一致）
@@ -551,6 +528,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 cm.setReplyUserId(0L);
                 cm.setReplyUsername("");
                 cm.setContent(COMMENTS[rnd.nextInt(COMMENTS.length)]);
+                cm.setLikeCount(rnd.nextInt(12));
                 cm.setCreateTime(createTime.plusMinutes(20 + rnd.nextInt(2000)));
                 ShardContext.setByInspireId(inspireId);
                 try {
@@ -653,8 +631,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
         List<Long> actors = new ArrayList<>(profiles.keySet());
         List<Object[]> batch = new ArrayList<>(need);
-        List<Long> rootIds = new ArrayList<>();
-        List<Long> rootUsers = new ArrayList<>();
+        List<Long> commentIds = new ArrayList<>();
+        List<Long> commentUsers = new ArrayList<>();
+        List<Long> commentRootIds = new ArrayList<>();
 
         LocalDateTime cursor = now().minusDays(25).withHour(8).withMinute(0).withSecond(0).withNano(0);
         long id = startId;
@@ -665,36 +644,46 @@ public class DemoDataSeeder implements ApplicationRunner {
 
             long parentId = 0L, replyUserId = 0L;
             String replyUsername = "";
-            boolean asReply = !rootIds.isEmpty() && rnd.nextInt(100) < 45;
+            boolean asReply = !commentIds.isEmpty() && rnd.nextInt(100) < 48;
             if (asReply) {
-                int idx = rnd.nextInt(rootIds.size());
-                parentId = rootIds.get(idx);
-                Long targetUser = rootUsers.get(idx);
+                int idx = rnd.nextInt(commentIds.size());
+                parentId = commentRootIds.get(idx);
+                Long targetUser = commentUsers.get(idx);
                 replyUserId = targetUser;
                 replyUsername = nicknameOf(profiles.get(targetUser), targetUser);
             }
 
             Timestamp ts = Timestamp.valueOf(cursor);
+            int likeCount = randomCommentLikes(asReply);
             batch.add(new Object[]{
                     id, inspireId, actor, nicknameOf(actorProfile, actor),
                     actorProfile == null || actorProfile[1] == null ? "" : actorProfile[1],
                     parentId, replyUserId, replyUsername,
-                    RICH_COMMENTS[rnd.nextInt(RICH_COMMENTS.length)], ts, ts
+                    RICH_COMMENTS[rnd.nextInt(RICH_COMMENTS.length)], likeCount, ts, ts
             });
-            if (!asReply) {
-                rootIds.add(id);
-                rootUsers.add(actor);
-            }
+            commentIds.add(id);
+            commentUsers.add(actor);
+            commentRootIds.add(asReply ? parentId : id);
             id++;
         }
 
         jdbcTemplate.batchUpdate(
                 "INSERT INTO inspire_comment_" + Math.floorMod(inspireId, 10)
                         + "(id, inspire_id, user_id, username, avatar, parent_id, "
-                        + "reply_user_id, reply_username, content, create_time, update_time, deleted) "
-                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,0)",
+                        + "reply_user_id, reply_username, content, like_count, create_time, update_time, deleted) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0)",
                 batch);
         return need;
+    }
+
+    private int randomCommentLikes(boolean reply) {
+        int roll = rnd.nextInt(100);
+        if (reply) {
+            return rnd.nextInt(10);
+        }
+        if (roll < 10) return 50 + rnd.nextInt(120);
+        if (roll < 42) return 12 + rnd.nextInt(38);
+        return 10 + rnd.nextInt(8);
     }
 
     private String nicknameOf(String[] profile, Long userId) {

@@ -3,7 +3,17 @@
     <header class="topbar">
       <button class="round-button" aria-label="返回" @click="goBack">‹</button>
       <span class="topbar-title">灵感手账</span>
-      <button class="round-button" aria-label="分享" @click="handleShare">···</button>
+      <div class="topbar-actions">
+        <button
+          v-if="isOwnInspire"
+          class="top-edit-button"
+          type="button"
+          @click="handleEdit"
+        >
+          编辑
+        </button>
+        <button class="round-button" aria-label="分享" @click="handleShare">···</button>
+      </div>
     </header>
 
     <AppState
@@ -62,11 +72,10 @@
           <b>{{ detail.nickname || detail.username || '灵感创作者' }}</b>
           <small>{{ publishText }}</small>
         </div>
-        <button v-if="isOwnInspire" class="follow-button" type="button" @click="handleEdit">编辑</button>
-        <button v-else-if="isLogin" class="follow-button" type="button" @click="handleToggleFollow">
+        <button v-if="!isOwnInspire && isLogin" class="follow-button" type="button" @click="handleToggleFollow">
           {{ isFollowing ? '已关注' : '关注' }}
         </button>
-        <button v-else class="follow-button" type="button" @click="requireLogin">关注</button>
+        <button v-else-if="!isOwnInspire" class="follow-button" type="button" @click="requireLogin">关注</button>
       </div>
 
       <button v-if="!isLogin" class="comment-gate" type="button" @click="requireLogin">
@@ -75,9 +84,19 @@
         <span class="comment-gate-btn">去登录</span>
       </button>
 
-      <div v-if="isLogin" class="comments-title">
-        共 <span>{{ commentTotal }}</span> 条评论 ·
-        已显示 <span>{{ loadedCommentCount }}</span>/<span>{{ commentTotal }}</span>
+      <div v-if="isLogin" class="comments-toolbar">
+        <div class="comments-title">
+          共 <span>{{ commentTotal }}</span> 条评论 ·
+          已显示 <span>{{ loadedCommentCount }}</span>/<span>{{ commentTotal }}</span>
+        </div>
+        <button
+          class="comment-sort-toggle"
+          type="button"
+          :disabled="commentLoading"
+          @click="toggleCommentSort"
+        >
+          {{ commentSort === 'hot' ? '按热度' : '按时间' }}
+        </button>
       </div>
 
       <AppState
@@ -103,11 +122,11 @@
               <span v-else>{{ avatarText(commentItem.avatar, commentItem.nickname || commentItem.username) }}</span>
             </span>
             <b>{{ commentItem.nickname || commentItem.username || '宁静小猫' }}</b>
-            <span>{{ commentItem.createTime ? formatRelativeTime(commentItem.createTime) : '' }}</span>
+            <span>{{ commentItem.createTime ? formatCommentTime(commentItem.createTime) : '' }}</span>
           </div>
           <p class="comment-text">{{ commentItem.content }}</p>
           <div class="comment-tools">
-            <span class="comment-like" :class="{ liked: commentItem.liked }" @click="likeComment(commentItem)">
+            <span class="comment-like" :class="{ liked: commentItem.liked }" @click="toggleCommentLike(commentItem)">
               ♡ {{ commentItem.likeCount ?? 0 }}
             </span>
             <span @click="replyTo(commentItem)">回复</span>
@@ -126,14 +145,14 @@
                   <span v-else>{{ avatarText(reply.avatar, reply.nickname || reply.username) }}</span>
                 </span>
                 <b>{{ reply.nickname || reply.username || '宁静小猫' }}</b>
-                <span>{{ reply.createTime ? formatRelativeTime(reply.createTime) : '' }}</span>
+                <span>{{ reply.createTime ? formatCommentTime(reply.createTime) : '' }}</span>
               </div>
               <p class="comment-text">
                 <span v-if="reply.replyUsername" class="reply-to">@{{ reply.replyUsername }}</span>
                 {{ reply.content }}
               </p>
               <div class="comment-tools">
-                <span class="comment-like" :class="{ liked: reply.liked }" @click="likeReply(reply)">
+                <span class="comment-like" :class="{ liked: reply.liked }" @click="toggleCommentLike(reply)">
                   ♡ {{ reply.likeCount ?? 0 }}
                 </span>
                 <span @click="replyTo(reply, { userId: reply.userId, username: reply.nickname || reply.username })">回复</span>
@@ -194,7 +213,7 @@
           <input
             v-model="quickCommentText"
             :readonly="!isLogin"
-            placeholder="说点什么..."
+            placeholder="说点什么，回车发送"
             maxlength="200"
             enterkeyhint="send"
             aria-label="快速评论"
@@ -248,10 +267,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { useAuthStore } from '@/stores/auth'
+import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {useAuthStore} from '@/stores/auth'
 // 注意：qrcode 体积不小，改成命中「生成海报」时再动态加载，避免进详情页就打包进去
 import {
   collectInspire,
@@ -259,13 +278,15 @@ import {
   followUser,
   getComments,
   getInspireDetail,
+  likeComment as likeCommentApi,
   likeInspire,
   shareInspire,
   uncollectInspire,
   unfollowUser,
+  unlikeComment as unlikeCommentApi,
   unlikeInspire
 } from '@/api/inspire.js'
-import { sanitizeHtml } from '@/utils/sanitizeHtml.js'
+import {sanitizeHtml} from '@/utils/sanitizeHtml.js'
 
 // 海报封面代理：站外图片经本站转发，返回的响应带 ACAO，canvas 不会被跨域污染
 const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
@@ -295,6 +316,7 @@ const comments = ref([])
 const allCommentRecords = ref([])
 const commentPage = ref(1)
 const commentTotal = ref(0)
+const commentSort = ref('hot')
 const commentLoading = ref(false)
 const commentError = ref('')
 const quickCommentText = ref('')
@@ -404,6 +426,25 @@ const formatRelativeTime = (value) => {
   return `${date.getFullYear()}年${month}月${day}日`
 }
 
+const formatCommentTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000)
+  if (diffMin >= 0 && diffMin < 5) return '刚刚'
+  if (diffMin >= 0 && diffMin < 60) return `${diffMin}分钟前`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour >= 0 && diffHour < 24 && date.toDateString() === now.toDateString()) {
+    return `${diffHour}小时前`
+  }
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  if (date.getFullYear() === now.getFullYear()) return `${month}月${day}日 ${time}`
+  return `${date.getFullYear()}年${month}月${day}日 ${time}`
+}
+
 /**
  * 游客触发需要登录的操作时统一处理：直接跳登录页，
  * 并把当前灵感写入 redirectPath，登录成功后自动回到这里。
@@ -424,6 +465,10 @@ watch(imageList, () => {
 })
 
 const sortCommentRecords = (records) => records.slice().sort((a, b) => {
+  if (commentSort.value === 'hot') {
+    const likeDiff = Number(b.likeCount || 0) - Number(a.likeCount || 0)
+    if (likeDiff !== 0) return likeDiff
+  }
   const left = new Date(a.createTime || 0).getTime()
   const right = new Date(b.createTime || 0).getTime()
   return right - left
@@ -497,7 +542,11 @@ const loadComments = async (reset = false, inspireIdOverride = null) => {
   commentError.value = ''
   const targetPage = reset ? 1 : commentPage.value
   try {
-    const res = await getComments(inspireId, { page: targetPage, size: 20 })
+    const res = await getComments(inspireId, {
+      page: targetPage,
+      size: 20,
+      sort: commentSort.value
+    })
     if (requestSeq !== commentRequestSeq
         || (!inspireIdOverride && String(detail.value.id) !== inspireId)) return
     if (res.code !== 200) return
@@ -533,6 +582,7 @@ const resetDetailState = () => {
   allCommentRecords.value = []
   commentPage.value = 1
   commentTotal.value = 0
+  commentSort.value = 'hot'
   commentLoading.value = false
   commentError.value = ''
 }
@@ -686,19 +736,43 @@ const loadMoreComments = () => {
   if (commentHasMore.value) loadComments(false)
 }
 
+const changeCommentSort = (sort) => {
+  if (commentSort.value === sort || commentLoading.value) return
+  commentSort.value = sort
+  commentPage.value = 1
+  comments.value = []
+  allCommentRecords.value = []
+  loadComments(true)
+}
+
+const toggleCommentSort = () => {
+  changeCommentSort(commentSort.value === 'hot' ? 'time' : 'hot')
+}
+
 onBeforeUnmount(() => {
   detailRequestSeq += 1
   commentRequestSeq += 1
 })
 
-const likeComment = (commentItem) => {
-  commentItem.liked = !commentItem.liked
-  commentItem.likeCount = Math.max(0, (commentItem.likeCount ?? 0) + (commentItem.liked ? 1 : -1))
-}
-
-const likeReply = (reply) => {
-  reply.liked = !reply.liked
-  reply.likeCount = Math.max(0, (reply.likeCount ?? 0) + (reply.liked ? 1 : -1))
+const toggleCommentLike = async (commentItem) => {
+  if (!isLogin.value) {
+    requireLogin()
+    return
+  }
+  const wasLiked = Boolean(commentItem.liked)
+  const oldCount = Number(commentItem.likeCount || 0)
+  commentItem.liked = !wasLiked
+  commentItem.likeCount = Math.max(0, oldCount + (wasLiked ? -1 : 1))
+  try {
+    const res = wasLiked
+      ? await unlikeCommentApi(detail.value.id, commentItem.id)
+      : await likeCommentApi(detail.value.id, commentItem.id)
+    if (res.code !== 200) throw new Error(res.msg || 'comment like failed')
+  } catch (e) {
+    commentItem.liked = wasLiked
+    commentItem.likeCount = oldCount
+    ElMessage.error('评论点赞失败')
+  }
 }
 
 const handleLike = async () => {
@@ -982,7 +1056,25 @@ const makePoster = async () => {
 }
 
 const handleEdit = () => router.push({ name: 'Edit', params: { id: detail.value.id } })
-const goBack = () => router.back()
+const goBack = () => {
+  const historyBack = window.history.state?.back
+  const safeInternalHistory = typeof historyBack === 'string'
+    && (historyBack.startsWith('/') || historyBack.startsWith('#'))
+
+  let sameOriginReferrer = false
+  try {
+    sameOriginReferrer = Boolean(document.referrer)
+      && new URL(document.referrer).origin === window.location.origin
+  } catch (e) {
+    sameOriginReferrer = false
+  }
+
+  if (safeInternalHistory || sameOriginReferrer) {
+    router.back()
+    return
+  }
+  router.replace('/')
+}
 
 const handleToggleFollow = async () => {
   if (!isLogin.value) { requireLogin(); return }
@@ -1053,13 +1145,43 @@ const handleToggleFollow = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0;
+  border: 1px solid rgba(168, 105, 58, .42);
   border-radius: 50%;
-  color: #fff7ed;
-  background: #e67833;
+  color: #8b5732;
+  background: rgba(255, 249, 240, .82);
   font-size: 21px;
   line-height: 1;
   cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.round-button:hover {
+  border-color: rgba(168, 105, 58, .72);
+  background: #fffaf3;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.top-edit-button {
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(168, 105, 58, .42);
+  border-radius: 999px;
+  color: #8b5732;
+  background: rgba(255, 249, 240, .82);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.top-edit-button:hover {
+  border-color: rgba(168, 105, 58, .72);
+  background: #fffaf3;
 }
 
 .topbar-title { font-size: 16px; font-weight: 700; }
@@ -1225,7 +1347,29 @@ h1 {
   cursor: pointer;
 }
 
-.comments-title { margin-top: 28px; font-size: 15px; font-weight: 700; }
+.comments-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.comments-title { margin: 0; font-size: 15px; font-weight: 700; }
+
+.comment-sort-toggle {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #82908b;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.comment-sort-toggle:disabled { opacity: .55; cursor: default; }
 
 /* 游客状态：评论区占位块，点击跳登录 */
 .comment-gate {

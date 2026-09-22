@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵感详情编辑入口 · 位置预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--ink:#17201d;--muted:#84918c;--line:#e5ece9;--mint:#1f8a70;--mint-soft:#e8f7f2}
+  body{
+    margin:0;padding:28px 20px 70px;color:var(--ink);background:#edf3f1;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .page-head{max-width:1320px;margin:0 auto 22px}
+  .eyebrow{margin-bottom:8px;color:var(--mint);font-size:12px;font-weight:850;letter-spacing:.08em}
+  h1{margin:0 0 8px;font-size:26px;line-height:1.2}
+  .lead{max-width:950px;margin:0;color:#65736e;font-size:14px;line-height:1.8}
+  .scheme-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .scheme-nav a{
+    padding:8px 12px;border:1px solid rgba(31,138,112,.16);border-radius:999px;
+    background:rgba(255,255,255,.86);color:#49645c;font-size:12.5px;font-weight:750;text-decoration:none;
+  }
+  .options{max-width:1320px;margin:0 auto;display:flex;gap:22px;align-items:flex-start}
+  .option{width:412px;flex:0 0 412px}
+  .option-info{min-height:110px;padding:0 3px 7px}
+  .option-title{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .option-title b{font-size:16px}
+  .badge{padding:2px 8px;border:1px solid #dce8e4;border-radius:999px;background:#fff;color:#55736a;font-size:10.5px}
+  .badge.recommend{background:var(--mint-soft);border-color:#c8ece1;color:var(--mint)}
+  .option-info p{margin:0;color:#697873;font-size:12.5px;line-height:1.7}
+  .device{
+    position:relative;width:412px;height:866px;padding:11px;border-radius:46px;background:#10161d;
+    box-shadow:0 30px 70px rgba(25,42,64,.20),inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .statusbar{
+    position:absolute;z-index:8;top:11px;left:11px;right:11px;height:32px;padding:0 17px;
+    display:flex;align-items:center;justify-content:space-between;border-radius:35px 35px 0 0;
+    background:#fff;color:#121820;font-size:11px;font-weight:800;line-height:1;
+  }
+  .status-icons{display:flex;align-items:center;gap:5px}
+  .status-icons svg{display:block;width:auto;height:11px}
+  .status-5g{font-size:9px;font-weight:850}
+  .screen{
+    position:absolute;top:43px;left:11px;right:11px;bottom:11px;overflow:hidden;
+    border-radius:0 0 35px 35px;background:#fbfcfb;
+  }
+  .detail{position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#fbfcfb}
+  .topbar{
+    flex:0 0 auto;height:48px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;
+    background:#fff;border-bottom:1px solid var(--line);
+  }
+  .round{
+    width:34px;height:34px;padding:0;border:0;border-radius:11px;background:transparent;
+    display:inline-flex;align-items:center;justify-content:center;color:#26332f;
+  }
+  .top-title{font-size:14px;font-weight:800}
+  .scroll{flex:1;min-height:0;overflow-y:auto;padding-bottom:72px}
+  .cover{width:100%;height:218px;object-fit:cover;display:block;background:#e8efec}
+  .article{padding:16px 14px 0}
+  .kicker{margin-bottom:8px;color:var(--mint);font-size:11px;font-weight:800;letter-spacing:.08em}
+  h2{margin:0 0 10px;font-size:23px;line-height:1.32}
+  .text{margin:0;color:#55625e;font-size:13px;line-height:1.8}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+  .tag{padding:5px 8px;border-radius:999px;background:#eef6f3;color:#4d7469;font-size:10.5px}
+  .author{
+    margin-top:16px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fff;
+    display:flex;align-items:center;gap:10px;
+  }
+  .avatar{
+    width:40px;height:40px;border-radius:50%;background:#dceee8;color:#356b5a;
+    display:flex;align-items:center;justify-content:center;font-weight:850;
+  }
+  .author b{display:block;font-size:13.5px}
+  .author small{display:block;margin-top:3px;color:var(--muted);font-size:10.5px}
+  .comments-title{margin:24px 0 8px;font-size:14px;font-weight:800}
+  .comment{padding:12px 0;border-top:1px solid var(--line);color:#596660;font-size:12.5px;line-height:1.65}
+  .comment b{color:#24312d}
+  .bottom{
+    position:absolute;left:0;right:0;bottom:0;height:58px;padding:8px 12px;display:flex;align-items:center;gap:9px;
+    background:rgba(255,255,255,.98);border-top:1px solid var(--line);
+  }
+  .fake-input{
+    flex:1;height:38px;padding:0 13px;display:flex;align-items:center;border:1px solid #dfe9e5;border-radius:12px;
+    background:#f8fbfa;color:#9aa6a2;font-size:12px;
+  }
+  .actions{display:flex;gap:10px;color:#65736e;font-size:12px}
+
+  /* A：顶部操作 */
+  .header-actions{display:flex;align-items:center;gap:5px}
+  .header-edit{
+    height:32px;padding:0 11px;border:1px solid #cce4dd;border-radius:10px;background:#f5faf8;
+    color:var(--mint);font-size:11.5px;font-weight:800;
+  }
+  .header-actions .round{width:32px;height:32px}
+
+  /* B：标题下方操作区 */
+  .article-tools{
+    display:flex;align-items:center;gap:8px;margin:0 0 12px;
+  }
+  .edited-badge{
+    display:inline-flex;align-items:center;gap:5px;color:#70807a;font-size:10.5px;
+  }
+  .edited-badge i{width:6px;height:6px;border-radius:50%;background:var(--mint);display:block}
+  .article-edit{
+    margin-left:auto;padding:5px 9px;border:1px solid #cce4dd;border-radius:999px;background:#fff;
+    color:var(--mint);font-size:10.5px;font-weight:800;
+  }
+
+  /* C：正文末尾 */
+  .owner-card{
+    margin-top:16px;padding:14px;border:1px solid #dcebe6;border-radius:16px;background:#f5faf8;
+    display:flex;align-items:center;gap:10px;
+  }
+  .owner-card b{display:block;font-size:13px;color:#35584e}
+  .owner-card span{display:block;margin-top:4px;color:#7c8d87;font-size:10.5px}
+  .owner-card button{
+    margin-left:auto;padding:8px 12px;border:0;border-radius:11px;background:var(--mint);color:#fff;
+    font-size:11px;font-weight:800;
+  }
+  .toast{
+    position:absolute;z-index:30;left:50%;top:48%;transform:translate(-50%,-50%);
+    padding:10px 13px;border-radius:11px;background:rgba(20,32,28,.86);color:#fff;font-size:12px;
+  }
+  .compare-note{
+    max-width:1320px;margin:26px auto 0;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,.76);
+    border:1px solid rgba(31,138,112,.12);color:#63726d;font-size:12.5px;line-height:1.8;
+  }
+  .compare-note b{color:#34453f}
+  @media(max-width:1050px){
+    body{padding-left:14px;padding-right:14px}
+    .options{overflow-x:auto;padding-bottom:20px;scroll-snap-type:x mandatory}
+    .option{scroll-snap-align:start}
+    .compare-note{max-width:412px;margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div class="eyebrow">DETAIL EDIT ENTRY · OPTIONS</div>
+  <h1>灵感详情编辑按钮：三种位置</h1>
+  <p class="lead">作者卡片只保留用户信息和关注关系，编辑入口改放到文章自己的操作区域。</p>
+  <nav class="scheme-nav">
+    <a href="#edit-a">A · 顶部操作</a>
+    <a href="#edit-b">B · 标题操作区</a>
+    <a href="#edit-c">C · 正文末尾</a>
+  </nav>
+</header>
+<main class="options">
+  <section class="option" id="edit-a">
+    <div class="option-info">
+      <div class="option-title"><b>方案 A · 顶部操作</b><span class="badge recommend">最标准</span></div>
+      <p>编辑按钮放在详情页右上角，只有作者自己可见，作者卡片完全不受影响。</p>
+    </div>
+    <div class="device" data-scheme="a"></div>
+  </section>
+  <section class="option" id="edit-b">
+    <div class="option-info">
+      <div class="option-title"><b>方案 B · 标题操作区</b><span class="badge recommend">最明确</span></div>
+      <p>标题下方放“已编辑”和“编辑”，编辑对象明确，和修改记录也能放在一起。</p>
+    </div>
+    <div class="device" data-scheme="b"></div>
+  </section>
+  <section class="option" id="edit-c">
+    <div class="option-info">
+      <div class="option-title"><b>方案 C · 正文末尾</b><span class="badge">最克制</span></div>
+      <p>正文结束后放作者自己的操作卡，不干扰阅读，但需要滑到下面才能看到。</p>
+    </div>
+    <div class="device" data-scheme="c"></div>
+  </section>
+</main>
+<section class="compare-note"><b>建议：</b>如果希望入口稳定、明显，选 A 或 B；如果不想打扰读者，选 C。</section>
+
+<script>
+function statusBar() {
+  return `
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <svg viewBox="0 0 20 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="4.5" y="6" width="3" height="6" rx="1" fill="currentColor"/><rect x="9" y="3.5" width="3" height="8.5" rx="1" fill="currentColor"/><rect x="13.5" y=".5" width="3" height="11.5" rx="1" fill="currentColor"/></svg>
+        <span class="status-5g">5G</span>
+        <svg viewBox="0 0 18 13"><path d="M1 4.2C5.5 0 12.5 0 17 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 7.2c2.8-2.5 7.2-2.5 10 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 10c1.2-1 2.8-1 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="12" r="1.1" fill="currentColor"/></svg>
+        <svg viewBox="0 0 26 12"><rect x=".8" y=".8" width="21" height="10.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/><rect x="2.6" y="2.6" width="16.2" height="6.8" rx="1.8" fill="currentColor"/><path d="M23.5 4v4c1.1-.3 1.8-1 1.8-2s-.7-1.7-1.8-2z" fill="currentColor" opacity=".55"/></svg>
+      </div>
+    </div>`
+}
+
+function render(root) {
+  const scheme = root.dataset.scheme
+  const headerActions = scheme === 'a'
+    ? `<div class="header-actions"><button class="header-edit" data-edit>编辑</button><button class="round" data-more>···</button></div>`
+    : '<button class="round" data-more>···</button>'
+  const titleTools = scheme === 'b'
+    ? `<div class="article-tools"><span class="edited-badge"><i></i>已编辑 · 第 2 版</span><button class="article-edit" data-edit>编辑</button></div>`
+    : ''
+  const ownerCard = scheme === 'c'
+    ? `<div class="owner-card"><div><b>这是你的灵感</b><span>可以继续修改正文、图片和分类。</span></div><button data-edit>继续编辑</button></div>`
+    : ''
+
+  root.innerHTML = statusBar() + `
+    <div class="screen">
+      <div class="detail">
+        <div class="topbar">
+          <button class="round" data-back>‹</button>
+          <div class="top-title">灵感手账</div>
+          ${headerActions}
+        </div>
+        <div class="scroll">
+          <img class="cover" src="https://picsum.photos/seed/detail-edit-entry/900/600" alt="">
+          <div class="article">
+            <div class="kicker">摄影手记 · DESIGN NOTES</div>
+            <h2>低饱和胶片感随手拍</h2>
+            ${titleTools}
+            <p class="text">减少高光、保留颗粒，让日常照片多一点安静的电影感。真正影响氛围的不是滤镜，而是光线、留白和动作发生的顺序。</p>
+            <div class="tags"><span class="tag">#摄影</span><span class="tag">#胶片感</span><span class="tag">#日常记录</span></div>
+            <div class="author">
+              <div class="avatar">文</div>
+              <div><b>文艺胶片</b><small>发布于 9月22日 20:10 · 厦门</small></div>
+            </div>
+            ${ownerCard}
+            <div class="comments-title">共 12 条评论</div>
+            <div class="comment"><b>林间小鹿：</b>这个调色思路很适合周末的照片，收藏了。</div>
+          </div>
+        </div>
+        <div class="bottom"><div class="fake-input">说点什么...</div><div class="actions"><span>♡ 98</span><span>☆ 64</span></div></div>
+      </div>
+    </div>`
+}
+
+function showToast(root, text) {
+  root.querySelector('.toast')?.remove()
+  const el = document.createElement('div')
+  el.className = 'toast'
+  el.textContent = text
+  root.appendChild(el)
+  setTimeout(() => el.remove(), 1300)
+}
+
+function bindDevice(root) {
+  render(root)
+  root.addEventListener('click', event => {
+    if (event.target.closest('[data-edit]')) return showToast(root, '进入二次编辑')
+    if (event.target.closest('[data-more]')) return showToast(root, '分享 / 举报')
+    if (event.target.closest('[data-back]')) return showToast(root, '返回上一页')
+  })
+}
+
+document.querySelectorAll('.device[data-scheme]').forEach(bindDevice)
+</script>
+</body>
+</html>

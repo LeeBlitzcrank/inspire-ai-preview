@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵感搜索 B 方案变体 · 可操作预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#17201d;
+    --muted:#84918c;
+    --line:#e5ece9;
+    --soft:#f3f7f5;
+    --mint:#1f8a70;
+    --mint-soft:#e8f7f2;
+    --warm:#b86d28;
+    --warm-soft:#fff3e5;
+    --blue:#4968d8;
+    --blue-soft:#edf2ff;
+  }
+  body{
+    margin:0;
+    padding:28px 20px 70px;
+    color:var(--ink);
+    background:#edf3f1;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .page-head{max-width:1320px;margin:0 auto 22px}
+  .eyebrow{margin-bottom:8px;color:var(--mint);font-size:12px;font-weight:850;letter-spacing:.08em}
+  h1{margin:0 0 8px;font-size:26px;line-height:1.2}
+  .lead{max-width:950px;margin:0;color:#65736e;font-size:14px;line-height:1.8}
+  .scheme-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .scheme-nav a{
+    padding:8px 12px;border:1px solid rgba(31,138,112,.16);border-radius:999px;
+    background:rgba(255,255,255,.86);color:#49645c;font-size:12.5px;font-weight:750;text-decoration:none;
+  }
+  .scheme-nav a:hover{color:var(--mint);border-color:rgba(31,138,112,.4)}
+  .options{max-width:1320px;margin:0 auto;display:flex;gap:22px;align-items:flex-start}
+  .option{width:412px;flex:0 0 412px}
+  .option-info{min-height:119px;padding:0 3px 7px}
+  .option-title{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .option-title b{font-size:16px}
+  .badge{padding:2px 8px;border:1px solid #dce8e4;border-radius:999px;background:#fff;color:#55736a;font-size:10.5px}
+  .badge.recommend{background:var(--mint-soft);border-color:#c8ece1;color:var(--mint)}
+  .badge.warm{background:var(--warm-soft);border-color:#f1ddc8;color:var(--warm)}
+  .badge.blue{background:var(--blue-soft);border-color:#d8e1ff;color:var(--blue)}
+  .option-info p{margin:0;color:#697873;font-size:12.5px;line-height:1.7}
+  .reset-preview{
+    margin-top:9px;padding:6px 9px;border:1px solid #dce8e4;border-radius:9px;
+    background:#fff;color:#4d6d64;font-size:11.5px;
+  }
+  .reset-preview:hover{border-color:#9fd4c6;color:var(--mint)}
+
+  .device{
+    position:relative;width:412px;height:866px;padding:11px;border-radius:46px;background:#10161d;
+    box-shadow:0 30px 70px rgba(25,42,64,.20),inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .statusbar{
+    position:absolute;z-index:8;top:11px;left:11px;right:11px;height:32px;padding:0 17px;
+    display:flex;align-items:center;justify-content:space-between;border-radius:35px 35px 0 0;
+    background:#fff;color:#121820;font-size:11px;font-weight:800;line-height:1;
+  }
+  .status-icons{display:flex;align-items:center;gap:5px}
+  .status-icons svg{display:block;width:auto;height:11px}
+  .status-5g{font-size:9px;font-weight:850}
+  .screen{
+    position:absolute;top:43px;left:11px;right:11px;bottom:11px;overflow:hidden;
+    border-radius:0 0 35px 35px;background:#f7faf9;
+  }
+  .app{position:relative;width:100%;height:100%;overflow:hidden;color:var(--ink);background:#f7faf9}
+  .icon{width:18px;height:18px;display:block}
+  .icon-button{
+    width:34px;height:34px;padding:0;border:0;border-radius:11px;background:transparent;color:#293630;
+    display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+  .icon-button:hover{background:rgba(23,32,29,.06)}
+  .scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .search-field{
+    height:42px;padding:0 12px;display:flex;align-items:center;gap:8px;border:1px solid #dfe9e5;
+    border-radius:13px;background:#fff;color:#87948f;
+  }
+  .search-field:focus-within{border-color:#8bc9b9}
+  .search-field input{width:100%;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font-size:13px}
+  .search-field input::placeholder{color:#a7b1ad}
+  .search-submit{
+    height:42px;padding:0 14px;border:0;border-radius:13px;background:var(--mint);color:#fff;
+    font-size:12.5px;font-weight:850;flex:0 0 auto;
+  }
+  .section-title{display:flex;align-items:flex-end;justify-content:space-between;margin:17px 0 9px}
+  .section-title b{font-size:13.5px}
+  .section-title span{color:var(--muted);font-size:11px}
+  .chip{
+    border:1px solid #dfeae6;border-radius:999px;background:#fff;color:#506b63;
+    padding:7px 10px;font-size:11.5px;white-space:nowrap;
+  }
+  .chip:hover,.chip.on{border-color:#9fd4c6;background:var(--mint-soft);color:var(--mint)}
+  .empty{padding:55px 20px;text-align:center;color:#96a39e;font-size:12.5px;line-height:1.8}
+  .empty b{display:block;margin-bottom:5px;color:#51615b;font-size:15px}
+  .toast{
+    position:absolute;z-index:30;left:50%;top:48%;transform:translate(-50%,-50%);
+    padding:11px 14px;border-radius:12px;background:rgba(20,32,28,.86);color:#fff;font-size:12.5px;
+    box-shadow:0 12px 34px rgba(15,30,25,.22);pointer-events:none;
+  }
+  .detail-mask{position:absolute;inset:0;z-index:20;display:flex;align-items:flex-end;background:rgba(13,26,22,.34)}
+  .detail-sheet{width:100%;max-height:78%;overflow-y:auto;padding:16px;border-radius:22px 22px 0 0;background:#fff}
+  .detail-cover{width:100%;height:150px;border-radius:15px;overflow:hidden;background:#edf3f1}
+  .detail-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .detail-sheet h3{margin:12px 0 7px;font-size:17px}
+  .detail-sheet p{margin:0;color:#6e7b76;font-size:12.5px;line-height:1.7}
+  .detail-actions{display:flex;gap:8px;margin-top:15px}
+  .detail-actions button{flex:1;height:41px;border:0;border-radius:12px;font-size:12.5px;font-weight:850}
+  .detail-actions .ghost{background:#eef3f1;color:#52615c}
+  .detail-actions .main{background:var(--mint);color:#fff}
+
+  /* B1：主推编辑流 */
+  .scheme-b1{background:#f8fbfa}
+  .scheme-b1 .b1-head{padding:11px 14px 10px;background:#fff;border-bottom:1px solid var(--line)}
+  .scheme-b1 .b1-title{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .scheme-b1 .b1-title b{font-size:16px}
+  .scheme-b1 .b1-title .icon-button:last-child{margin-left:auto}
+  .scheme-b1 .b1-search{display:flex;gap:7px}
+  .scheme-b1 .b1-search .search-field{flex:1}
+  .scheme-b1 .b1-body{padding:14px}
+  .scheme-b1 .feature{
+    position:relative;height:214px;border-radius:18px;overflow:hidden;background:#dce8e4;
+  }
+  .scheme-b1 .feature img{width:100%;height:100%;object-fit:cover;display:block}
+  .scheme-b1 .feature-copy{
+    position:absolute;inset:0;padding:17px;display:flex;flex-direction:column;justify-content:flex-end;
+    color:#fff;background:linear-gradient(180deg,transparent 35%,rgba(15,24,21,.78));
+  }
+  .scheme-b1 .feature-kicker{font-size:10px;font-weight:850;letter-spacing:.12em;color:rgba(255,255,255,.74)}
+  .scheme-b1 .feature-copy h2{margin:7px 0 5px;font-size:22px;line-height:1.2}
+  .scheme-b1 .feature-copy p{margin:0;color:rgba(255,255,255,.82);font-size:11.5px;line-height:1.6}
+  .scheme-b1 .pick-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:3px}
+  .scheme-b1 .pick{
+    width:158px;flex:0 0 158px;border:0;padding:0;border-radius:14px;overflow:hidden;background:#fff;text-align:left;
+    border:1px solid #e5eeeb;
+  }
+  .scheme-b1 .pick img{width:100%;height:94px;object-fit:cover;display:block;background:#edf3f1}
+  .scheme-b1 .pick-copy{padding:9px 10px 10px}
+  .scheme-b1 .pick-copy b{display:block;font-size:12.5px;line-height:1.35}
+  .scheme-b1 .pick-copy span{display:block;margin-top:5px;color:#87938f;font-size:10.5px}
+  .scheme-b1 .chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px}
+  .scheme-b1 .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .scheme-b1 .tile{
+    position:relative;height:157px;border:0;padding:0;border-radius:15px;overflow:hidden;background:#e4edea;text-align:left;
+  }
+  .scheme-b1 .tile:nth-child(3n){height:188px}
+  .scheme-b1 .tile img{width:100%;height:100%;object-fit:cover;display:block}
+  .scheme-b1 .tile-copy{
+    position:absolute;inset:0;padding:11px;display:flex;align-items:flex-end;color:#fff;
+    background:linear-gradient(180deg,transparent 35%,rgba(18,25,23,.75));
+  }
+  .scheme-b1 .tile-copy b{display:block;font-size:12.5px;line-height:1.35}
+  .scheme-b1 .tile-copy span{display:block;margin-top:4px;color:rgba(255,255,255,.8);font-size:10px}
+  .scheme-b1 .result-tools{display:flex;gap:7px;overflow-x:auto;padding-bottom:10px}
+  .scheme-b1 .result-title{margin:1px 0 10px;display:flex;align-items:flex-end;justify-content:space-between}
+  .scheme-b1 .result-title b{font-size:15px}
+  .scheme-b1 .result-title span{color:#87938f;font-size:10.5px}
+  .scheme-b1 .load-more{
+    width:100%;height:40px;margin-top:10px;border:1px solid #dce9e5;border-radius:12px;background:#fff;
+    color:#55726a;font-size:12px;font-weight:800;
+  }
+
+  /* B2：场景导览流 */
+  .scheme-b2{background:#fffaf4}
+  .scheme-b2 .b2-head{padding:12px 14px 10px;background:#fffaf4;border-bottom:1px solid #eee4d8}
+  .scheme-b2 .b2-title{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .scheme-b2 .b2-title b{font-size:16px}
+  .scheme-b2 .b2-title .icon-button:last-child{margin-left:auto}
+  .scheme-b2 .b2-search{display:flex;gap:7px}
+  .scheme-b2 .b2-search .search-field{flex:1}
+  .scheme-b2 .b2-search .search-submit{background:#c46e49}
+  .scheme-b2 .b2-body{padding:14px}
+  .scheme-b2 .scene-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .scheme-b2 .scene{
+    position:relative;height:142px;border:0;padding:0;border-radius:16px;overflow:hidden;background:#e8ddd3;text-align:left;
+  }
+  .scheme-b2 .scene img{width:100%;height:100%;object-fit:cover;display:block}
+  .scheme-b2 .scene-copy{
+    position:absolute;inset:0;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;
+    background:linear-gradient(180deg,transparent 30%,rgba(31,26,22,.75));
+  }
+  .scheme-b2 .scene-copy b{font-size:14px}
+  .scheme-b2 .scene-copy span{margin-top:4px;color:rgba(255,255,255,.8);font-size:10.5px}
+  .scheme-b2 .ranking{display:flex;flex-direction:column;gap:8px}
+  .scheme-b2 .rank{
+    display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #eee4d8;border-radius:14px;background:#fff;
+    text-align:left;
+  }
+  .scheme-b2 .rank-no{width:24px;color:#c46e49;font-size:19px;font-weight:900;text-align:center;flex:0 0 auto}
+  .scheme-b2 .rank img{width:55px;height:55px;border-radius:10px;object-fit:cover;background:#edf3f1;flex:0 0 auto}
+  .scheme-b2 .rank-copy{min-width:0;flex:1}
+  .scheme-b2 .rank-copy b{display:block;font-size:13px;line-height:1.35}
+  .scheme-b2 .rank-copy span{display:block;margin-top:5px;color:#9b8d80;font-size:10.5px}
+  .scheme-b2 .scene-cart{display:flex;gap:10px;overflow-x:auto;padding-bottom:3px}
+  .scheme-b2 .scene-cart button{
+    width:156px;flex:0 0 156px;border:1px solid #eee4d8;border-radius:14px;background:#fff;padding:0;overflow:hidden;text-align:left;
+  }
+  .scheme-b2 .scene-cart img{width:100%;height:92px;object-fit:cover;display:block;background:#edf3f1}
+  .scheme-b2 .scene-cart b{display:block;padding:9px 10px 10px;font-size:12.5px}
+
+  /* B3：沉浸单列流 */
+  .scheme-b3{background:#f3f6f4}
+  .scheme-b3 .b3-head{
+    position:relative;z-index:2;padding:11px 14px 10px;background:rgba(249,251,250,.97);
+    border-bottom:1px solid #e3ebe8;
+  }
+  .scheme-b3 .b3-title{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .scheme-b3 .b3-title b{font-size:16px}
+  .scheme-b3 .b3-title .icon-button:last-child{margin-left:auto}
+  .scheme-b3 .b3-search{display:flex;gap:7px}
+  .scheme-b3 .b3-search .search-field{flex:1}
+  .scheme-b3 .b3-body{padding:0 0 18px}
+  .scheme-b3 .topic-strip{display:flex;gap:7px;overflow-x:auto;padding:12px 14px 10px}
+  .scheme-b3 .topic-strip .chip{background:#fff}
+  .scheme-b3 .topic-strip .chip.on{background:#e8f7f2;border-color:#9fd4c6;color:#1f8a70}
+  .scheme-b3 .immersive{
+    width:100%;height:246px;border:0;padding:0;position:relative;overflow:hidden;background:#dfe9e6;text-align:left;
+  }
+  .scheme-b3 .immersive img{width:100%;height:100%;object-fit:cover;display:block}
+  .scheme-b3 .immersive-copy{
+    position:absolute;inset:0;padding:18px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;
+    background:linear-gradient(180deg,transparent 32%,rgba(14,23,20,.78));
+  }
+  .scheme-b3 .immersive-copy span{font-size:10px;font-weight:850;letter-spacing:.1em;color:rgba(255,255,255,.75)}
+  .scheme-b3 .immersive-copy h2{margin:7px 0 6px;font-size:23px;line-height:1.2}
+  .scheme-b3 .immersive-copy p{margin:0;color:rgba(255,255,255,.83);font-size:12px;line-height:1.6}
+  .scheme-b3 .feed-card{
+    width:calc(100% - 28px);margin:10px 14px 0;border:0;padding:0;border-radius:18px;overflow:hidden;background:#fff;text-align:left;
+  }
+  .scheme-b3 .feed-card img{width:100%;height:182px;object-fit:cover;display:block;background:#edf3f1}
+  .scheme-b3 .feed-copy{padding:13px}
+  .scheme-b3 .feed-copy h3{margin:0 0 7px;font-size:15px;line-height:1.35}
+  .scheme-b3 .feed-copy p{margin:0;color:#74817c;font-size:11.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .scheme-b3 .feed-meta{display:flex;align-items:center;gap:8px;margin-top:10px;color:#98a5a0;font-size:10.5px}
+  .scheme-b3 .feed-meta b{margin-left:auto;color:#1f8a70;font-size:11px}
+  .scheme-b3 .result-label{padding:12px 14px 4px;color:#80908a;font-size:11.5px}
+
+  .compare-note{
+    max-width:1320px;margin:26px auto 0;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,.76);
+    border:1px solid rgba(31,138,112,.12);color:#63726d;font-size:12.5px;line-height:1.8;
+  }
+  .compare-note b{color:#34453f}
+
+  @media (max-width:1050px){
+    body{padding-left:14px;padding-right:14px}
+    .options{overflow-x:auto;padding-bottom:20px;scroll-snap-type:x mandatory}
+    .option{scroll-snap-align:start}
+    .compare-note{max-width:412px;margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div class="eyebrow">SEARCH B · MORE DIRECTIONS</div>
+  <h1>B 方案再加三种方向</h1>
+  <p class="lead">
+    这三套都保留 B 的视觉驱动，但分别解决不同问题：主次不够强、逛起来没有目标、或者图片流不够沉浸。
+  </p>
+  <nav class="scheme-nav">
+    <a href="#scheme-b1">B1 · 主推编辑流</a>
+    <a href="#scheme-b2">B2 · 场景导览流</a>
+    <a href="#scheme-b3">B3 · 沉浸单列流</a>
+  </nav>
+</header>
+
+<main class="options">
+  <section class="option" id="scheme-b1">
+    <div class="option-info">
+      <div class="option-title"><b>B1 · 主推编辑流</b><span class="badge recommend">层级最强</span></div>
+      <p>首屏先给一个强主卡，再给编辑精选和瀑布流。视觉有重点，用户一眼知道先看什么。</p>
+      <button class="reset-preview" data-reset>重置 B1</button>
+    </div>
+    <div class="device" data-scheme="b1"></div>
+  </section>
+
+  <section class="option" id="scheme-b2">
+    <div class="option-info">
+      <div class="option-title"><b>B2 · 场景导览流</b><span class="badge warm">目标最清楚</span></div>
+      <p>用“周末出逃、城市慢游、居家改造、夜晚灵感”等场景先建立意图，再进入内容，解决漫无目的下滑。</p>
+      <button class="reset-preview" data-reset>重置 B2</button>
+    </div>
+    <div class="device" data-scheme="b2"></div>
+  </section>
+
+  <section class="option" id="scheme-b3">
+    <div class="option-info">
+      <div class="option-title"><b>B3 · 沉浸单列流</b><span class="badge blue">视觉最强</span></div>
+      <p>每一屏只推一张大图，内容更有冲击力，适合想继续加强图片和氛围感的版本。</p>
+      <button class="reset-preview" data-reset>重置 B3</button>
+    </div>
+    <div class="device" data-scheme="b3"></div>
+  </section>
+</main>
+
+<section class="compare-note">
+  <b>怎么选：</b>
+  B1 是最稳的升级，层级和视觉兼顾；B2 功能性和浏览目标最强；B3 最沉浸，但单屏信息量最少。
+  三套都还没有改正式页面，确定后再落地到 <code>Search.vue</code>。
+</section>
+
+<script>
+const ICONS = {
+  back:'<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  close:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  user:'<path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/>',
+  spark:'<path d="m12 3-1.9 5.1L5 10l5.1 1.9L12 17l1.9-5.1L19 10l-5.1-1.9Z"/><path d="m19 3-.7 1.8L16.5 5l1.8.7L19 7.5l.7-1.8L21.5 5l-1.8-.7Z"/>'
+}
+
+function icon(name) {
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`
+}
+
+const seedIdeas = [
+  { id:'i1', title:'周末去山里住一晚', tag:'旅行', sub:'自然治愈', content:'找一个有露台的小院，白天散步，晚上看星星，把节奏放慢。', img:'https://picsum.photos/seed/search-b-mountain/700/500', heat:986, views:'1.2万', likes:642, city:'杭州' },
+  { id:'i2', title:'城市里的小众咖啡地图', tag:'美食', sub:'咖啡探店', content:'从老城区走到河边，收藏五家适合坐一下午的小店。', img:'https://picsum.photos/seed/search-b-coffee/700/500', heat:834, views:'8632', likes:521, city:'上海' },
+  { id:'i3', title:'把旧衬衫改成夏日包', tag:'手作', sub:'旧物改造', content:'保留原来的纽扣和口袋，加一条帆布肩带，旧衣马上变成新包。', img:'https://picsum.photos/seed/search-b-craft/700/500', heat:721, views:'6540', likes:438, city:'成都' },
+  { id:'i4', title:'低饱和胶片感随手拍', tag:'摄影', sub:'胶片质感', content:'减少高光、保留颗粒，让日常照片多一点安静的电影感。', img:'https://picsum.photos/seed/search-b-film/700/500', heat:698, views:'5810', likes:392, city:'厦门' },
+  { id:'i5', title:'小户型也能有阅读角', tag:'家居', sub:'空间改造', content:'一把单椅、一盏落地灯、一个窄边几，就能把窗边变成阅读角。', img:'https://picsum.photos/seed/search-b-room/700/500', heat:646, views:'4920', likes:356, city:'北京' },
+  { id:'i6', title:'夏夜十分钟夜跑路线', tag:'运动', sub:'城市夜跑', content:'沿河跑完两公里，最后在便利店买一瓶冰水，轻松但很满足。', img:'https://picsum.photos/seed/search-b-run/700/500', heat:588, views:'4210', likes:287, city:'南京' },
+  { id:'i7', title:'一周不重样的早餐', tag:'美食', sub:'早餐灵感', content:'提前准备两三种基础食材，十分钟就能组合出不同的早餐。', img:'https://picsum.photos/seed/search-b-breakfast/700/500', heat:552, views:'3880', likes:265, city:'广州' },
+  { id:'i8', title:'浅色系夏日穿搭', tag:'穿搭', sub:'清爽配色', content:'用白、浅蓝和燕麦色做主色，简单搭配也可以很耐看。', img:'https://picsum.photos/seed/search-b-outfit/700/500', heat:512, views:'3520', likes:241, city:'深圳' }
+]
+
+const hotWords = ['城市漫步', '夏日咖啡', '山野露营', '极简摄影', '旧物改造', '夜跑路线', '胶片感', '小户型']
+const historyWords = ['山野露营', '咖啡店', '胶片感']
+const categories = ['全部','美食','旅行','摄影','家居','穿搭','手作','运动']
+const keywordAliases = {
+  '城市漫步':['城市','散步'],
+  '夏日咖啡':['咖啡'],
+  '山野露营':['旅行','山里','自然'],
+  '极简摄影':['摄影','胶片'],
+  '旧物改造':['改造','手作','旧'],
+  '夜跑路线':['夜跑','运动'],
+  '胶片感':['胶片','摄影'],
+  '小户型':['小户型','家居'],
+  '咖啡店':['咖啡']
+}
+const scenes = [
+  { id:'weekend', title:'周末出逃', subtitle:'48小时离开城市', keyword:'山野露营', img:'https://picsum.photos/seed/search-scene-weekend/500/380' },
+  { id:'city', title:'城市慢游', subtitle:'一条街逛一下午', keyword:'城市漫步', img:'https://picsum.photos/seed/search-scene-city/500/380' },
+  { id:'home', title:'居家改造', subtitle:'让家里变舒服一点', keyword:'小户型', img:'https://picsum.photos/seed/search-scene-home/500/380' },
+  { id:'night', title:'夜晚灵感', subtitle:'下班后的轻松时刻', keyword:'夜跑路线', img:'https://picsum.photos/seed/search-scene-night/500/380' }
+]
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;')
+}
+
+function statusBar() {
+  return `
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <svg viewBox="0 0 20 12" aria-hidden="true">
+          <rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/>
+          <rect x="4.5" y="6" width="3" height="6" rx="1" fill="currentColor"/>
+          <rect x="9" y="3.5" width="3" height="8.5" rx="1" fill="currentColor"/>
+          <rect x="13.5" y=".5" width="3" height="11.5" rx="1" fill="currentColor"/>
+        </svg>
+        <span class="status-5g">5G</span>
+        <svg viewBox="0 0 18 13" aria-hidden="true">
+          <path d="M1 4.2C5.5 0 12.5 0 17 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4 7.2c2.8-2.5 7.2-2.5 10 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M7 10c1.2-1 2.8-1 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="9" cy="12" r="1.1" fill="currentColor"/>
+        </svg>
+        <svg viewBox="0 0 26 12" aria-hidden="true">
+          <rect x=".8" y=".8" width="21" height="10.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+          <rect x="2.6" y="2.6" width="16.2" height="6.8" rx="1.8" fill="currentColor"/>
+          <path d="M23.5 4v4c1.1-.3 1.8-1 1.8-2s-.7-1.7-1.8-2z" fill="currentColor" opacity=".55"/>
+        </svg>
+      </div>
+    </div>`
+}
+
+function searchField(state, placeholder) {
+  return `
+    <div class="search-field">
+      ${icon('search')}
+      <input data-search value="${escapeHtml(state.keyword)}" placeholder="${placeholder}" autocomplete="off">
+      ${state.keyword ? `<button class="icon-button" data-clear aria-label="清空搜索">${icon('close')}</button>` : ''}
+    </div>`
+}
+
+function filteredIdeas(state) {
+  const keyword = state.keyword.trim().toLowerCase()
+  const terms = [keyword, ...(keywordAliases[state.keyword] || [])]
+    .map(value => String(value || '').toLowerCase())
+    .filter(Boolean)
+  return state.ideas.filter(item => {
+    if (state.category !== '全部' && item.tag !== state.category) return false
+    if (!terms.length) return true
+    const haystack = [item.title, item.content, item.tag, item.sub].join(' ').toLowerCase()
+    return terms.some(term => haystack.includes(term))
+  })
+}
+
+function visibleIdeas(state) {
+  return filteredIdeas(state).slice(0, state.page * 4)
+}
+
+function categoryChips(state) {
+  return categories.map(category => `
+    <button class="chip ${state.category === category ? 'on' : ''}" data-category="${category}">${escapeHtml(category)}</button>
+  `).join('')
+}
+
+function emptyView(keyword) {
+  return `<div class="empty"><b>没有找到相关灵感</b><span>试试「${escapeHtml(keyword || '旅行')}」或换个分类</span></div>`
+}
+
+function tile(item) {
+  return `
+    <button class="tile" data-open="${item.id}">
+      <img src="${item.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="tile-copy"><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.tag)} · ${item.heat} 热度</span></div></span>
+    </button>`
+}
+
+function pick(item) {
+  return `
+    <button class="pick" data-open="${item.id}">
+      <img src="${item.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <div class="pick-copy"><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.tag)} · ${item.heat} 热度</span></div>
+    </button>`
+}
+
+function renderB1(state) {
+  if (state.searched) {
+    const result = visibleIdeas(state)
+    return `
+      <div class="app scheme-b1">
+        <div class="b1-head">
+          <div class="b1-title">
+            <button class="icon-button" data-home aria-label="返回首页">${icon('back')}</button>
+            <b>搜索结果</b>
+            <button class="icon-button" data-profile aria-label="个人页">${icon('user')}</button>
+          </div>
+          <div class="b1-search">${searchField(state, '继续搜索灵感')}<button class="search-submit" data-submit>搜索</button></div>
+        </div>
+        <div class="scroll"><div class="b1-body">
+          <div class="result-tools">${categoryChips(state)}</div>
+          <div class="result-title"><b>${escapeHtml(state.keyword || '全部灵感')}</b><span>${filteredIdeas(state).length} 条结果</span></div>
+          ${result.length ? `<div class="grid">${result.map(tile).join('')}</div>` : emptyView(state.keyword)}
+          ${result.length && result.length < filteredIdeas(state).length ? `<button class="load-more" data-more>加载更多 · 已显示 ${result.length} / ${filteredIdeas(state).length}</button>` : ''}
+        </div></div>
+      </div>`
+  }
+  return `
+    <div class="app scheme-b1">
+      <div class="b1-head">
+        <div class="b1-title">
+          <button class="icon-button" data-home aria-label="返回首页">${icon('back')}</button>
+          <b>本周灵感</b>
+          <button class="icon-button" data-profile aria-label="个人页">${icon('user')}</button>
+        </div>
+        <div class="b1-search">${searchField(state, '今天想找什么灵感？')}<button class="search-submit" data-submit>搜索</button></div>
+      </div>
+      <div class="scroll"><div class="b1-body">
+        <button class="feature" data-open="${state.ideas[0].id}">
+          <img src="${state.ideas[0].img}" alt="" loading="lazy" onerror="this.style.display='none'">
+          <span class="feature-copy">
+            <span class="feature-kicker">WEEKLY EDIT</span>
+            <h2>${escapeHtml(state.ideas[0].title)}</h2>
+            <p>${escapeHtml(state.ideas[0].content)}</p>
+          </span>
+        </button>
+        <div class="section-title"><b>编辑精选</b><span>横向浏览</span></div>
+        <div class="pick-row">${state.ideas.slice(1, 6).map(pick).join('')}</div>
+        <div class="section-title"><b>热门标签</b><span>点击搜索</span></div>
+        <div class="chips">${hotWords.map(word => `<button class="chip" data-search-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`).join('')}</div>
+        <div class="section-title"><b>继续发现</b><span>双列图片流</span></div>
+        <div class="grid">${state.ideas.slice(2, 8).map(tile).join('')}</div>
+      </div></div>
+    </div>`
+}
+
+function sceneCard(scene) {
+  return `
+    <button class="scene" data-scene="${scene.id}">
+      <img src="${scene.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="scene-copy"><b>${escapeHtml(scene.title)}</b><span>${escapeHtml(scene.subtitle)}</span></span>
+    </button>`
+}
+
+function rankItem(item, index) {
+  return `
+    <button class="rank" data-open="${item.id}">
+      <span class="rank-no">${index + 1}</span>
+      <img src="${item.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="rank-copy"><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.tag)} · ${item.heat} 热度 · ${item.city}</span></span>
+    </button>`
+}
+
+function renderB2(state) {
+  if (state.searched) {
+    const result = visibleIdeas(state)
+    return `
+      <div class="app scheme-b2">
+        <div class="b2-head">
+          <div class="b2-title">
+            <button class="icon-button" data-home aria-label="返回首页">${icon('back')}</button>
+            <b>${escapeHtml(state.sceneTitle || '搜索结果')}</b>
+            <button class="icon-button" data-profile aria-label="个人页">${icon('user')}</button>
+          </div>
+          <div class="b2-search">${searchField(state, '继续筛选灵感')}<button class="search-submit" data-submit>搜索</button></div>
+        </div>
+        <div class="scroll"><div class="b2-body">
+          <div class="chips" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:10px">${categoryChips(state)}</div>
+          <div class="result-title" style="display:flex;justify-content:space-between;margin:1px 0 10px"><b>为你找到</b><span>${filteredIdeas(state).length} 条灵感</span></div>
+          ${result.length ? `<div class="scene-grid">${result.map(tile).join('')}</div>` : emptyView(state.keyword)}
+          ${result.length && result.length < filteredIdeas(state).length ? `<button class="load-more" data-more style="width:100%;height:40px;margin-top:10px;border:1px solid #eee4d8;border-radius:12px;background:#fff;color:#8b6b57;font-weight:800">加载更多 · 已显示 ${result.length} / ${filteredIdeas(state).length}</button>` : ''}
+        </div></div>
+      </div>`
+  }
+  return `
+    <div class="app scheme-b2">
+      <div class="b2-head">
+        <div class="b2-title">
+          <button class="icon-button" data-home aria-label="返回首页">${icon('back')}</button>
+          <b>发现灵感</b>
+          <button class="icon-button" data-profile aria-label="个人页">${icon('user')}</button>
+        </div>
+        <div class="b2-search">${searchField(state, '搜索关键词或想做的事')}<button class="search-submit" data-submit>搜索</button></div>
+      </div>
+      <div class="scroll"><div class="b2-body">
+        <div class="section-title" style="margin-top:0"><b>按场景找</b><span>先选一种状态</span></div>
+        <div class="scene-grid">${scenes.map(sceneCard).join('')}</div>
+        <div class="section-title"><b>今日热榜</b><span>热度前五</span></div>
+        <div class="ranking">${state.ideas.slice(0, 5).map(rankItem).join('')}</div>
+        <div class="section-title"><b>顺手收藏</b><span>值得多看一眼</span></div>
+        <div class="scene-cart">
+          ${state.ideas.slice(2, 7).map(item => `<button data-open="${item.id}"><img src="${item.img}" alt="" loading="lazy"><b>${escapeHtml(item.title)}</b></button>`).join('')}
+        </div>
+      </div></div>
+    </div>`
+}
+
+function immersiveFeature(item) {
+  return `
+    <button class="immersive" data-open="${item.id}">
+      <img src="${item.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="immersive-copy"><span>EDITOR'S PICK</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.content)}</p></span>
+    </button>`
+}
+
+function feedCard(item) {
+  return `
+    <button class="feed-card" data-open="${item.id}">
+      <img src="${item.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <div class="feed-copy">
+        <h3>${escapeHtml(item.title)}</h3>
+        <p>${escapeHtml(item.content)}</p>
+        <div class="feed-meta"><span>${escapeHtml(item.tag)}</span><span>${item.heat} 热度</span><span>${item.views} 浏览</span><b>打开详情</b></div>
+      </div>
+    </button>`
+}
+
+function renderB3(state) {
+  const source = state.searched ? visibleIdeas(state) : state.ideas
+  return `
+    <div class="app scheme-b3">
+      <div class="b3-head">
+        <div class="b3-title">
+          <button class="icon-button" data-home aria-label="返回首页">${icon('back')}</button>
+          <b>${state.searched ? '沉浸结果' : '灵感发现'}</b>
+          <button class="icon-button" data-profile aria-label="个人页">${icon('user')}</button>
+        </div>
+        <div class="b3-search">${searchField(state, '今天想找什么灵感？')}<button class="search-submit" data-submit>搜索</button></div>
+      </div>
+      <div class="scroll"><div class="b3-body">
+        <div class="topic-strip">
+          ${categories.map(category => `<button class="chip ${state.category === category ? 'on' : ''}" data-category="${category}">${escapeHtml(category)}</button>`).join('')}
+        </div>
+        ${source.length ? immersiveFeature(source[0]) : ''}
+        <div class="result-label">${state.searched ? `共 ${filteredIdeas(state).length} 条结果` : '继续往下看'}</div>
+        ${source.slice(1).length ? source.slice(1).map(feedCard).join('') : emptyView(state.keyword)}
+        ${source.length && state.searched && source.length < filteredIdeas(state).length
+          ? `<button class="load-more" data-more style="width:calc(100% - 28px);height:40px;margin:10px 14px 0;border:1px solid #dce9e5;border-radius:12px;background:#fff;color:#55726a;font-weight:800">加载更多 · 已显示 ${source.length} / ${filteredIdeas(state).length}</button>`
+          : ''}
+      </div></div>
+    </div>`
+}
+
+function detailSheet(state) {
+  if (!state.detail) return ''
+  const item = state.ideas.find(idea => idea.id === state.detail)
+  if (!item) return ''
+  return `
+    <div class="detail-mask" data-close-detail>
+      <div class="detail-sheet" data-sheet>
+        <div class="detail-cover"><img src="${item.img}" alt="" onerror="this.style.display='none'"></div>
+        <h3>${escapeHtml(item.title)}</h3>
+        <p>${escapeHtml(item.content)} 分类：${escapeHtml(item.tag)} · ${escapeHtml(item.sub)} · ${item.city}</p>
+        <div class="detail-actions">
+          <button class="ghost" data-close-detail>关闭</button>
+          <button class="main" data-detail-toast>打开详情</button>
+        </div>
+      </div>
+    </div>`
+}
+
+function render(root) {
+  const state = root._searchState
+  const html = state.scheme === 'b1'
+    ? renderB1(state)
+    : state.scheme === 'b2'
+      ? renderB2(state)
+      : renderB3(state)
+  root.querySelector('.screen').innerHTML = html + detailSheet(state)
+}
+
+function showToast(root, message) {
+  root.querySelector('.toast')?.remove()
+  const toast = document.createElement('div')
+  toast.className = 'toast'
+  toast.textContent = message
+  root.appendChild(toast)
+  window.setTimeout(() => toast.remove(), 1300)
+}
+
+function performSearch(root, keyword) {
+  const state = root._searchState
+  const text = String(keyword ?? state.keyword ?? '').trim()
+  if (!text && state.category === '全部') return showToast(root, '请输入关键词或选择分类')
+  state.keyword = text
+  state.searched = true
+  state.page = 1
+  state.detail = null
+  if (text) state.history = [text, ...state.history.filter(item => item !== text)].slice(0, 5)
+  render(root)
+}
+
+function bindDevice(root) {
+  root.innerHTML = statusBar() + '<div class="screen"></div>'
+  root._searchState = {
+    scheme: root.dataset.scheme,
+    ideas: clone(seedIdeas),
+    keyword: '',
+    searched: false,
+    category: '全部',
+    page: 1,
+    detail: null,
+    history: clone(historyWords),
+    sceneTitle: ''
+  }
+  render(root)
+
+  root.addEventListener('click', event => {
+    const state = root._searchState
+    const word = event.target.closest('[data-search-word]')
+    const submit = event.target.closest('[data-submit]')
+    const clear = event.target.closest('[data-clear]')
+    const category = event.target.closest('[data-category]')
+    const open = event.target.closest('[data-open]')
+    const more = event.target.closest('[data-more]')
+    const home = event.target.closest('[data-home]')
+    const profile = event.target.closest('[data-profile]')
+    const scene = event.target.closest('[data-scene]')
+    const closeDetail = event.target.closest('[data-close-detail]')
+    const detailToast = event.target.closest('[data-detail-toast]')
+
+    if (word) return performSearch(root, word.dataset.searchWord)
+    if (submit) return performSearch(root)
+    if (clear) {
+      state.keyword = ''
+      state.searched = false
+      state.page = 1
+      render(root)
+      return
+    }
+    if (category) {
+      state.category = category.dataset.category
+      if (state.searched) {
+        state.page = 1
+        render(root)
+      } else if (state.scheme === 'b3') {
+        state.searched = true
+        state.page = 1
+        render(root)
+      } else {
+        render(root)
+      }
+      return
+    }
+    if (scene) {
+      const item = scenes.find(value => value.id === scene.dataset.scene)
+      if (item) {
+        state.sceneTitle = item.title
+        state.keyword = item.keyword
+        state.searched = true
+        state.page = 1
+        render(root)
+      }
+      return
+    }
+    if (open) {
+      state.detail = open.dataset.open
+      return render(root)
+    }
+    if (more) {
+      state.page += 1
+      return render(root)
+    }
+    if (closeDetail) {
+      state.detail = null
+      return render(root)
+    }
+    if (detailToast) return showToast(root, '这里将打开灵感详情')
+    if (home) {
+      if (state.searched) {
+        state.searched = false
+        state.keyword = ''
+        state.category = '全部'
+        state.page = 1
+        state.detail = null
+        state.sceneTitle = ''
+        render(root)
+      } else {
+        showToast(root, '这里将返回首页')
+      }
+      return
+    }
+    if (profile) return showToast(root, '这里将进入个人页')
+  })
+
+  root.addEventListener('input', event => {
+    if (event.target.matches('[data-search]')) {
+      root._searchState.keyword = event.target.value
+    }
+  })
+
+  root.addEventListener('keydown', event => {
+    if (event.target.matches('[data-search]') && event.key === 'Enter') {
+      event.preventDefault()
+      performSearch(root)
+    }
+  })
+}
+
+document.querySelectorAll('.device[data-scheme]').forEach(bindDevice)
+document.querySelectorAll('[data-reset]').forEach(button => {
+  button.addEventListener('click', () => {
+    const device = button.closest('.option').querySelector('.device')
+    bindDevice(device)
+  })
+})
+</script>
+</body>
+</html>
