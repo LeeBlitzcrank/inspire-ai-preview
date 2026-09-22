@@ -1,6 +1,7 @@
 package com.inspire.platform.core.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import com.inspire.platform.common.result.Result;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.InspireMain;
@@ -45,7 +46,11 @@ public class InspireController {
     @Operation(summary = "公开灵感列表", description = "分页+分类筛选，支持按时间/热度排序")
     @GetMapping("/public/list")
     public Result<List<InspireVO>> listPublic(InspirePageQuery query,
-            @RequestHeader(value = "X-User-Id", required = false) Long loginUserId) {
+            @RequestHeader(value = "X-User-Id", required = false) Long loginUserId,
+            HttpServletResponse response) {
+        if (loginUserId == null) {
+            response.setHeader("Cache-Control", "public, max-age=60");
+        }
         return Result.success(inspireService.listPublic(query, loginUserId));
     }
 
@@ -138,7 +143,11 @@ public class InspireController {
     public Result<List<InspireVO>> recommend(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            HttpServletResponse response) {
+        if (userId == null) {
+            response.setHeader("Cache-Control", "public, max-age=60");
+        }
         return Result.success(inspireService.recommend(userId, page, size));
     }
 

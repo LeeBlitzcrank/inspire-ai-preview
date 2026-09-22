@@ -11,7 +11,7 @@ export const changePassword = (data) => request.put('/auth/password', data)
 export const doLogout = () => request.post('/auth/logout')
 
 // ===== 灵感核心 =====
-export const getInspireList = (params) => request.get('/inspire/public/list', { params })
+export const getInspireList = (params) => cachedGet('/inspire/public/list', params, 60 * 1000)
 export const getInspireDetail = (id) => request.get(`/inspire/public/${id}`)
 // 注意：这两个接口必须带上 page/size，否则后端会用它自己的默认分页（只返回 5 条），
 // 导致「我的发布」只显示几条、且因为没有更多而直接显示「已经到底啦」。
@@ -77,7 +77,7 @@ export const adminPendingList = (params) => request.get('/admin/inspire/pending'
 export const adminApproveInspire = (id) => request.put(`/admin/inspire/${id}/approve`)
 export const adminRejectInspire = (id) => request.put(`/admin/inspire/${id}/reject`)
 
-export const getRecommendList = (params) => request.get('/inspire/public/recommend', { params })
+export const getRecommendList = (params) => cachedGet('/inspire/public/recommend', params, 60 * 1000)
 
 // ===== 关注 =====
 export const followUser = (userId) => request.post(`/inspire/follow/${userId}`)

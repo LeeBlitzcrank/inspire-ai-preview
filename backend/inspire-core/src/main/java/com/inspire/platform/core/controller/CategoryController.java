@@ -8,7 +8,9 @@ import com.inspire.platform.core.mapper.CategoryMapper;
 import com.inspire.platform.core.mapper.WordCloudMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +38,9 @@ public class CategoryController {
 
     @Operation(summary = "分类树", description = "返回两级分类，一级分类带该分类下的灵感数量")
     @GetMapping("/categories")
-    public Result<List<Map<String, Object>>> categories() {
+    @Cacheable(value = "categories", key = "'tree'")
+    public Result<List<Map<String, Object>>> categories(HttpServletResponse response) {
+        response.setHeader("Cache-Control", "public, max-age=600");
         List<Category> all = categoryMapper.selectList(
                 Wrappers.<Category>lambdaQuery()
                         .eq(Category::getStatus, 1)
@@ -89,7 +93,9 @@ public class CategoryController {
 
     @Operation(summary = "AI探索词云", description = "返回启用的词云词条，按权重与排序返回")
     @GetMapping("/word-cloud")
-    public Result<List<WordCloud>> wordCloud() {
+    @Cacheable(value = "wordCloud", key = "'enabled'")
+    public Result<List<WordCloud>> wordCloud(HttpServletResponse response) {
+        response.setHeader("Cache-Control", "public, max-age=600");
         return Result.success(wordCloudMapper.selectList(
                 Wrappers.<WordCloud>lambdaQuery()
                         .eq(WordCloud::getStatus, 1)

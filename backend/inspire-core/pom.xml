@@ -44,6 +44,10 @@
             <groupId>com.inspire.platform</groupId>
             <artifactId>inspire-mq</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
         <!-- MinIO 对象存储 SDK（文档3.1节） -->
         <dependency>
             <groupId>io.minio</groupId>

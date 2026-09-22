@@ -7,6 +7,7 @@ import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class WordCloudAdminController {
 
     @Operation(summary = "新增词条")
     @PostMapping
+    @CacheEvict(value = "wordCloud", allEntries = true)
     public Result<WordCloud> create(@RequestBody WordCloud body) {
         if (body.getWord() == null || body.getWord().isBlank()) {
             return Result.error("词条内容不能为空");
@@ -46,6 +48,7 @@ public class WordCloudAdminController {
 
     @Operation(summary = "更新词条")
     @PutMapping
+    @CacheEvict(value = "wordCloud", allEntries = true)
     public Result<Void> update(@RequestBody WordCloud body) {
         if (body.getId() == null) return Result.error("缺少词条 id");
         wordCloudMapper.updateById(body);
@@ -54,6 +57,7 @@ public class WordCloudAdminController {
 
     @Operation(summary = "删除词条", description = "逻辑删除")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "wordCloud", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         wordCloudMapper.deleteById(id);
         return Result.success("删除成功", null);

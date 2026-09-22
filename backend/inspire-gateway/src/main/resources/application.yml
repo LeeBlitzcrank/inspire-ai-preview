@@ -21,6 +21,25 @@ spring:
             redis-rate-limiter.burstCapacity: 100
             redis-rate-limiter.requestedTokens: 1
       routes:
+        # 公开接口：移除会阻止 Cloudflare 缓存的 Vary 响应头
+        - id: inspire-public-api-cache
+          uri: ${routes.core-service:http://localhost:8083}
+          order: -10
+          predicates:
+            - Path=/api/inspire/public/**
+          filters:
+            - StripPrefix=1
+            - RemoveResponseHeader=Vary
+        # 公开图片接口：同样移除 Vary，允许 Cloudflare 长期缓存
+        - id: inspire-public-image-cache
+          uri: ${routes.core-service:http://localhost:8083}
+          order: -10
+          predicates:
+            - Path=/api/file/view
+          filters:
+            - StripPrefix=1
+            - RemoveResponseHeader=Vary
+
         - id: inspire-auth
           uri: ${routes.auth-service:http://localhost:8081}
           predicates:

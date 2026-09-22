@@ -4,16 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 设计系统与主题切换">
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 生产性能优化">
+      <change afterPath="$PROJECT_DIR$/backend/inspire-common/src/main/java/com/inspire/platform/common/config/CommonCacheConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/config/PublicCacheHeaderFilter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/InspireAdminApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/InspireAdminApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/controller/CategoryAdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/controller/CategoryAdminController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/controller/WordCloudAdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-admin/src/main/java/com/inspire/platform/admin/controller/WordCloudAdminController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/CategoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/CategoryController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/inspire.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/inspire.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reset-data.sh" beforeDir="false" afterPath="$PROJECT_DIR$/reset-data.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start.sh" beforeDir="false" afterPath="$PROJECT_DIR$/start.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/projectWord/生产性能优化操作清单.md" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/生产性能优化操作清单.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -184,15 +191,7 @@
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
       <workItem from="1789909706268" duration="17014000" />
-      <workItem from="1789976086790" duration="37047000" />
-    </task>
-    <task id="LOCAL-00020" summary="init 多图上传、版本历史、编辑/草稿模式">
-      <option name="closed" value="true" />
-      <created>1782975952930</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1782975952930</updated>
+      <workItem from="1789976086790" duration="39343000" />
     </task>
     <task id="LOCAL-00021" summary="性能优化：N+1查询消除优化，数据库索引，ES分页，图片缩略图">
       <option name="closed" value="true" />
@@ -578,7 +577,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790092271339</updated>
     </task>
-    <option name="localTasksCounter" value="69" />
+    <task id="LOCAL-00069" summary="feat(create): 生产性能优化">
+      <option name="closed" value="true" />
+      <created>1790096654199</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1790096654199</updated>
+    </task>
+    <option name="localTasksCounter" value="70" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -611,7 +618,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="init 引入Flink接入RocketMQ" />
     <MESSAGE value="init 前端页面动画&amp;用户体验优化" />
     <MESSAGE value="init 灵感创建引入deepseek&amp;引入redis缓存" />
     <MESSAGE value="init 评论系统 &amp; 用户中心功能" />
@@ -636,7 +642,8 @@
     <MESSAGE value="feat(create): 灵感详情薄荷绿书法词云" />
     <MESSAGE value="feat(create): 个人页&amp;我的收藏夹优化" />
     <MESSAGE value="feat(create): 设计系统与主题切换" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 设计系统与主题切换" />
+    <MESSAGE value="feat(create): 生产性能优化" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 生产性能优化" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
