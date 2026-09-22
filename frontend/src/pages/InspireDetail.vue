@@ -73,7 +73,17 @@
         已显示 <span>{{ loadedCommentCount }}</span>/<span>{{ commentTotal }}</span>
       </div>
 
-      <div v-if="isLogin" class="comment-list">
+      <AppState
+        v-if="isLogin"
+        :state="commentState"
+        :rows="4"
+        loading-variant="text"
+        empty-icon="💬"
+        empty-text="还没有评论"
+        error-text="评论加载失败"
+        @retry="loadComments(true)"
+      >
+      <div class="comment-list">
         <div v-for="commentItem in displayComments" :key="commentItem.id" class="comment-root">
           <div class="comment-head">
             <span class="comment-avatar">
@@ -156,8 +166,9 @@
           </div>
         </div>
       </div>
+      </AppState>
 
-      <div v-if="isLogin" class="comment-load-status">
+      <div v-if="isLogin && commentState === 'ready'" class="comment-load-status">
         <span v-if="commentLoading">正在加载评论...</span>
         <span v-else-if="commentHasMore" @click="loadMoreComments">
           下滑加载 20 条评论 · 当前显示 {{ loadedCommentCount }}/{{ commentTotal }}
@@ -270,6 +281,7 @@ const allCommentRecords = ref([])
 const commentPage = ref(1)
 const commentTotal = ref(0)
 const commentLoading = ref(false)
+const commentError = ref('')
 const quickCommentText = ref('')
 const replyText = ref('')
 const replyTarget = ref(null)
@@ -331,6 +343,11 @@ const publishText = computed(() => {
 })
 
 const displayComments = computed(() => comments.value)
+const commentState = computed(() => {
+  if (commentLoading.value && !comments.value.length) return 'loading'
+  if (commentError.value && !comments.value.length) return 'error'
+  return comments.value.length ? 'ready' : 'empty'
+})
 const loadedCommentCount = computed(() => allCommentRecords.value.length)
 const commentHasMore = computed(() => !commentLoading.value && allCommentRecords.value.length < commentTotal.value)
 
@@ -453,6 +470,7 @@ const loadComments = async (reset = false) => {
     return
   }
   commentLoading.value = true
+  commentError.value = ''
   const targetPage = reset ? 1 : commentPage.value
   try {
     const res = await getComments(detail.value.id, { page: targetPage, size: 20 })
@@ -466,6 +484,7 @@ const loadComments = async (reset = false) => {
     commentPage.value = targetPage + 1
     regroupComments()
   } catch (e) {
+    commentError.value = e?.message || 'load comments failed'
     ElMessage.error('评论加载失败')
   } finally {
     commentLoading.value = false

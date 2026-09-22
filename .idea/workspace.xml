@@ -4,53 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 灵感详情薄荷绿书法词云">
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 个人页&amp;我的收藏夹优化">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/entity/CollectFolder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/entity/CollectFolder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application-dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-gateway/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.mjs.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.mjs.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.umd.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.umd.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.umd.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/dist/sourcemap-codec.umd.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/scopes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/scopes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/sourcemap-codec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/sourcemap-codec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/vlq.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/src/vlq.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/scopes.d.cts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/scopes.d.cts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/scopes.d.mts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/scopes.d.mts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.cts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.cts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.cts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.cts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.mts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.mts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.mts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/sourcemap-codec.d.mts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.cts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.cts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.cts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.cts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.mts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.mts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.mts.map" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@jridgewell/sourcemap-codec/types/vlq.d.mts.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/inspire.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/inspire.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/InspireCard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/InspireCard.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Following.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Following.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Search.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Search.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminCategory.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminCategory.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/admin/AdminWordCloud.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/admin/AdminWordCloud.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/index.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/request.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/vite.config.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reset-data.sh" beforeDir="false" afterPath="$PROJECT_DIR$/reset-data.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start.sh" beforeDir="false" afterPath="$PROJECT_DIR$/start.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -221,15 +191,7 @@
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
       <workItem from="1789909706268" duration="17014000" />
-      <workItem from="1789976086790" duration="30852000" />
-    </task>
-    <task id="LOCAL-00018" summary="init 消息通知系统">
-      <option name="closed" value="true" />
-      <created>1782969260028</created>
-      <option name="number" value="00018" />
-      <option name="presentableId" value="LOCAL-00018" />
-      <option name="project" value="LOCAL" />
-      <updated>1782969260028</updated>
+      <workItem from="1789976086790" duration="34148000" />
     </task>
     <task id="LOCAL-00019" summary="init 扩展分享裂变&amp;分享后续数据分析功能">
       <option name="closed" value="true" />
@@ -615,7 +577,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789996065655</updated>
     </task>
-    <option name="localTasksCounter" value="67" />
+    <task id="LOCAL-00067" summary="feat(create): 个人页&amp;我的收藏夹优化">
+      <option name="closed" value="true" />
+      <created>1790088845174</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1790088845174</updated>
+    </task>
+    <option name="localTasksCounter" value="68" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -648,7 +618,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="init 引入rocketMq，实现注册、发送灵感通过mq服务" />
     <MESSAGE value="init 管理员后台开发，监控大屏，灵感管理，推送配置" />
     <MESSAGE value="init 引入Flink接入RocketMQ" />
     <MESSAGE value="init 前端页面动画&amp;用户体验优化" />
@@ -673,7 +642,8 @@
     <MESSAGE value="代码修复" />
     <MESSAGE value="feat(create): AI探索薄荷绿书法词云" />
     <MESSAGE value="feat(create): 灵感详情薄荷绿书法词云" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 灵感详情薄荷绿书法词云" />
+    <MESSAGE value="feat(create): 个人页&amp;我的收藏夹优化" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 个人页&amp;我的收藏夹优化" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

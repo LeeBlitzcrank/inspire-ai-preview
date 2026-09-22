@@ -1,17 +1,26 @@
 <template>
+  <DeviceShell :enabled="$route.meta.deviceShell !== false">
   <div class="app-design">
     <router-view v-slot="{ Component, route }">
       <transition name="page">
-        <component :is="Component" :key="route.fullPath" />
+        <div
+          class="app-page"
+          :class="{ 'app-page--fixed': route.meta.fixedViewport }"
+          :key="route.fullPath"
+        >
+          <component :is="Component" />
+        </div>
       </transition>
     </router-view>
   </div>
   <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
   <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
+  </DeviceShell>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import DeviceShell from '@/components/layout/DeviceShell.vue'
 const showTop = ref(false)
 const isOnline = ref(navigator.onLine)
 
@@ -60,7 +69,44 @@ html, body {
   width: 100%;
   overflow-x: hidden;
 }
-#app { overflow-x: hidden; }
+html { min-height: 100%; }
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* 所有路由（包括未来新增页面）统一使用动态视口高度和移动端安全区。
+   不再用 transform 缩放页面，避免 iPhone 上文字变小、触控区域失准。 */
+.app-design,
+.app-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.app-page > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-page--fixed {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+#app .app-page--fixed > * {
+  height: 100%;
+  min-height: 0;
+}
 
 /* iOS Safari：表单控件字号必须 ≥16px，否则聚焦时会自动放大页面并卡在放大态 */
 @media screen and (max-width: 620px) {
@@ -71,6 +117,12 @@ html, body {
   .el-textarea__inner {
     font-size: 16px !important;
   }
+
+  /* 直接给页面根节点留底部空间，背景色不会被透明外层破坏。
+     消息等固定视口页面不参与这条规则。 */
+  #app .app-page:not(.app-page--fixed) > * {
+    padding-bottom: max(96px, calc(80px + env(safe-area-inset-bottom, 0px)));
+  }
 }
 </style>
 
@@ -78,6 +130,12 @@ html, body {
 <style>
 /* 全局盒模型 reset：避免「width:100% + padding」把元素横向撑出容器 */
 *, *::before, *::after { box-sizing: border-box; }
+
+/* 路由级过渡：淡入 + 轻微上移，比原来的硬切自然 */
+.page-enter-active { transition: opacity .22s ease, transform .22s ease; }
+.page-leave-active { transition: opacity .16s ease; }
+.page-enter-from { opacity: 0; transform: translateY(6px); }
+.page-leave-to { opacity: 0; }
 
 #nprogress .bar {
   background: #4f8a48;

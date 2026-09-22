@@ -6,26 +6,38 @@
       <div class="cnt">{{ list.length }} 人</div>
     </div>
 
-    <div v-if="loading" class="empty">正在加载…</div>
-    <template v-else>
-      <div v-for="u in list" :key="u.id" class="urow">
+    <AppState
+      :state="listState"
+      :rows="4"
+      empty-icon="💭"
+      empty-text="还没有关注的人"
+      error-text="关注列表加载失败"
+      @retry="load"
+    >
+      <AppCard
+        v-for="u in list"
+        :key="u.id"
+        class="urow"
+        padding="12px"
+        clickable
+        @click="goUser(u)"
+      >
         <div class="uav" @click="goUser(u)">{{ avatarOf(u) }}</div>
         <div class="txt" @click="goUser(u)">
           <div class="un">{{ u.nickname || u.username }}</div>
           <div class="ua">@{{ u.username }}</div>
         </div>
         <div class="uops">
-          <button @click="toMessage(u)">私信</button>
-          <button class="unfollow" @click="doUnfollow(u)">取消关注</button>
+          <button @click.stop="toMessage(u)">私信</button>
+          <button class="unfollow" @click.stop="doUnfollow(u)">取消关注</button>
         </div>
-      </div>
-      <div v-if="!list.length" class="empty">💭 还没有关注的人</div>
-    </template>
+      </AppCard>
+    </AppState>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getFollowing, unfollowUser } from '@/api/inspire.js'
@@ -34,6 +46,12 @@ import { startConversation } from '@/api/message.js'
 const router = useRouter()
 const list = ref([])
 const loading = ref(true)
+const loadError = ref('')
+const listState = computed(() => {
+  if (loading.value) return 'loading'
+  if (loadError.value) return 'error'
+  return list.value.length ? 'ready' : 'empty'
+})
 
 const isImg = (a) => typeof a === 'string' && (a.startsWith('http') || a.startsWith('/') || a.startsWith('data:'))
 const avatarOf = (u) => {
@@ -43,11 +61,13 @@ const avatarOf = (u) => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getFollowing()
     list.value = res.data || []
   } catch (e) {
     console.error(e)
+    loadError.value = e?.message || 'load failed'
   } finally {
     loading.value = false
   }
@@ -92,8 +112,7 @@ onMounted(load)
   color: #0f766e; font-size: 18px; cursor: pointer; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
 .ttl { font-size: 16px; font-weight: 700; }
 .cnt { margin-left: auto; font-size: 12px; color: #9aa3b2; }
-.urow { display: flex; align-items: center; gap: 11px; padding: 12px; margin-bottom: 9px;
-  background: #fff; border: 1px solid #e6f2ef; border-radius: 14px; }
+.urow { display: flex; align-items: center; gap: 11px; margin-bottom: 9px; border-radius: 14px; }
 .uav { width: 44px; height: 44px; border-radius: 50%; background: #e6f2e4; color: #4f8a48;
   display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 700;
   flex: 0 0 auto; cursor: pointer; }
@@ -104,5 +123,4 @@ onMounted(load)
 .uops button { font-size: 11.5px; padding: 6px 11px; border-radius: 999px;
   border: 1px solid #e3ecea; background: #fff; color: #0f766e; cursor: pointer; font-family: inherit; }
 .uops button.unfollow { color: #9aa3b2; }
-.empty { text-align: center; padding: 60px 0; color: #b6c2c0; font-size: 13px; }
 </style>

@@ -8,6 +8,14 @@
         <button @click="clearAllConversations" style="margin-left:auto;padding:4px 12px;border:none;border-radius:20px;background:#f56c6c22;color:#f56c6c;font-size:12px;cursor:pointer;">清空聊天</button>
       </div>
       <div class="list-scroll">
+        <AppState
+          :state="conversationState"
+          :rows="4"
+          empty-icon="💬"
+          empty-text="还没有会话"
+          error-text="会话加载失败"
+          @retry="loadConversations"
+        >
         <div v-for="c in conversations" :key="c.id" class="conv-row">
           <div class="session-item"
                :class="{active: activeConversation && activeConversation.id === c.id, swiping: swipedId === c.id}"
@@ -36,14 +44,14 @@
           </div>
           <div class="swipe-delete" @click="handleDelete(c)">删除</div>
         </div>
-        <div v-if="conversations.length === 0" style="text-align:center;padding:60px 20px;color:#999;font-size:14px;">还没有会话</div>
+        </AppState>
       </div>
     </div>
 
     <!-- 右侧聊天窗口 -->
     <div class="chat-main" :class="{show: activeConversation && isMobile}">
       <template v-if="!activeConversation">
-        <div class="empty-tip">请在左侧选择用户开启对话</div>
+        <AppEmpty class="empty-tip" icon="💬" text="请在左侧选择用户开启对话" />
       </template>
       <template v-else>
         <div class="chat-header">
@@ -54,6 +62,14 @@
           <span class="chat-name">{{ getOtherName(activeConversation) }}</span>
         </div>
         <div class="msg-box" ref="msgBox">
+          <AppState
+            :state="messageState"
+            :rows="4"
+            empty-icon="💬"
+            empty-text="暂无消息"
+            error-text="消息加载失败"
+            @retry="reloadMessages"
+          >
           <div v-for="msg in messages" :key="msg.id"
                class="msg-item" :class="msg.fromUserId === myId ? 'msg-right' : 'msg-left'">
             <div class="msg-avatar">
@@ -66,7 +82,7 @@
               <div class="msg-small-time">{{ formatTimeDetail(msg.createTime) }}</div>
             </div>
           </div>
-          <div v-if="messages.length === 0" style="text-align:center;padding:60px 20px;color:#999;font-size:14px;">暂无消息</div>
+          </AppState>
         </div>
         <div class="input-area">
           <input id="inputText" v-model="inputMsg" placeholder="输入消息，回车发送" @keydown="onKeydown">
@@ -109,17 +125,39 @@ const myId = computed(() => {
 const myFirstChar = (localStorage.getItem('username') || '我')[0]
 const isMobile = ref(window.innerWidth <= 768)
 const conversations = ref([])
+const conversationLoading = ref(false)
+const conversationError = ref('')
 const activeConversation = ref(null)
 const messages = ref([])
+const messageLoading = ref(false)
+const messageError = ref('')
 const inputMsg = ref('')
 const msgBox = ref(null)
 let pollTimer = null
+const conversationState = computed(() => {
+  if (conversationLoading.value && !conversations.value.length) return 'loading'
+  if (conversationError.value && !conversations.value.length) return 'error'
+  return conversations.value.length ? 'ready' : 'empty'
+})
+const messageState = computed(() => {
+  if (messageLoading.value && !messages.value.length) return 'loading'
+  if (messageError.value && !messages.value.length) return 'error'
+  return messages.value.length ? 'ready' : 'empty'
+})
 
 const onResize = () => { isMobile.value = window.innerWidth <= 768 }
 
 const loadConversations = async () => {
-  try { const res = await getConversations(); conversations.value = res.data || [] }
-  catch (e) { conversations.value = [] }
+  if (!conversations.value.length) conversationLoading.value = true
+  conversationError.value = ''
+  try {
+    const res = await getConversations()
+    conversations.value = res.data || []
+  } catch (e) {
+    conversationError.value = e?.message || 'load conversations failed'
+  } finally {
+    conversationLoading.value = false
+  }
 }
 
 const getOtherName = (c) => {
@@ -135,6 +173,8 @@ const getUnread = (c) => {
 
 const openConversation = async (c) => {
   activeConversation.value = c
+  messageLoading.value = true
+  messageError.value = ''
   try {
     await markMessageRead(c.id)
     const res = await getMessages(c.id)
@@ -142,7 +182,16 @@ const openConversation = async (c) => {
     await nextTick()
     if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
     loadConversations()
-  } catch (e) { messages.value = [] }
+  } catch (e) {
+    messages.value = []
+    messageError.value = e?.message || 'load messages failed'
+  } finally {
+    messageLoading.value = false
+  }
+}
+
+const reloadMessages = async () => {
+  if (activeConversation.value) await openConversation(activeConversation.value)
 }
 
 const closeChat = () => {
@@ -178,6 +227,8 @@ const sendMsg = async () => {
     return
   }
   try {
+    messageLoading.value = true
+    messageError.value = ''
     await sendMessage(otherId, inputMsg.value.trim())
     inputMsg.value = ''
     const res = await getMessages(activeConversation.value.id)
@@ -185,6 +236,7 @@ const sendMsg = async () => {
     await nextTick()
     if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
   } catch (e) { ElMessage.error('发送失败') }
+  finally { messageLoading.value = false }
 }
 
 const onKeydown = (e) => { if (e.key === 'Enter') sendMsg() }
@@ -276,13 +328,20 @@ onMounted(async () => {
     const found = convs.find(c => String(c.id) === route.query.convId)
     const targetConv = found || { id: route.query.convId }
     activeConversation.value = targetConv
+    messageLoading.value = true
+    messageError.value = ''
     try {
       const res = await getMessages(route.query.convId)
       messages.value = (res.data || []).reverse()
       await markMessageRead(route.query.convId)
       await nextTick()
       if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      messageError.value = e?.message || 'load messages failed'
+    } finally {
+      messageLoading.value = false
+    }
   } else {
     loadConversations()
   }

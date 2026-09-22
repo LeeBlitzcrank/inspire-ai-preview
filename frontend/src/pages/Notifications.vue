@@ -6,16 +6,16 @@
       <div v-if="list.length > 0" class="noti-mark-all" @click="markAll">全部已读</div>
     </div>
 
-    <div v-if="loading" class="noti-loading">
-      <div v-for="n in 5" :key="n" class="s-line" style="margin-bottom:12px;height:14px"></div>
-    </div>
-
-    <div v-else-if="list.length === 0" class="noti-empty">
-      <div class="noti-empty-icon">🔔</div>
-      <div class="noti-empty-text">暂无消息通知</div>
-    </div>
-
-    <div v-else class="noti-list">
+    <AppState
+      :state="notiState"
+      :rows="5"
+      loading-variant="text"
+      empty-icon="🔔"
+      empty-text="暂无消息通知"
+      error-text="通知加载失败"
+      @retry="loadMore"
+    >
+    <div class="noti-list">
       <div v-for="item in list" :key="item.id" class="noti-item"
         :class="{ 'noti-unread': !item.isRead }"
         @click="handleClick(item)">
@@ -33,6 +33,7 @@
         </div>
       </div>
     </div>
+    </AppState>
 
     <div v-if="list.length > 0 && hasMore" class="noti-load-more" @click="loadMore">加载更多</div>
     <div v-if="!hasMore && list.length > 0" class="noti-no-more">-- 没有更多了 --</div>
@@ -40,19 +41,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getNotifications, markNotificationRead, markAllRead } from '@/api/inspire.js'
 
 const router = useRouter()
 const list = ref([])
 const loading = ref(false)
+const loadError = ref('')
 const page = ref(1)
 const hasMore = ref(true)
+const notiState = computed(() => {
+  if (loading.value && !list.value.length) return 'loading'
+  if (loadError.value && !list.value.length) return 'error'
+  return list.value.length ? 'ready' : 'empty'
+})
 
 const loadMore = async () => {
   if (loading.value) return
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getNotifications({ page: page.value, size: 20 })
     if (res.data && res.data.length > 0) {
@@ -62,7 +70,10 @@ const loadMore = async () => {
     } else {
       hasMore.value = false
     }
-  } catch (e) { hasMore.value = false }
+  } catch (e) {
+    hasMore.value = false
+    loadError.value = e?.message || 'load failed'
+  }
   finally { loading.value = false }
 }
 

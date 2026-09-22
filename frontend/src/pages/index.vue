@@ -19,12 +19,14 @@
     <!-- 一级分类 -->
     <transition name="slide-fade">
       <div id="category-grid-wrap" class="category-grid" v-if="!activeCategory">
-        <div class="category-card" v-for="(item, idx) in categoryList" :key="item.id"
+        <AppCard class="category-card" v-for="(item, idx) in categoryList" :key="item.id"
+          padding="32px 14px"
+          clickable
           @click="handleClickCategory(item)" :style="{'--idx': idx}">
           <div class="cate-icon">{{ item.icon }}</div>
           <div class="cate-name">{{ item.name }}</div>
           <div class="cate-num">{{ item.count }}条灵感</div>
-   </div>
+   </AppCard>
       </div>
     </transition>
 
@@ -33,7 +35,8 @@
       <div id="sub-tag-wrap" v-if="activeCategory && !activeSubItem" class="sub-wrap">
         <div id="back-to-category" class="back-btn" @click="resetCategory">← 返回全部分类</div>
         <div id="sub-tag-list" class="sub-tag-list">
-          <div class="sub-tag" v-for="item in currentSubList" :key="item.id" @click="selectSubItem(item)">{{ item.name }}</div>
+          <AppCard class="sub-tag" v-for="item in currentSubList" :key="item.id"
+            padding="32px 14px" clickable @click="selectSubItem(item)">{{ item.name }}</AppCard>
         </div>
         <div id="sub-empty-tip" v-if="currentSubList.length === 0" class="empty-sub">暂无子分类</div>
       </div>
@@ -43,27 +46,27 @@
     <transition name="slide-fade">
       <div id="detail-inspire-wrap" v-if="activeSubItem" class="detail-wrap">
         <div id="back-to-subtag" class="back-btn" @click="resetSubItem">← 返回{{ activeCategory }}</div>
-        <div v-if="loading" class="list-wrap">
-          <div v-for="n in 3" :key="n" class="inspire-card skeleton-card">
-            <div class="s-line s-title"></div>
-            <div class="s-line s-desc"></div>
-            <div class="s-line s-footer"></div>
-          </div>
-        </div>
-        <div id="inspire-card-list" class="list-wrap" v-else>
+        <AppState :state="listState" :rows="4" empty-icon="📭"
+          empty-text="还没有灵感，去其他分类看看吧" error-text="灵感加载失败"
+          @retry="loadInspireList">
+        <div id="inspire-card-list" class="list-wrap">
           <InspireCard v-for="item in inspireList" :key="item.id" :item="item"
             :style="{'--idx': item.id}" @collect="handleCollect" @click-card="goDetail" />
         </div>
-        <div v-if="!loading && inspireList.length === 0" class="empty-sub">📭 还没有灵感，去其他分类看看吧</div>
-    <div v-if="loading && inspireList.length > 0" class="empty-sub" style="color:#409eff">加载更多...</div>
-    <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+        <div v-if="loading && inspireList.length > 0" class="empty-sub" style="color:#409eff">加载更多...</div>
+        <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+        </AppState>
       </div>
     </transition>
     </div>
   <!-- 关注：关注的人列表 / 灵感列表 -->
   <div v-if="activeTab === 'following'" class="feed-list">
-    <div v-if="!selectedFollowee && !loading" class="following-list">
-      <div v-for="u in followingList" :key="u.id" class="follow-user-card" @click="selectFollowee(u)">
+    <div v-if="!selectedFollowee" class="following-list">
+      <AppState :state="followingState" :rows="4" empty-icon="💭"
+        empty-text="还没有关注人" error-text="关注列表加载失败"
+        @retry="loadFollowing">
+      <AppCard v-for="u in followingList" :key="u.id" class="follow-user-card"
+        padding="14px 16px" clickable @click="selectFollowee(u)">
         <span class="follow-user-avatar">{{ u.avatar || (u.nickname ? u.nickname[0] : u.username[0]) || '👤' }}</span>
         <div class="follow-user-info">
           <div class="follow-user-name">{{ u.nickname || u.username }}</div>
@@ -71,15 +74,17 @@
         </div>
         <span class="follow-user-arrow" @click.stop="handleMsgFromFollow(u)" style="color:#6366f1;font-size:12px;border:1px solid #6366f1;border-radius:8px;padding:3px 8px;margin-right:6px;cursor:pointer;">💬 私信</span>
         <span class="follow-user-arrow" style="font-size:18px;">›</span>
-      </div>
-      <div v-if="followingList.length === 0" class="empty-sub" style="padding:40px 0">💭 还没有关注人</div>
+      </AppCard>
+      </AppState>
     </div>
     <div v-if="selectedFollowee">
       <div class="back-btn" @click="selectedFollowee = null; inspireList=[]; loadInspireList()">&larr; 返回关注列表</div>
-      <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
-      <div v-if="loading" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
-      <div v-if="!loading && inspireList.length === 0" class="empty-sub" style="padding:40px 0">💭 暂无内容</div>
-      <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+      <AppState :state="listState" :rows="4" empty-icon="💭" empty-text="暂无内容"
+        error-text="内容加载失败" @retry="loadInspireList">
+        <InspireCard v-for="item in inspireList" :key="item.id" :item="item" @collect="handleCollect" />
+        <div v-if="loading && inspireList.length > 0" class="empty-sub" style="color:#666;padding:30px 0">⏳ 加载中...</div>
+        <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
+      </AppState>
     </div>
   </div>
   <!-- 推荐卡片滑动（完全对照demo） -->
@@ -114,13 +119,15 @@
   <!-- 收藏文件夹选择器 -->
   <el-dialog v-model="folderDialogVisible" title="选择收藏夹" width="320px">
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-      <div v-for="f in collectFolders" :key="f.id" class="folder-option"
-           :class="{selected: selectedFolder === f.id}"
+      <AppCard v-for="f in collectFolders" :key="f.id" class="folder-option"
+           :selected="selectedFolder === f.id"
+           padding="12px"
+           clickable
            @click="selectedFolder = f.id"
-           style="flex:1;min-width:100px;padding:12px;border-radius:12px;border:2px solid #e4e7ed;text-align:center;cursor:pointer;">
+           style="flex:1;min-width:100px;text-align:center;">
         <div style="font-size:24px;">{{ f.icon || '📁' }}</div>
         <div style="font-size:13px;margin-top:4px;color:#1d1d1f;">{{ f.name }}</div>
-      </div>
+      </AppCard>
     </div>
     <div style="display:flex;gap:8px;">
       <el-input v-model="newFolderName" placeholder="新建文件夹" size="small" style="flex:1;" />
@@ -162,15 +169,31 @@ const switchTab = async (tab) => {
   selectedFollowee.value = null
   resetCategory()
   if (tab === 'following' && followingList.value.length === 0) {
-    try {
-      const res = await getFollowing()
-      followingList.value = res.data || []
-    } catch (e) { followingList.value = [] }
+    await loadFollowing()
   }
   loadInspireList()
 }
 const selectedFollowee = ref(null)
 const followingList = ref([])
+const followingLoading = ref(false)
+const followingError = ref('')
+const followingState = computed(() => {
+  if (followingLoading.value && !followingList.value.length) return 'loading'
+  if (followingError.value && !followingList.value.length) return 'error'
+  return followingList.value.length ? 'ready' : 'empty'
+})
+const loadFollowing = async () => {
+  followingLoading.value = true
+  followingError.value = ''
+  try {
+    const res = await getFollowing()
+    followingList.value = res.data || []
+  } catch (e) {
+    followingError.value = e?.message || 'load following failed'
+  } finally {
+    followingLoading.value = false
+  }
+}
 
 const selectFollowee = (u) => {
   selectedFollowee.value = u.id
@@ -218,6 +241,12 @@ const activeSubItem = ref('')
 const currentSubList = ref([])
 const inspireList = ref([])
 const loading = ref(false)
+const listError = ref('')
+const listState = computed(() => {
+  if (loading.value && !inspireList.value.length) return 'loading'
+  if (listError.value && !inspireList.value.length) return 'error'
+  return inspireList.value.length ? 'ready' : 'empty'
+})
 
 const handleClickCategory = (item) => {
   activeCategory.value = item.name; activeSubItem.value = ''; inspireList.value = []
@@ -229,17 +258,19 @@ const hasMore = ref(true)
 const selectSubItem = async (item) => {
   activeSubItem.value = item.name; currentPage.value = 1; hasMore.value = true
   loading.value = true
+  listError.value = ''
   try {
     const res = await getInspireList({ tag: activeCategory.value, page: 1, size: 20 })
     inspireList.value = res.data || []
     if (res.data && res.data.length < 20) hasMore.value = false
-  } catch (e) { inspireList.value = []
+  } catch (e) { inspireList.value = []; listError.value = e?.message || 'load failed'
   } finally { loading.value = false }
 }
 
 const loadInspireList = async () => {
   if (loading.value) return
   loading.value = true
+  listError.value = ''
   try {
     if (activeTab.value === 'recommend') {
       const res = await getRecommendList({ page: currentPage.value, size: 10 })
@@ -259,7 +290,7 @@ const loadInspireList = async () => {
     } else {
       hasMore.value = false
     }
-  } catch (e) { console.error(e) }
+  } catch (e) { console.error(e); listError.value = e?.message || 'load failed' }
   finally { loading.value = false }
 }
 
@@ -537,8 +568,7 @@ const handleMsgFromFollow = async (u) => {
 .tab-item.active { background:#fff; color:#409eff; font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
 .feed-list { display:flex; flex-direction:column; gap:16px; }
 .following-list { display:flex; flex-direction:column; gap:10px; }
-.follow-user-card { display:flex; align-items:center; gap:12px; padding:14px 16px; background:#fff; border-radius:14px; cursor:pointer; transition:0.2s; border:1px solid #f0f3f9; }
-.follow-user-card:hover { border-color:#409eff; box-shadow:0 2px 8px rgba(64,158,255,.08); }
+.follow-user-card { display:flex; align-items:center; gap:12px; border-radius:14px; transition:0.2s; }
 .follow-user-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
 .follow-user-info { flex:1; min-width:0; }
 .follow-user-name { font-size:15px; font-weight:500; color:#1d1d1f; }
@@ -546,7 +576,7 @@ const handleMsgFromFollow = async (u) => {
 .follow-user-arrow { font-size:20px; color:#c0c4cc; }
 .all-title { font-size:20px; font-weight:600; color:#1d1d1f; margin:0 0 20px; }
 .category-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
-.category-card { padding:32px 14px; background:#fff; border-radius:20px; text-align:center; cursor:pointer; transition:all 0.26s; animation:fadeUp 0.4s forwards; animation-delay:calc(var(--idx)*65ms); opacity:0; border:1px solid #f0f3f9; }
+.category-card { border-radius:20px; text-align:center; transition:all 0.26s; animation:fadeUp 0.4s forwards; animation-delay:calc(var(--idx)*65ms); opacity:0; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 .category-card:active { transform:scale(0.96) }
 .cate-icon { font-size:40px; margin-bottom:14px; }
@@ -554,7 +584,7 @@ const handleMsgFromFollow = async (u) => {
 .cate-num { font-size:13px; color:#86868b; }
 .back-btn { font-size:15px; color:#409eff; cursor:pointer; margin:24px 0 20px; }
 #sub-tag-list { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
-.sub-tag { padding:32px 14px; background:#fff; border-radius:20px; text-align:center; cursor:pointer; border:1px solid #f0f3f9; font-size:17px; font-weight:500; color:#1d1d1f; }
+.sub-tag { border-radius:20px; text-align:center; font-size:17px; font-weight:500; color:#1d1d1f; }
 .slide-fade-enter-from { opacity:0; transform:translateX(14px) }
 .slide-fade-leave-to { opacity:0; transform:translateX(-14px) }
 .slide-fade-enter-active,.slide-fade-leave-active { transition:all 0.28s }
@@ -580,8 +610,7 @@ const handleMsgFromFollow = async (u) => {
 .btn-left:hover{transform:scale(1.1);}
 .btn-right:hover{transform:scale(1.1);}
 
-.folder-option.selected { border-color: #409eff; background: #f0f8ff; }
-.folder-option:hover { border-color: #409eff44; }
+.folder-option { cursor:pointer; }
 /* 推荐卡片 - 完全对照 demo 样式 */
 .swipe-container{overflow:hidden}
 .card{

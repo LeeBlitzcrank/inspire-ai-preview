@@ -1,0 +1,153 @@
+/**
+ * 设计令牌（design tokens）
+ *
+ * 所有颜色 / 圆角 / 阴影 / 间距 / 字号都收敛到这里，
+ * 页面里只引用 var(--xx)，不要再写死色值。
+ * 换主题只改 :root[data-theme=...] 这一层。
+ */
+
+:root {
+  /* ---------- 间距 ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ---------- 字号 ---------- */
+  --fs-xs: 11.5px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --fs-lg: 15px;
+  --fs-xl: 17px;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-sm: 0 1px 6px rgba(0, 0, 0, .05);
+  --shadow-md: 0 4px 14px rgba(30, 90, 80, .08);
+  --shadow-lg: 0 8px 30px rgba(20, 70, 60, .10);
+
+  /* ---------- 中性色（不随主题变） ---------- */
+  --c-bg: #eef4f2;
+  --c-surface: #ffffff;
+  --c-text: #1d1d1f;
+  --c-text-2: #5b6b68;
+  --c-text-3: #9aa3b2;
+  --c-placeholder: #b6c2c0;
+  --c-danger: #c2613a;
+
+  /* ---------- 通用组件色（非个人页默认蓝色，避免主题切换污染全局） ---------- */
+  --ui-primary: #409eff;
+  --ui-primary-weak: #ecf5ff;
+  --ui-primary-soft: #f4f7fd;
+  --ui-primary-line: #e4e9f2;
+  --ui-primary-hover: #b3d8ff;
+  --ui-surface: #ffffff;
+  --ui-text: #1d1d1f;
+  --ui-text-2: #6b7280;
+  --ui-text-3: #9aa3b2;
+  --ui-danger: #f56c6c;
+  --ui-success: #52c41a;
+  --ui-warning: #d98200;
+}
+
+/* ==================== 主题 1：薄荷绿（全局默认） ====================
+   注意：默认值定义在 :root 上，其他主题只在 [data-theme=...] 的元素子树里生效。
+   目前 data-theme 只挂在个人页根节点上，所以换主题只影响个人页，其他页面永远是薄荷绿。 */
+:root,
+[data-theme="mint"] {
+  --c-primary: #0f766e;
+  --c-primary-weak: #f2faf8;
+  --c-primary-soft: #e9f5f2;
+  --c-primary-line: #cfe6e0;
+  --c-primary-hover: #a8dcd2;
+  --c-accent: #4f8a48;
+  --c-accent-weak: #e6f2e4;
+  --c-warn-tip: #d98200;
+}
+
+/* ==================== 主题 2：暖橙 ==================== */
+[data-theme="orange"] {
+  --c-primary: #c2611f;
+  --c-primary-weak: #fff8f2;
+  --c-primary-soft: #fdeee0;
+  --c-primary-line: #f0d9c0;
+  --c-primary-hover: #efc79b;
+  --c-accent: #b26a00;
+  --c-accent-weak: #fdf3e2;
+  --c-warn-tip: #b26a00;
+}
+
+/* ==================== 主题 3：莫兰迪灰 ==================== */
+[data-theme="morandi"] {
+  --c-primary: #6b7280;
+  --c-primary-weak: #f7f8f9;
+  --c-primary-soft: #eef0f2;
+  --c-primary-line: #dcdfe4;
+  --c-primary-hover: #c4c9d0;
+  --c-accent: #7c6f64;
+  --c-accent-weak: #f1efed;
+  --c-warn-tip: #a1824a;
+}
+
+/* 个人页组件跟随个人页主题，其他页面继续使用上面的中性蓝色组件变量。 */
+.personal-page[data-theme] {
+  --ui-primary: var(--c-primary);
+  --ui-primary-weak: var(--c-primary-weak);
+  --ui-primary-soft: var(--c-primary-soft);
+  --ui-primary-line: var(--c-primary-line);
+  --ui-primary-hover: var(--c-primary-hover);
+  --ui-surface: var(--c-surface);
+  --ui-text: var(--c-text);
+  --ui-text-2: var(--c-text-2);
+  --ui-text-3: var(--c-text-3);
+  --ui-danger: var(--c-danger);
+}
+
+/* ==================== 通用原子类 ==================== */
+.tk-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-primary-line);
+  border-radius: var(--radius-lg);
+}
+.tk-card--hover:hover {
+  border-color: var(--c-primary-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.tk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 8px 15px;
+  border: 1px solid var(--c-primary-line);
+  border-radius: var(--radius-pill);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.tk-pill--main {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+.tk-input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--c-primary-line);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.tk-input:focus { border-color: var(--c-primary); }

@@ -187,15 +187,23 @@
         <!-- AI 配图推荐面板（内联，不再弹窗） -->
         <div v-if="imageSuggestOpen" class="suggest-panel">
           <div class="suggest-title">🤖 为你推荐（点击可多选，换一批可继续挑）</div>
-          <div v-if="suggestLoading" class="suggest-empty">正在获取配图…</div>
-          <div v-else-if="imageSuggestions.length" class="suggest-grid">
+          <AppState
+            :state="suggestState"
+            :rows="3"
+            loading-variant="grid"
+            empty-icon="🖼"
+            empty-text="暂无推荐，换个关键词再试试"
+            error-text="配图加载失败"
+            @retry="suggestImages"
+          >
+          <div v-if="imageSuggestions.length" class="suggest-grid">
             <div v-for="(url, i) in imageSuggestions" :key="i" class="suggest-img"
                  :class="{ selected: selectedSuggests.includes(url) }" @click="toggleSuggestPick(url)">
               <img :src="url" alt="" />
               <span class="check">✓</span>
             </div>
           </div>
-          <div v-else class="suggest-empty">暂无推荐，换个关键词再试试</div>
+          </AppState>
           <div class="suggest-actions">
             <button type="button" class="ghost" :disabled="suggestLoading || addingSuggest" @click="suggestImages({ next: true })">🔄 换一批</button>
             <button type="button" class="primary"
@@ -916,7 +924,13 @@ const toggleSuggest = async () => {
 }
 
 const suggestLoading = ref(false)
+const suggestError = ref('')
 const suggestPage = ref(1)                 // 当前批次页码，「换一批」递增
+const suggestState = computed(() => {
+  if (suggestLoading.value && !imageSuggestions.value.length) return 'loading'
+  if (suggestError.value && !imageSuggestions.value.length) return 'error'
+  return imageSuggestions.value.length ? 'ready' : 'empty'
+})
 
 // 取一批推荐图（走统一请求封装：自动带上 baseURL 与 Token）
 const fetchSuggest = async (keyword, page) => {
@@ -936,6 +950,7 @@ const suggestImages = async ({ next = false } = {}) => {
     suggestPage.value += 1
   }
   suggestLoading.value = true
+  suggestError.value = ''
   try {
     let list = await fetchSuggest(keyword, suggestPage.value)
     // 翻到末页后回到第一页，保证「换一批」永远有内容
@@ -948,6 +963,7 @@ const suggestImages = async ({ next = false } = {}) => {
   } catch (e) {
     console.error('suggestImages failed:', e)
     imageSuggestions.value = []
+    suggestError.value = e?.message || 'suggest images failed'
     ElMessage.error('获取配图失败')
   } finally {
     suggestLoading.value = false

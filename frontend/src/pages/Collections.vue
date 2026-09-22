@@ -7,15 +7,28 @@
     </div>
 
     <!-- 文件夹网格（与预览一致：两列卡片，右上角重命名） -->
+    <AppState
+      :state="folderState"
+      :rows="2"
+      loading-variant="grid"
+      empty-icon="📁"
+      empty-text="还没有收藏夹"
+      error-text="收藏夹加载失败"
+      @retry="loadFolders"
+    >
     <div class="folder-grid" id="c-folder-grid">
       <!-- 未分类放第一个，和预览一致 -->
-      <div class="folder unc" id="c-folder-unc"
+      <AppCard v-if="uncFolder" class="folder unc" id="c-folder-unc"
+           padding="13px 12px"
+           clickable
            :class="{ on: String(activeFolder) === String(uncFolder ? uncFolder.id : -1) }"
            @click="selectFolder(uncFolder ? uncFolder.id : -1)">
         <div class="top"><div class="ico">📂</div><div class="fn">未分类</div></div>
         <div class="fc">{{ uncFolder ? folderCount(uncFolder) + ' 条灵感' : '未归档的收藏' }}</div>
-      </div>
-      <div v-for="f in namedFolders" :key="f.id" class="folder" id="c-folder"
+      </AppCard>
+      <AppCard v-for="f in namedFolders" :key="f.id" class="folder" id="c-folder"
+           padding="13px 12px"
+           clickable
            :class="{ on: String(activeFolder) === String(f.id) }" @click="selectFolder(f.id)">
         <div class="top">
           <div class="ico">{{ f.icon || '📁' }}</div>
@@ -23,14 +36,23 @@
         </div>
         <div class="fc">{{ folderCount(f) }} 条灵感</div>
         <button class="edit" id="c-folder-edit" title="重命名" @click.stop="editFolder(f)">✎</button>
-      </div>
+      </AppCard>
     </div>
+    </AppState>
 
     <!-- 选中文件夹后的收藏列表 -->
     <div v-if="activeFolder !== null" class="list-head" id="c-list-head">
       <span class="t2">{{ activeFolderName }}</span>
       <span class="n">共 {{ collectedInspires.length }} 条</span>
     </div>
+    <AppState
+      :state="collectState"
+      :rows="4"
+      empty-icon="⭐"
+      empty-text="该文件夹还没有收藏灵感"
+      error-text="收藏内容加载失败"
+      @retry="loadCollects"
+    >
     <!-- 虚拟列表：只渲染可视区，滚到底继续放出一批（与预览一致） -->
     <div
       v-if="activeFolder !== null && collectedInspires.length"
@@ -39,11 +61,13 @@
       @scroll.passive="onListScroll"
     >
       <div class="spacer" :style="{ height: (visibleCount * ITEM_H) + 'px' }">
-        <div
+        <AppCard
           v-for="row in visibleRows"
           :key="row.data.id"
           class="ccard"
           id="c-card"
+          padding="11px 12px"
+          clickable
           :style="{ position: 'absolute', left: 0, right: 0, top: (row.index * ITEM_H) + 'px' }"
           @click="goDetail(row.data.id)"
         >
@@ -53,13 +77,13 @@
           <div class="ctxt">
             <div class="ct">{{ row.data.title || '无标题' }}</div>
             <div class="cm">
-              <span v-if="row.data.tag" class="ctag">{{ row.data.tag }}</span>
+              <AppTag v-if="row.data.tag" class="ctag" tone="neutral">{{ row.data.tag }}</AppTag>
               <span v-if="row.data.tag">·</span>
               <span>{{ fmtDate(row.data.createTime) }}</span>
             </div>
           </div>
           <button class="move" id="c-move-btn" @click.stop="openMoveDialog(row.data.id)">📁 移动</button>
-        </div>
+        </AppCard>
       </div>
     </div>
     <div v-if="activeFolder !== null && collectedInspires.length" class="virt-foot" id="c-foot">
@@ -69,8 +93,7 @@
       </template>
       <template v-else>— 已经到底啦，共 {{ collectedInspires.length }} 条 —</template>
     </div>
-    <div v-else-if="activeFolder !== null" class="empty">该文件夹还没有收藏灵感</div>
-    <div v-else class="empty">还没有收藏夹，点击右上角新建</div>
+    </AppState>
     <!-- 新建收藏夹：与预览一致（带字段标题 + 图标输入 + 胶囊按钮） -->
     <el-dialog v-model="showCreate" title="新建收藏夹" width="320px" id="c-dlg-create"
                class="mint-dialog" :show-close="false" append-to-body>
@@ -134,11 +157,32 @@ const newFolderIcon = ref('📁')
 const showRename = ref(false)
 const renameName = ref('')
 const renamingFolder = ref(null)
+const folderLoading = ref(true)
+const folderError = ref('')
+const collectLoading = ref(false)
+const collectError = ref('')
+const folderState = computed(() => {
+  if (folderLoading.value) return 'loading'
+  if (folderError.value) return 'error'
+  return folders.value.length ? 'ready' : 'empty'
+})
+const collectState = computed(() => {
+  if (collectLoading.value) return 'loading'
+  if (collectError.value) return 'error'
+  return collectedInspires.value.length ? 'ready' : 'empty'
+})
 const loadFolders = async () => {
+  folderLoading.value = true
+  folderError.value = ''
   try { const res = await getCollectFolders(); folders.value = res.data || []
     if (folders.value.length > 0 && !activeFolder.value) { activeFolder.value = folders.value[0].id; loadCollects() }
     loadFolderCounts()
-  } catch (e) { folders.value = [] }
+  } catch (e) {
+    folders.value = []
+    folderError.value = e?.message || 'load folders failed'
+  } finally {
+    folderLoading.value = false
+  }
 }
 
 /**
@@ -161,8 +205,15 @@ const loadCollects = async () => {
   // 换文件夹时回到第一批
   visibleCount.value = PAGE_STEP
   listScrollTop.value = 0
+  collectLoading.value = true
+  collectError.value = ''
   try { const res = await getCollectListByFolder(activeFolder.value); collectedInspires.value = res.data || [] }
-  catch (e) { collectedInspires.value = [] }
+  catch (e) {
+    collectedInspires.value = []
+    collectError.value = e?.message || 'load collects failed'
+  } finally {
+    collectLoading.value = false
+  }
 }
 
 /* ===== 虚拟列表：只渲染可视区，滚到底再放出一批 ===== */
@@ -258,7 +309,14 @@ const confirmMove = async () => {
 </script>
 <style scoped>
 /* v2：整页换成站点薄荷绿色系 */
-#collections-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; }
+#collections-page {
+  --ui-primary:#0f766e;
+  --ui-primary-weak:#f2faf8;
+  --ui-primary-soft:#e9f5f2;
+  --ui-primary-line:#e6f2ef;
+  --ui-primary-hover:#a8dcd2;
+  width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px;
+}
 .head { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
 .head h2 { margin:0; font-size:17px; font-weight:700; }
 .back-btn { width:34px; height:34px; border-radius:50%; border:none; background:#fff;
@@ -268,8 +326,7 @@ const confirmMove = async () => {
 
 /* ===== 与预览完全一致的样式 ===== */
 .folder-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:11px; margin-bottom:16px; }
-.folder { padding:13px 12px; background:#fff; border:1px solid #e6f2ef; border-radius:15px;
-  cursor:pointer; position:relative; transition:.16s; }
+.folder { border-radius:15px; cursor:pointer; position:relative; transition:.16s; }
 .folder:hover { border-color:#d6e8e3; }
 /* 选中态要明确区别于 hover，否则看起来「所有卡片都像选中」 */
 .folder.on { border:2px solid #0f766e; background:#f2faf8; box-shadow:0 0 0 2px rgba(15,118,110,.10); }
@@ -289,9 +346,8 @@ const confirmMove = async () => {
 
 .virt { height:330px; overflow-y:auto; padding-right:2px; }
 .spacer { position:relative; }
-.ccard { display:flex; align-items:center; gap:11px; padding:11px 12px; background:#fff;
-  height:88px; margin-bottom:8px; box-sizing:border-box;
-  border:1px solid #e6f2ef; border-radius:14px; cursor:pointer; transition:.16s; }
+.ccard { display:flex; align-items:center; gap:11px; height:88px; margin-bottom:8px;
+  box-sizing:border-box; border-radius:14px; cursor:pointer; transition:.16s; }
 .ccard:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .cthumb { width:56px; height:56px; border-radius:11px; flex:0 0 auto; overflow:hidden; }
 .cthumb img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -299,7 +355,7 @@ const confirmMove = async () => {
 .ct { font-size:13.5px; font-weight:600; line-height:1.4; margin-bottom:5px;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .cm { display:flex; align-items:center; gap:6px; font-size:11.5px; color:#9aa3b2; }
-.ctag { font-size:11px; padding:1px 7px; border-radius:999px; background:#f1f7f5; color:#4b7a72; }
+.ctag { --ui-text-3:#4b7a72; }
 .move { border:none; background:#f2f8f6; color:#0f766e; font-size:11.5px; padding:6px 10px;
   border-radius:999px; cursor:pointer; white-space:nowrap; font-family:inherit; }
 .move:hover { background:#e6f3ef; }

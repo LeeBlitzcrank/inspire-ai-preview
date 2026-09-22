@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>移动端 App 化 · 可操作预览</title>
+<style>
+  :root {
+    --bg: #edf3f8;
+    --surface: #ffffff;
+    --surface-2: #f6f9fc;
+    --text: #17202a;
+    --muted: #7d8b9c;
+    --line: #e6edf5;
+    --primary: #2f7cf6;
+    --primary-soft: #eaf2ff;
+    --green: #18a874;
+    --orange: #f08a24;
+    --pink: #eb4d8f;
+    --shadow: 0 18px 55px rgba(33, 57, 85, .16);
+    --brand-a: #3a86ff;
+    --brand-b: #21b890;
+    --hero: linear-gradient(145deg,#eff8ff,#edf9f4);
+    --bar: rgba(255,255,255,.94);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(47,124,246,.12), transparent 28%),
+      radial-gradient(circle at 88% 20%, rgba(24,168,116,.12), transparent 26%),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  button, input { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+
+  .stage {
+    width: min(1240px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 34px 0 60px;
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 390px minmax(260px, 1fr);
+    gap: 28px;
+    align-items: center;
+  }
+  .intro { align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
+  .eyebrow {
+    display: inline-flex; width: fit-content; align-items: center; gap: 8px;
+    padding: 7px 11px; border-radius: 999px;
+    background: rgba(47,124,246,.1); color: var(--primary);
+    font-size: 12px; font-weight: 700;
+  }
+  .intro h1 { margin: 18px 0 12px; font-size: clamp(28px, 3vw, 46px); line-height: 1.12; letter-spacing: 0; }
+  .intro p { margin: 0; color: #5d6d80; font-size: 14px; line-height: 1.9; }
+  .feature-list { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .feature-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: #435365; }
+  .feature-list i { font-style: normal; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: #fff; box-shadow: 0 4px 14px rgba(33,57,85,.08); }
+  .desk-note { margin-top: 24px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,.68); color: #5d6d80; font-size: 12px; line-height: 1.75; }
+
+  .phone-wrap { position: relative; }
+  .phone {
+    position: relative;
+    width: 390px;
+    height: min(820px, calc(100dvh - 68px));
+    min-height: 620px;
+    margin: 0 auto;
+    border-radius: 38px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow), 0 0 0 8px #1b2633, 0 0 0 10px #33465c;
+  }
+  .phone[data-style="mint"] {
+    --primary: #0f766e;
+    --primary-soft: #e9f5f2;
+    --bg: #f3faf8;
+    --surface: #ffffff;
+    --text: #173d38;
+    --muted: #718a84;
+    --line: #dcebe7;
+    --brand-a: #0f766e;
+    --brand-b: #4f8a48;
+    --hero: linear-gradient(145deg,#e9f8f3,#f7fbf8);
+    --bar: rgba(255,255,255,.95);
+  }
+  .phone[data-style="orange"] {
+    --primary: #c2611f;
+    --primary-soft: #fff2e5;
+    --bg: #fbf6f0;
+    --surface: #ffffff;
+    --text: #3b2a1b;
+    --muted: #8a7562;
+    --line: #f0e2d5;
+    --brand-a: #d97735;
+    --brand-b: #e7a43d;
+    --hero: linear-gradient(145deg,#fff1e3,#fdf8ef);
+    --bar: rgba(255,251,247,.96);
+  }
+  .phone[data-style="night"] {
+    --primary: #70b8ff;
+    --primary-soft: #1d334a;
+    --bg: #0f1620;
+    --surface: #182330;
+    --surface-2: #111b26;
+    --text: #edf6ff;
+    --muted: #8fa3b8;
+    --line: #2b3b4d;
+    --brand-a: #3a86ff;
+    --brand-b: #21b890;
+    --hero: linear-gradient(145deg,#172c3f,#152c2b);
+    --bar: rgba(21,31,42,.96);
+    --shadow: 0 18px 55px rgba(0,0,0,.42);
+    color-scheme: dark;
+  }
+  .phone[data-style="night"] .cover { filter: saturate(.92) brightness(.9); }
+  .phone[data-style="night"] .pill { background: #21384f; color: #9bcaff; }
+  .phone[data-style="night"] .pill.orange { background: #3b2d1e; color: #ffc274; }
+  .phone[data-style="night"] .pill.green { background: #17382f; color: #74e1b5; }
+  .phone[data-style="night"] .category .ico,
+  .phone[data-style="night"] .profile-stat { background: rgba(255,255,255,.06); }
+  .phone:before {
+    content: ""; position: absolute; z-index: 50; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 104px; height: 26px; border-radius: 999px; background: #111a23;
+  }
+  .statusbar {
+    position: absolute; z-index: 40; top: 0; left: 0; right: 0; height: 44px;
+    padding: 11px 18px 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    color: var(--text); font-size: 11px; font-weight: 800; pointer-events: none;
+  }
+  .status-icons { display: flex; gap: 5px; font-size: 10px; }
+
+  .app {
+    position: absolute; inset: 0;
+    overflow: hidden;
+    background: var(--bg);
+    touch-action: pan-y;
+  }
+  .pull-indicator {
+    position: absolute; z-index: 5; top: 48px; left: 0; right: 0;
+    height: 54px; display: flex; align-items: center; justify-content: center; gap: 9px;
+    color: var(--primary); font-size: 12px; font-weight: 700;
+    opacity: 0; transform: translateY(-24px); pointer-events: none;
+    transition: opacity .18s, transform .18s;
+  }
+  .pull-indicator.on { opacity: 1; transform: translateY(0); }
+  .spinner {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid rgba(47,124,246,.2); border-top-color: var(--primary);
+  }
+  .pull-indicator.loading .spinner { animation: spin .75s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .page {
+    position: absolute; inset: 0 0 66px;
+    padding: 56px 16px calc(26px + env(safe-area-inset-bottom));
+    overflow-y: auto; overscroll-behavior-y: contain;
+    opacity: 0; visibility: hidden; transform: translateX(14px);
+    transition: opacity .2s, transform .2s, visibility .2s;
+    background: var(--bg);
+    -webkit-overflow-scrolling: touch;
+  }
+  .page.active { opacity: 1; visibility: visible; transform: none; }
+  .page.refreshing { transition: transform .22s ease; }
+
+  .topline { min-height: 38px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-size: 18px; font-weight: 800; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg,var(--brand-a),var(--brand-b)); box-shadow: 0 8px 18px rgba(47,124,246,.22); }
+  .round { width: 34px; height: 34px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--text); box-shadow: 0 3px 14px rgba(33,57,85,.08); cursor: pointer; }
+  .title { font-size: 23px; line-height: 1.2; font-weight: 850; margin: 2px 0 8px; }
+  .sub { margin: 0 0 18px; color: var(--muted); font-size: 12.5px; line-height: 1.65; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px; }
+  .section-head h2 { margin: 0; font-size: 15px; }
+  .section-head span { color: var(--primary); font-size: 11.5px; font-weight: 700; }
+
+  .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); color: var(--muted); padding: 7px 12px; border-radius: 999px; font-size: 12px; }
+  .chip.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 750; }
+
+  .feed { display: grid; gap: 13px; }
+  .feed-card {
+    position: relative; overflow: hidden; border: 0; padding: 0; text-align: left;
+    background: var(--surface); border-radius: 20px; box-shadow: 0 5px 20px rgba(33,57,85,.08);
+    cursor: pointer; animation: rise .45s both;
+  }
+  .feed-card:active { transform: scale(.985); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .cover { height: 178px; width: 100%; display: block; object-fit: cover; background: #dfe9f4; }
+  .feed-body { padding: 13px 14px 14px; }
+  .meta { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+  .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 10.5px; font-weight: 750; }
+  .pill.orange { background: #fff2e5; color: #c26a12; }
+  .pill.green { background: #e9f9f2; color: #0d895e; }
+  .feed-title { margin: 0; color: var(--text); font-size: 15px; line-height: 1.45; font-weight: 800; }
+  .feed-desc { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.62; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .stats { display: flex; gap: 14px; margin-top: 11px; color: #9aa6b5; font-size: 11px; }
+
+  .category-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .category {
+    min-height: 118px; border: 0; border-radius: 18px; padding: 15px; text-align: left;
+    background: var(--surface); box-shadow: 0 5px 18px rgba(33,57,85,.07); cursor: pointer;
+  }
+  .category .ico { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: #eef4ff; font-size: 20px; margin-bottom: 13px; }
+  .category b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .category small { color: #97a3b2; font-size: 11px; }
+
+  .creator {
+    padding: 18px; border-radius: 24px; color: #fff;
+    background: linear-gradient(145deg,var(--brand-a),var(--brand-b));
+    box-shadow: 0 16px 32px rgba(37,113,215,.22);
+  }
+  .creator h2 { margin: 0 0 8px; font-size: 22px; }
+  .creator p { margin: 0; font-size: 12.5px; line-height: 1.75; color: rgba(255,255,255,.84); }
+  .create-input { margin-top: 18px; padding: 15px; border-radius: 18px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2); min-height: 112px; font-size: 13px; line-height: 1.7; }
+  .create-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; margin-top: 14px; }
+  .create-actions button { border: 0; height: 44px; border-radius: 14px; cursor: pointer; font-weight: 800; }
+  .create-actions .ghost { color: #fff; background: rgba(255,255,255,.16); }
+  .create-actions .main { color: #1d5dca; background: #fff; }
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 16px; }
+  .quick { padding: 14px; border-radius: 17px; background: var(--surface); box-shadow: 0 4px 16px rgba(33,57,85,.06); }
+  .quick b { display: block; margin-bottom: 5px; font-size: 13px; }
+  .quick span { color: #8c98a8; font-size: 11px; line-height: 1.5; }
+
+  .chat-list { display: grid; gap: 9px; }
+  .chat { display: flex; align-items: center; gap: 11px; padding: 13px; border-radius: 17px; background: var(--surface); box-shadow: 0 4px 16px rgba(33,57,85,.06); }
+  .avatar { width: 43px; height: 43px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; color: #fff; font-weight: 800; background: linear-gradient(135deg,#5a7cff,#a855f7); }
+  .chat-main { flex: 1; min-width: 0; }
+  .chat-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .chat-top b { font-size: 13.5px; }
+  .chat-top time { color: #a2adba; font-size: 10.5px; }
+  .chat p { margin: 0; color: #788697; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; border-radius: 999px; background: #f25656; color: #fff; font-size: 10px; font-weight: 800; }
+  .message-compose { display: flex; gap: 9px; margin-top: 15px; }
+  .message-compose input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; outline: none; background: var(--surface); color: var(--text); }
+  .message-compose button { width: 58px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 800; }
+
+  .profile-hero { padding: 18px; border-radius: 22px; background: var(--hero); }
+  .profile-row { display: flex; align-items: center; gap: 13px; }
+  .profile-avatar { width: 66px; height: 66px; display: grid; place-items: center; border-radius: 50%; background: #fff; font-size: 27px; box-shadow: 0 8px 20px rgba(33,57,85,.1); }
+  .profile-row h2 { margin: 0 0 4px; font-size: 18px; }
+  .profile-row p { margin: 0; color: #7d8b9c; font-size: 12px; }
+  .profile-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 18px; }
+  .profile-stat { text-align: center; padding: 11px 4px; border-radius: 14px; background: rgba(255,255,255,.7); }
+  .profile-stat b { display: block; color: var(--primary); font-size: 16px; }
+  .profile-stat span { color: #8794a4; font-size: 10.5px; }
+  .profile-actions { display: grid; gap: 9px; margin-top: 15px; }
+  .profile-actions button { height: 46px; border: 0; border-radius: 15px; background: var(--surface); color: var(--text); text-align: left; padding: 0 15px; font-weight: 700; box-shadow: 0 4px 16px rgba(33,57,85,.06); }
+
+  .tabbar {
+    position: absolute; z-index: 12; left: 0; right: 0; bottom: 0;
+    height: calc(66px + env(safe-area-inset-bottom));
+    padding: 7px 8px env(safe-area-inset-bottom);
+    display: grid; grid-template-columns: repeat(5,1fr);
+    background: var(--bar);
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(16px);
+  }
+  .tab {
+    position: relative; border: 0; background: transparent; color: #9ba7b5;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 10px; cursor: pointer;
+  }
+  .tab .icon { font-size: 19px; line-height: 1; filter: grayscale(1); opacity: .7; }
+  .tab.on { color: var(--primary); font-weight: 800; }
+  .tab.on .icon { filter: none; opacity: 1; transform: translateY(-1px); }
+  .tab .tab-badge {
+    position: absolute; top: 1px; left: calc(50% + 7px);
+    min-width: 15px; height: 15px; padding: 0 4px; display: grid; place-items: center;
+    border-radius: 999px; color: #fff; background: #f25656; font-size: 9px; font-weight: 800;
+  }
+
+  .detail-sheet {
+    position: absolute; z-index: 30; inset: 0;
+    background: var(--surface); transform: translateX(100%);
+    transition: transform .28s cubic-bezier(.22,.9,.35,1);
+  }
+  .detail-sheet.open { transform: translateX(0); }
+  .detail-top {
+    position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: 52px;
+    display: flex; align-items: center; padding: 8px 14px 0;
+    background: var(--bar); backdrop-filter: blur(14px);
+  }
+  .detail-top button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f1f5f9; cursor: pointer; }
+  .detail-top b { margin-left: 10px; font-size: 14px; }
+  .detail-scroll { position: absolute; inset: 52px 0 0; overflow-y: auto; padding-bottom: 30px; }
+  .detail-cover { width: 100%; height: 250px; object-fit: cover; display: block; background: #e4edf6; }
+  .detail-content { padding: 18px 17px 24px; }
+  .detail-content h1 { margin: 10px 0 9px; font-size: 22px; line-height: 1.35; }
+  .detail-content h1 { color: var(--text); }
+  .detail-content p { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; }
+  .edge-hint {
+    position: absolute; z-index: 31; bottom: 22px; left: 50%; transform: translateX(-50%);
+    padding: 8px 12px; border-radius: 999px; background: rgba(17,28,40,.78); color: #fff;
+    font-size: 11px; opacity: 0; pointer-events: none; transition: opacity .2s; white-space: nowrap;
+  }
+  .edge-hint.on { opacity: 1; }
+
+  .style-fab {
+    position: absolute; z-index: 36; top: 50px; right: 13px;
+    width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%;
+    display: grid; place-items: center; background: var(--surface); color: var(--text);
+    box-shadow: 0 5px 18px rgba(33,57,85,.12); cursor: pointer;
+  }
+  .style-panel {
+    position: absolute; z-index: 37; top: 92px; right: 13px;
+    width: 142px; padding: 8px; border: 1px solid var(--line); border-radius: 15px;
+    background: var(--surface); box-shadow: 0 16px 36px rgba(33,57,85,.18);
+    opacity: 0; visibility: hidden; transform: translateY(-5px) scale(.98);
+    transition: .18s; transform-origin: top right;
+  }
+  .style-panel.open { opacity: 1; visibility: visible; transform: none; }
+  .style-option {
+    width: 100%; height: 34px; padding: 0 8px; border: 0; border-radius: 10px;
+    display: flex; align-items: center; gap: 8px; background: transparent;
+    color: var(--text); font-size: 11.5px; cursor: pointer;
+  }
+  .style-option:hover, .style-option.on { background: var(--primary-soft); color: var(--primary); font-weight: 800; }
+  .swatch { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .swatch.blue { background: linear-gradient(135deg,#3a86ff,#21b890); }
+  .swatch.mint { background: linear-gradient(135deg,#0f766e,#4f8a48); }
+  .swatch.orange { background: linear-gradient(135deg,#d97735,#e7a43d); }
+  .swatch.night { background: linear-gradient(135deg,#101a25,#3a86ff); }
+  .layout-mark {
+    width: 17px; height: 17px; border-radius: 6px; display: grid; place-items: center;
+    background: var(--primary-soft); color: var(--primary); font-size: 9px; font-style: normal; font-weight: 900;
+  }
+  .panel-title { padding: 5px 8px 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+  .panel-divider { height: 1px; margin: 5px 4px; background: var(--line); }
+
+  .quick-entry { display: none; }
+
+  /* A：沉浸单列流，保持一张大卡占据主要视线。 */
+  .phone[data-layout="classic"] .feed { gap: 13px; }
+
+  /* B：双列瀑布流，适合图片和短标题浏览。 */
+  .phone[data-layout="masonry"] .feed {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    align-items: start;
+    gap: 9px;
+  }
+  .phone[data-layout="masonry"] .cover { height: 118px; }
+  .phone[data-layout="masonry"] .feed-body { padding: 10px; }
+  .phone[data-layout="masonry"] .feed-title { font-size: 12.5px; }
+  .phone[data-layout="masonry"] .feed-desc {
+    margin-top: 6px;
+    font-size: 10.5px;
+    line-height: 1.55;
+    -webkit-line-clamp: 3;
+  }
+  .phone[data-layout="masonry"] .stats { display: none; }
+  .phone[data-layout="masonry"] .pill { padding: 1px 6px; font-size: 9.5px; }
+  .phone[data-layout="masonry"] .tabs .chip:nth-child(n+4) { display: none; }
+
+  /* C：杂志式大图流，强化封面和阅读节奏。 */
+  .phone[data-layout="editorial"] .feed { gap: 18px; }
+  .phone[data-layout="editorial"] .feed-card {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 16px;
+  }
+  .phone[data-layout="editorial"] .feed-card:first-child .cover { height: 248px; }
+  .phone[data-layout="editorial"] .cover { height: 168px; border-radius: 18px; }
+  .phone[data-layout="editorial"] .feed-body { padding: 12px 3px 0; }
+  .phone[data-layout="editorial"] .feed-title { font-size: 18px; }
+  .phone[data-layout="editorial"] .feed-desc { font-size: 12.5px; line-height: 1.8; }
+  .phone[data-layout="editorial"] .tabs { margin-left: -16px; margin-right: -16px; padding-left: 16px; }
+
+  /* D：快捷入口 + 横向紧凑列表，适合效率型使用。 */
+  .phone[data-layout="quick"] .quick-entry {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 4px 0 14px;
+  }
+  .phone[data-layout="quick"] .quick-entry button {
+    min-width: 0; border: 1px solid var(--line); border-radius: 15px;
+    padding: 10px 4px; display: grid; gap: 5px; background: var(--surface); color: var(--text); cursor: pointer;
+  }
+  .phone[data-layout="quick"] .quick-entry b { font-size: 19px; }
+  .phone[data-layout="quick"] .quick-entry span { font-size: 10.5px; color: var(--muted); }
+  .phone[data-layout="quick"] .tabs { display: none; }
+  .phone[data-layout="quick"] .feed { gap: 9px; }
+  .phone[data-layout="quick"] .feed-card {
+    display: grid; grid-template-columns: 96px minmax(0,1fr);
+    border-radius: 16px; box-shadow: 0 4px 14px rgba(33,57,85,.06);
+  }
+  .phone[data-layout="quick"] .cover { height: 104px; }
+  .phone[data-layout="quick"] .feed-body { padding: 10px 11px; }
+  .phone[data-layout="quick"] .feed-title { font-size: 13.5px; }
+  .phone[data-layout="quick"] .feed-desc { display: none; }
+  .phone[data-layout="quick"] .stats { margin-top: 9px; gap: 9px; }
+  .phone[data-layout="quick"] .tab[data-tab="create"] .icon {
+    width: 46px; height: 46px; margin-top: -24px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(135deg,var(--brand-a),var(--brand-b));
+    box-shadow: 0 8px 18px rgba(47,124,246,.28);
+  }
+  .phone[data-layout="quick"] .tab[data-tab="create"] {
+    color: var(--primary); font-weight: 800;
+  }
+  .phone[data-layout="quick"] .tabbar { overflow: visible; }
+
+  .toast {
+    position: absolute; z-index: 45; left: 50%; bottom: 84px; transform: translate(-50%, 12px);
+    padding: 9px 14px; border-radius: 999px; background: rgba(19,31,44,.86); color: #fff;
+    font-size: 11.5px; opacity: 0; pointer-events: none; transition: .22s;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  .legend { display: grid; gap: 14px; }
+  .legend-card { padding: 17px; border-radius: 18px; background: rgba(255,255,255,.75); box-shadow: 0 8px 24px rgba(33,57,85,.07); }
+  .legend-card h3 { margin: 0 0 7px; font-size: 14px; }
+  .legend-card p { margin: 0; color: #657486; font-size: 12px; line-height: 1.75; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .controls button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 11px; font-size: 11.5px; cursor: pointer; }
+
+  @media (max-width: 980px) {
+    .stage { grid-template-columns: 1fr; width: min(430px, calc(100% - 24px)); padding-top: 18px; }
+    .intro, .legend { display: none; }
+    .phone { width: min(390px, 100%); height: calc(100dvh - 24px); min-height: 560px; border-radius: 28px; box-shadow: 0 18px 50px rgba(33,57,85,.18); }
+    .phone:before { display: none; }
+    .statusbar { padding-top: 8px; }
+  }
+  @media (max-width: 520px) {
+    body { background: #fff; }
+    .stage { width: 100%; padding: 0; }
+    .phone { width: 100%; height: 100dvh; min-height: 100dvh; border-radius: 0; box-shadow: none; }
+    .statusbar { height: 38px; }
+    .page { padding-top: 46px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="intro">
+    <span class="eyebrow">MOBILE LAYOUT PREVIEW</span>
+    <h1>比较 4 种<br>移动端页面分布</h1>
+    <p>同一个内容与交互下，只改变页面怎么排。你可以切换布局和配色，再决定最终采用哪一套。</p>
+    <ul class="feature-list">
+      <li><i>A</i><span><b>沉浸单列</b><br>大卡主视觉，适合现在的内容流</span></li>
+      <li><i>B</i><span><b>双列瀑布</b><br>同屏看到更多灵感，浏览效率更高</span></li>
+      <li><i>C</i><span><b>杂志大图</b><br>封面优先，阅读节奏更像内容杂志</span></li>
+      <li><i>D</i><span><b>快捷紧凑</b><br>四宫格入口 + 横向列表 + 中央创建</span></li>
+    </ul>
+    <div class="desk-note">点手机右上角 🎨 可切换页面分布和配色；桌面右侧也有快捷按钮。</div>
+  </aside>
+
+  <div class="phone-wrap">
+    <div class="phone" id="phone" data-style="blue">
+      <div class="statusbar"><span>9:41</span><span class="status-icons">▮▮▮ ◒ ▰</span></div>
+      <div class="app" id="app">
+        <div class="pull-indicator" id="pullIndicator">
+          <span class="spinner"></span><span id="pullText">下拉刷新</span>
+        </div>
+        <button class="style-fab" title="切换风格" onclick="toggleStylePanel()">🎨</button>
+        <div class="style-panel" id="stylePanel">
+          <div class="panel-title">页面分布</div>
+          <button class="style-option layout-option on" data-layout="classic" onclick="setLayout('classic')"><i class="layout-mark">A</i>沉浸单列</button>
+          <button class="style-option layout-option" data-layout="masonry" onclick="setLayout('masonry')"><i class="layout-mark">B</i>双列瀑布</button>
+          <button class="style-option layout-option" data-layout="editorial" onclick="setLayout('editorial')"><i class="layout-mark">C</i>杂志大图</button>
+          <button class="style-option layout-option" data-layout="quick" onclick="setLayout('quick')"><i class="layout-mark">D</i>快捷紧凑</button>
+          <div class="panel-divider"></div>
+          <div class="panel-title">配色</div>
+          <button class="style-option on" data-style="blue" onclick="setStyle('blue')"><i class="swatch blue"></i>清透蓝</button>
+          <button class="style-option" data-style="mint" onclick="setStyle('mint')"><i class="swatch mint"></i>薄荷绿</button>
+          <button class="style-option" data-style="orange" onclick="setStyle('orange')"><i class="swatch orange"></i>暖橙生活</button>
+          <button class="style-option" data-style="night" onclick="setStyle('night')"><i class="swatch night"></i>深色夜航</button>
+        </div>
+
+        <section class="page active" id="page-recommend">
+          <div class="topline">
+            <div class="brand"><span class="brand-mark">🍎</span><span>灵感空间</span></div>
+            <button class="round" onclick="toast('搜索演示')">⌕</button>
+          </div>
+          <h1 class="title">今天，想发现点什么？</h1>
+          <p class="sub" id="refreshTime">下拉页面即可刷新推荐内容</p>
+          <div class="quick-entry">
+            <button onclick="toast('家居')"><b>🏠</b><span>家居</span></button>
+            <button onclick="toast('旅行')"><b>🏕</b><span>旅行</span></button>
+            <button onclick="toast('美食')"><b>🍜</b><span>美食</span></button>
+            <button onclick="toast('手作')"><b>🧶</b><span>手作</span></button>
+          </div>
+          <div class="tabs">
+            <button class="chip on">为你推荐</button>
+            <button class="chip">家居设计</button>
+            <button class="chip">旅行灵感</button>
+            <button class="chip">手作生活</button>
+          </div>
+          <div class="section-head"><h2>灵感推荐</h2><span>自动更新</span></div>
+          <div class="feed" id="feed"></div>
+        </section>
+
+        <section class="page" id="page-category">
+          <div class="topline">
+            <div><h1 class="title">灵感分类</h1><p class="sub">按兴趣浏览，比网页下拉框更直接</p></div>
+            <button class="round" onclick="toast('分类管理演示')">⚙</button>
+          </div>
+          <div class="category-grid">
+            <button class="category" onclick="toast('进入家居分类')"><span class="ico">🏠</span><b>家居设计</b><small>126 条灵感</small></button>
+            <button class="category" onclick="toast('进入美食分类')"><span class="ico">🍜</span><b>家常美食</b><small>98 条灵感</small></button>
+            <button class="category" onclick="toast('进入旅行分类')"><span class="ico">🏕</span><b>周末旅行</b><small>74 条灵感</small></button>
+            <button class="category" onclick="toast('进入摄影分类')"><span class="ico">📷</span><b>摄影记录</b><small>61 条灵感</small></button>
+            <button class="category" onclick="toast('进入穿搭分类')"><span class="ico">👗</span><b>穿搭灵感</b><small>53 条灵感</small></button>
+            <button class="category" onclick="toast('进入手作分类')"><span class="ico">🧶</span><b>手作生活</b><small>42 条灵感</small></button>
+          </div>
+        </section>
+
+        <section class="page" id="page-create">
+          <div class="topline">
+            <div><h1 class="title">创建灵感</h1><p class="sub">底部直接进入，发布路径更短</p></div>
+          </div>
+          <div class="creator">
+            <h2>记录今天突然冒出的想法</h2>
+            <p>输入一句话，AI 可以帮你扩展成完整灵感。</p>
+            <div class="create-input" contenteditable="true">周末想做一个不用烤箱的甜点，最好材料简单、步骤不超过五步……</div>
+            <div class="create-actions">
+              <button class="ghost" onclick="toast('已保存草稿')">存草稿</button>
+              <button class="main" onclick="toast('发布流程演示')">发布灵感</button>
+            </div>
+          </div>
+          <div class="quick-grid">
+            <div class="quick"><b>AI 配图</b><span>根据文案一次生成多张候选图</span></div>
+            <div class="quick"><b>自动排版</b><span>标题、段落和重点自动整理</span></div>
+            <div class="quick"><b>视频编辑</b><span>压缩、裁剪后决定是否保留原片</span></div>
+            <div class="quick"><b>分享海报</b><span>一键生成带二维码的分享图</span></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-messages">
+          <div class="topline">
+            <div><h1 class="title">消息</h1><p class="sub">会话、点赞和系统提醒集中到 App 入口</p></div>
+            <span class="pill orange">2 条未读</span>
+          </div>
+          <div class="chat-list">
+            <div class="chat"><span class="avatar">鹿</span><div class="chat-main"><div class="chat-top"><b>甜蜜小鹿</b><time>刚刚</time></div><p>你上次分享的手作思路很有用</p></div><span class="badge">2</span></div>
+            <div class="chat"><span class="avatar">奶</span><div class="chat-main"><div class="chat-top"><b>清爽奶茶</b><time>22:10</time></div><p>收藏了你的灵感《桌面整理》</p></div></div>
+            <div class="chat"><span class="avatar">胶</span><div class="chat-main"><div class="chat-top"><b>文艺胶片</b><time>昨天</time></div><p>评论了你：这个配色很舒服</p></div></div>
+          </div>
+          <div class="message-compose"><input id="messageInput" placeholder="发一条消息…"><button onclick="sendMessage()">发送</button></div>
+        </section>
+
+        <section class="page" id="page-mine">
+          <div class="topline">
+            <div><h1 class="title">我的</h1><p class="sub">个人中心与设置集中放置</p></div>
+            <button class="round" onclick="toast('设置演示')">⚙</button>
+          </div>
+          <div class="profile-hero">
+            <div class="profile-row">
+              <div class="profile-avatar">🐰</div>
+              <div><h2>温暖小兔</h2><p>@user001 · 杭州</p></div>
+            </div>
+            <div class="profile-stats">
+              <div class="profile-stat"><b>200</b><span>发布</span></div>
+              <div class="profile-stat"><b>687</b><span>收藏</span></div>
+              <div class="profile-stat"><b>2</b><span>关注</span></div>
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button onclick="toast('打开我的发布')">✍️ 我的发布</button>
+            <button onclick="toast('打开我的收藏夹')">⭐ 我的收藏夹</button>
+            <button onclick="toast('打开编辑资料')">👤 编辑资料</button>
+            <button onclick="toast('打开主题设置')">🎨 主题与偏好</button>
+          </div>
+        </section>
+
+        <nav class="tabbar">
+          <button class="tab on" data-tab="recommend" onclick="switchTab('recommend')"><span class="icon">🏠</span><span>推荐</span></button>
+          <button class="tab" data-tab="category" onclick="switchTab('category')"><span class="icon">▦</span><span>分类</span></button>
+          <button class="tab" data-tab="create" onclick="switchTab('create')"><span class="icon">＋</span><span>创建</span></button>
+          <button class="tab" data-tab="messages" onclick="switchTab('messages')"><span class="icon">💬</span><span>消息</span><i class="tab-badge">2</i></button>
+          <button class="tab" data-tab="mine" onclick="switchTab('mine')"><span class="icon">👤</span><span>我的</span></button>
+        </nav>
+
+        <section class="detail-sheet" id="detailSheet">
+          <div class="detail-top"><button onclick="closeDetail()">←</button><b>灵感详情</b></div>
+          <div class="detail-scroll">
+            <img class="detail-cover" id="detailCover" alt="">
+            <div class="detail-content">
+              <span class="pill green">推荐灵感</span>
+              <h1 id="detailTitle"></h1>
+              <p id="detailText"></p>
+            </div>
+          </div>
+          <div class="edge-hint" id="edgeHint">继续滑动即可返回</div>
+        </section>
+
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="legend">
+    <div class="legend-card">
+      <h3>先切页面分布</h3>
+      <p>点右上角 🎨，依次看 A / B / C / D。配色切换只作为附加选项，不影响布局比较。</p>
+      <div class="controls">
+        <button onclick="resetDemo()">重置预览</button>
+        <button onclick="showGestureHint()">显示手势提示</button>
+      </div>
+      <div class="controls">
+        <button onclick="setLayout('classic')">A 沉浸单列</button>
+        <button onclick="setLayout('masonry')">B 双列瀑布</button>
+        <button onclick="setLayout('editorial')">C 杂志大图</button>
+        <button onclick="setLayout('quick')">D 快捷紧凑</button>
+      </div>
+      <div class="controls">
+        <button onclick="setStyle('blue')">清透蓝</button>
+        <button onclick="setStyle('mint')">薄荷绿</button>
+        <button onclick="setStyle('orange')">暖橙生活</button>
+        <button onclick="setStyle('night')">深色夜航</button>
+      </div>
+    </div>
+    <div class="legend-card">
+      <h3>正式落地方式</h3>
+      <p>底部栏和手势只在移动端启用；桌面端保持现在的顶部导航。不会影响已有页面和后台管理。</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+const feeds = [
+  { title: '把阳台改造成阅读角，只用了三件家具', desc: '没有大面积改造，也没有昂贵家具。重点是减少视觉噪音，让光线和植物成为空间主角。', tag: '家居', cls: '', img: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=900&q=80', stats: ['👁 1261','⭐ 89'] },
+  { title: '周末短途不赶路：一份松弛感旅行清单', desc: '不追求打卡数量，把交通、住宿和散步路线控制在最舒服的节奏里。', tag: '旅行', cls: 'orange', img: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', stats: ['👁 763','⭐ 64'] },
+  { title: '手冲咖啡入门，先别急着买很多器具', desc: '一只滤杯、一包新鲜豆子就足够开始。稳定水温比复杂手法更重要。', tag: '美食', cls: 'green', img: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80', stats: ['👁 2888','⭐ 132'] }
+];
+let currentTab = 'recommend';
+let detailOpen = false;
+let refreshCount = 0;
+let toastTimer = 0;
+let pull = null;
+
+const app = document.getElementById('app');
+const indicator = document.getElementById('pullIndicator');
+const pullText = document.getElementById('pullText');
+const detailSheet = document.getElementById('detailSheet');
+const edgeHint = document.getElementById('edgeHint');
+
+function renderFeed() {
+  document.getElementById('feed').innerHTML = feeds.map((item, index) => `
+    <button class="feed-card" onclick="openDetail(${index})" style="animation-delay:${index * 55}ms">
+      <img class="cover" src="${item.img}" alt="">
+      <div class="feed-body">
+        <div class="meta"><span class="pill ${item.cls}">${item.tag}</span><span class="pill">AI 配图</span></div>
+        <h3 class="feed-title">${item.title}</h3>
+        <p class="feed-desc">${item.desc}</p>
+        <div class="stats">${item.stats.map(s => `<span>${s}</span>`).join('')}</div>
+      </div>
+    </button>
+  `).join('');
+}
+
+function switchTab(tab) {
+  if (detailOpen) closeDetail(false);
+  document.getElementById('stylePanel').classList.remove('open');
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+  document.getElementById(`page-${tab}`).classList.add('active');
+  document.querySelectorAll('.tab').forEach(button => button.classList.toggle('on', button.dataset.tab === tab));
+  const page = document.getElementById(`page-${tab}`);
+  page.scrollTop = 0;
+}
+
+function openDetail(index) {
+  document.getElementById('stylePanel').classList.remove('open');
+  const item = feeds[index];
+  document.getElementById('detailCover').src = item.img;
+  document.getElementById('detailTitle').textContent = item.title;
+  document.getElementById('detailText').textContent = item.desc + ' 这是移动端详情预览，正式页面会保留现有详情页的全部内容与交互。';
+  detailSheet.classList.add('open');
+  detailOpen = true;
+}
+
+function closeDetail(showToast = true) {
+  detailSheet.classList.remove('open');
+  detailOpen = false;
+  edgeHint.classList.remove('on');
+  if (showToast) toast('已返回推荐页');
+}
+
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 1300);
+}
+
+const styleNames = { blue: '清透蓝', mint: '薄荷绿', orange: '暖橙生活', night: '深色夜航' };
+const layoutNames = { classic: '沉浸单列', masonry: '双列瀑布', editorial: '杂志大图', quick: '快捷紧凑' };
+
+function toggleStylePanel() {
+  document.getElementById('stylePanel').classList.toggle('open');
+}
+
+function setStyle(style) {
+  document.getElementById('phone').dataset.style = style;
+  document.querySelectorAll('.style-option').forEach(option => {
+    option.classList.toggle('on', option.dataset.style === style);
+  });
+  document.getElementById('stylePanel').classList.remove('open');
+  toast(`已切换：${styleNames[style] || style}`);
+}
+
+function setLayout(layout) {
+  document.getElementById('phone').dataset.layout = layout;
+  document.querySelectorAll('.layout-option').forEach(option => {
+    option.classList.toggle('on', option.dataset.layout === layout);
+  });
+  document.getElementById('stylePanel').classList.remove('open');
+  const activePage = document.querySelector('.page.active');
+  if (activePage) activePage.scrollTop = 0;
+  toast(`页面分布：${layoutNames[layout] || layout}`);
+}
+
+function sendMessage() {
+  const input = document.getElementById('messageInput');
+  if (!input.value.trim()) return toast('请输入消息');
+  input.value = '';
+  toast('消息已发送');
+}
+
+function resetDemo() {
+  refreshCount = 0;
+  switchTab('recommend');
+  document.getElementById('refreshTime').textContent = '下拉页面即可刷新推荐内容';
+  renderFeed();
+  toast('预览已重置');
+}
+
+function showGestureHint() {
+  edgeHint.classList.add('on');
+  toast('进入详情后，从左右边缘滑动返回');
+  setTimeout(() => edgeHint.classList.remove('on'), 1800);
+}
+
+function triggerRefresh(page) {
+  indicator.classList.add('loading');
+  pullText.textContent = '刷新中…';
+  setTimeout(() => {
+    refreshCount += 1;
+    const alternatives = [
+      { title: '低成本提升居住幸福感的小改变', desc: '调整一束光、一个收纳位置和一块常坐区域，就能明显改变家的感受。', tag: '生活', cls: 'green', img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=900&q=80', stats: ['👁 932','⭐ 71'] },
+      { title: '周末不宅家：城市里也能完成的微旅行', desc: '用半天时间探索一个没去过的街区，拍照、喝咖啡、慢慢走。', tag: '旅行', cls: 'orange', img: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=80', stats: ['👁 688','⭐ 45'] }
+    ];
+    feeds.unshift(alternatives[refreshCount % alternatives.length]);
+    if (feeds.length > 6) feeds.pop();
+    renderFeed();
+    document.getElementById('refreshTime').textContent = `刚刚刷新 · 第 ${refreshCount} 次`;
+    indicator.classList.remove('loading');
+    indicator.classList.remove('on');
+    page.style.transition = 'transform .22s ease';
+    page.style.transform = '';
+    toast('已刷新，出现一条新推荐');
+  }, 900);
+}
+
+app.addEventListener('pointerdown', event => {
+  if (event.target.closest('button,input,[contenteditable]')) return;
+  const page = document.querySelector('.page.active');
+  pull = { x: event.clientX, y: event.clientY, startX: event.clientX, page, axis: null };
+});
+
+app.addEventListener('pointermove', event => {
+  if (!pull) return;
+  const dx = event.clientX - pull.x;
+  const dy = event.clientY - pull.y;
+
+  if (detailOpen) {
+    if (!pull.axis && Math.abs(dx) > 8) pull.axis = 'back';
+    if (pull.axis === 'back') {
+      const edgeStart = pull.startX <= 42 || pull.startX >= window.innerWidth - 42;
+      if (edgeStart && Math.abs(dx) > 24) edgeHint.classList.add('on');
+      if ((edgeStart && Math.abs(dx) > 78) || Math.abs(dx) > 130) {
+        pull = null;
+        closeDetail();
+      }
+    }
+    return;
+  }
+
+  if (pull.page.scrollTop > 0) return;
+  if (!pull.axis && Math.abs(dy) > 8) pull.axis = dy > 0 ? 'pull' : 'scroll';
+  if (pull.axis !== 'pull') return;
+  const distance = Math.min(82, Math.max(0, dy * .55));
+  pull.page.style.transition = 'none';
+  pull.page.style.transform = `translateY(${distance}px)`;
+  indicator.classList.toggle('on', distance > 8);
+  pullText.textContent = distance > 54 ? '松开刷新' : '下拉刷新';
+});
+
+function endPointer() {
+  if (!pull) return;
+  const page = pull.page;
+  const transform = page.style.transform || '';
+  const number = Number((transform.match(/translateY\(([\d.]+)px\)/) || [0,0])[1]);
+  pull = null;
+  if (!detailOpen && number > 54) {
+    triggerRefresh(page);
+  } else {
+    page.style.transition = 'transform .18s ease';
+    page.style.transform = '';
+    indicator.classList.remove('on');
+  }
+}
+app.addEventListener('pointerup', endPointer);
+app.addEventListener('pointercancel', endPointer);
+app.addEventListener('pointerleave', endPointer);
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && detailOpen) closeDetail();
+});
+
+renderFeed();
+setStyle('blue');
+setLayout('classic');
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 <template>
-  <div class="personal-page">
+  <div class="personal-page" :data-theme="currentTheme">
     <div class="topbar" id="p-topbar">
       <div class="ico" id="p-logo" @click="$router.push('/')">🍎</div>
       <div class="right">
@@ -51,17 +51,17 @@
     </div>
 
     <div class="list">
-      <!-- 骨架屏 -->
-      <template v-if="loading">
-        <div v-for="n in 3" :key="n" class="card">
-          <div class="s-line s-w-60"></div>
-          <div class="s-line s-w-90"></div>
-          <div class="s-line s-w-40"></div>
-        </div>
-      </template>
+      <AppState
+        :state="personalState"
+        :rows="4"
+        empty-icon="✍️"
+        :empty-text="personalEmptyText"
+        error-text="内容加载失败"
+        @retry="reloadActiveTab"
+      >
 
       <!-- 我的发布 -->
-      <template v-else-if="activeTab === 'published'">
+      <template v-if="activeTab === 'published'">
         <!-- 虚拟列表：500 条也只渲染可视区那十几张卡片 -->
         <div
           v-if="publishedList.length"
@@ -71,10 +71,12 @@
           @scroll.passive="onPubScroll"
         >
           <div class="virt-spacer" :style="{ height: (publishedList.length * PUB_ITEM_H) + 'px' }">
-            <div
+            <AppCard
               v-for="row in pubVisible"
               :key="row.data.id"
               class="card"
+              padding="11px 12px"
+              clickable
               :style="{ position: 'absolute', left: 0, right: 0, top: (row.index * PUB_ITEM_H) + 'px' }"
               @click="goDetail(row.data.id)"
             >
@@ -83,7 +85,7 @@
                 <div class="txt">
                   <div class="t">{{ row.data.title || '无标题' }}</div>
                   <div class="m">
-                    <span class="tag" v-if="row.data.tag">{{ tagText(row.data.tag) }}</span>
+                    <AppTag v-if="row.data.tag" class="tag" tone="neutral">{{ tagText(row.data.tag) }}</AppTag>
                     <span class="sep" v-if="row.data.tag">·</span>
                     <span>{{ formatTime(row.data.createTime) }}</span>
                     <span class="sep">·</span>
@@ -91,10 +93,9 @@
                   </div>
                 </div>
               </div>
-            </div>
+            </AppCard>
           </div>
         </div>
-        <div v-if="!publishedList.length" class="empty">✍️ 还没有发布过灵感</div>
         <div v-if="publishedList.length" class="virt-foot" id="p-virt-foot">
           <template v-if="pubHasMore">
             滚到底自动加载… 已显示 {{ publishedList.length }} / {{ pubTotal }} 条
@@ -106,34 +107,41 @@
 
       <!-- 我的草稿 -->
       <template v-else-if="activeTab === 'drafts'">
-        <div v-for="item in draftList" :key="item.id" class="draft" @click="$router.push('/edit/' + item.id)">
+        <AppCard
+          v-for="item in draftList"
+          :key="item.id"
+          class="draft"
+          padding="13px 14px"
+          clickable
+          @click="$router.push('/edit/' + item.id)"
+        >
           <div class="dt">{{ item.title || '无标题' }}</div>
           <div class="dm">
-            <span class="badge">草稿</span>
-            <span v-if="item.tag">{{ tagText(item.tag) }}</span>
+            <AppTag class="badge" tone="warning">草稿</AppTag>
+            <AppTag v-if="item.tag" class="tag" tone="neutral">{{ tagText(item.tag) }}</AppTag>
             <span class="sep" v-if="item.tag">·</span>
             <span>{{ formatTime(item.createTime) }}</span>
           </div>
-        </div>
-        <div v-if="!draftList.length" class="empty">📝 还没有草稿</div>
+        </AppCard>
       </template>
 
       <!-- 我的收藏夹：先看文件夹，点进去才看该夹下的灵感 -->
       <template v-else>
         <div v-if="!activeFolder" class="folders" id="p-folders">
           <div class="grid-hint" id="p-folders-hint">点文件夹查看其中灵感</div>
-          <div v-for="f in folders" :key="f.id" class="folder" id="p-folder"
+          <AppCard v-for="f in folders" :key="f.id" class="folder" id="p-folder"
+               padding="14px 12px"
+               clickable
                :class="{ on: String(activeFolder?.id) === String(f.id) }" @click="openFolder(f)">
             <div class="ico">{{ f.icon || '📁' }}</div>
             <div>
               <div class="fn">{{ f.name }}</div>
               <div class="fc">{{ folderCounts[f.id] || 0 }} 条灵感</div>
             </div>
-          </div>
-          <div class="folder add" id="p-folder-add" @click="$router.push('/collections')">
+          </AppCard>
+          <AppCard class="folder add" id="p-folder-add" padding="14px 12px" clickable @click="$router.push('/collections')">
             <span class="plus">＋</span><span>管理收藏夹</span>
-          </div>
-          <div v-if="!folders.length" class="empty" style="grid-column:1/-1">⭐ 还没有收藏夹</div>
+          </AppCard>
         </div>
 
         <template v-else>
@@ -142,27 +150,31 @@
             <span class="ttl">{{ activeFolder.icon }} {{ activeFolder.name }}</span>
             <span class="c">共 {{ folderCollects.length }} 条</span>
           </div>
-          <div v-if="folderLoading" class="card">
-            <div class="s-line s-w-60"></div><div class="s-line s-w-90"></div>
-          </div>
-          <template v-else>
-            <div v-for="(item, idx) in folderCollects" :key="item.id" class="card" @click="goDetail(item.id)">
+          <template>
+            <AppCard
+              v-for="(item, idx) in folderCollects"
+              :key="item.id"
+              class="card"
+              padding="11px 12px"
+              clickable
+              @click="goDetail(item.id)"
+            >
               <div class="item">
                 <div class="thumb" :style="thumbStyle(item, idx)"></div>
                 <div>
                   <div class="t">{{ item.title || '无标题' }}</div>
                   <div class="m">
-                    <span class="tag" v-if="item.tag">{{ tagText(item.tag) }}</span>
+                    <AppTag v-if="item.tag" class="tag" tone="neutral">{{ tagText(item.tag) }}</AppTag>
                     <span class="sep" v-if="item.tag">·</span>
                     <span class="uncollect" @click.stop="handleUncollect(item.id)">取消收藏</span>
                   </div>
                 </div>
               </div>
-            </div>
-            <div v-if="!folderCollects.length" class="empty">该收藏夹还没有灵感</div>
+            </AppCard>
           </template>
         </template>
       </template>
+      </AppState>
     </div>
 
     <!-- 分页（我的发布 / 我的草稿） -->
@@ -179,6 +191,17 @@
       共 {{ folders.length }} 个收藏夹
     </div>
 
+    <!-- 主题切换：色值全在 styles/tokens.css 里，这里只切换 data-theme -->
+    <div class="theme-row" id="p-theme">
+      <span class="theme-label">主题</span>
+      <button
+        v-for="t in THEMES"
+        :key="t.key"
+        class="theme-chip"
+        :class="{ on: currentTheme === t.key }"
+        @click="applyTheme(t.key)"
+      >{{ t.label }}</button>
+    </div>
     <button class="logout" id="p-logout" @click="handleLogout">退出登录</button>
 
     <!-- 编辑资料对话框 -->
@@ -247,6 +270,7 @@ import { getUserInfo, getMyInspires, getMyCollects,
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
 import { randomNickname } from '@/utils/nickname.js'
 import { useAuthStore } from '@/stores/auth'
+import { THEMES, currentTheme, applyTheme } from '@/utils/theme.js'
 const auth = useAuthStore()
 
 const router = useRouter()
@@ -292,6 +316,11 @@ const setPubContainer = (el) => {
 const draftList = ref([])
 const collectList = ref([])
 const loading = ref(false)
+const pageError = ref('')
+const publishedError = ref('')
+const draftError = ref('')
+const foldersError = ref('')
+const folderCollectsError = ref('')
 const activeTab = ref('published')
 
 // 分页状态
@@ -306,6 +335,47 @@ const folderCounts = ref({})
 const activeFolder = ref(null)
 const folderCollects = ref([])
 const folderLoading = ref(false)
+
+const personalEmptyText = computed(() => {
+  if (activeTab.value === 'published') return '还没有发布过灵感'
+  if (activeTab.value === 'drafts') return '还没有草稿'
+  return activeFolder.value ? '该收藏夹还没有灵感' : '还没有收藏夹'
+})
+const personalState = computed(() => {
+  if (loading.value) return 'loading'
+  if (pageError.value) return 'error'
+  if (activeTab.value === 'published') {
+    if (publishedError.value && !publishedList.value.length) return 'error'
+    return publishedList.value.length ? 'ready' : 'empty'
+  }
+  if (activeTab.value === 'drafts') {
+    if (draftError.value && !draftList.value.length) return 'error'
+    return draftList.value.length ? 'ready' : 'empty'
+  }
+  if (activeFolder.value) {
+    if (folderLoading.value) return 'loading'
+    if (folderCollectsError.value && !folderCollects.value.length) return 'error'
+    return folderCollects.value.length ? 'ready' : 'empty'
+  }
+  if (foldersError.value && !folders.value.length) return 'error'
+  return folders.value.length ? 'ready' : 'empty'
+})
+const reloadActiveTab = async () => {
+  pageError.value = ''
+  if (activeTab.value === 'published') {
+    publishedError.value = ''
+    await loadPublished(true)
+  } else if (activeTab.value === 'drafts') {
+    draftError.value = ''
+    await loadDrafts(1)
+  } else if (activeFolder.value) {
+    folderCollectsError.value = ''
+    await openFolder(activeFolder.value)
+  } else {
+    foldersError.value = ''
+    await loadFolders()
+  }
+}
 
 // Banner 头像：优先 emoji，否则取昵称首字
 const avatarText = computed(() => {
@@ -380,6 +450,7 @@ const loadPublished = async (reset = false) => {
   if (pubLoading.value) return
   if (!reset && !pubHasMore.value) return
   pubLoading.value = true
+  publishedError.value = ''
   const nextPage = reset ? 1 : pubLoadedPage.value + 1
   try {
     const token = localStorage.getItem('token') || ''
@@ -392,11 +463,15 @@ const loadPublished = async (reset = false) => {
     pubTotal.value = json.data?.total || 0
     pubLoadedPage.value = nextPage
     pubHasMore.value = rows.length >= PUB_PAGE_SIZE
-  } catch (e) { console.error(e) } finally { pubLoading.value = false }
+  } catch (e) {
+    console.error(e)
+    publishedError.value = e?.message || 'load published failed'
+  } finally { pubLoading.value = false }
 }
 
 const loadDrafts = async (page) => {
   if (page !== undefined) draftPage.value = page
+  draftError.value = ''
   try {
     const token = localStorage.getItem('token') || ''
     const resp = await fetch('/api/inspire/my/drafts?page=' + draftPage.value + '&size=' + pageSize.value, {
@@ -405,7 +480,10 @@ const loadDrafts = async (page) => {
     const json = await resp.json()
     draftList.value = json.data?.records || []
     draftTotal.value = json.data?.total || 0
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+    draftError.value = e?.message || 'load drafts failed'
+  }
 }
 
 const loadCollects = async (page) => {
@@ -423,6 +501,7 @@ const loadCollects = async (page) => {
 
 // 拉取收藏夹列表，并并行统计每个夹里的灵感条数
 const loadFolders = async () => {
+  foldersError.value = ''
   try {
     const res = await getCollectFolders()
     folders.value = res.data || []
@@ -437,6 +516,7 @@ const loadFolders = async () => {
   } catch (e) {
     folders.value = []
     folderCounts.value = {}
+    foldersError.value = e?.message || 'load folders failed'
   }
 }
 
@@ -444,11 +524,13 @@ const loadFolders = async () => {
 const openFolder = async (f) => {
   activeFolder.value = f
   folderLoading.value = true
+  folderCollectsError.value = ''
   try {
     const res = await getCollectListByFolder(f.id)
     folderCollects.value = res.data || []
   } catch (e) {
     folderCollects.value = []
+    folderCollectsError.value = e?.message || 'load folder collects failed'
   } finally {
     folderLoading.value = false
   }
@@ -568,7 +650,9 @@ const detectLocation = async () => {
         }
       }
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
   finally { autoDetecting.value = false }
 }
 
@@ -603,7 +687,10 @@ onMounted(async () => {
     statList.value[0].num = pubTotal.value
     statList.value[1].num = collTotal.value
     statList.value[2].num = publishedList.value.reduce((s, i) => s + (i.viewCount || 0), 0)
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+    pageError.value = e?.message || 'load personal failed'
+  }
   finally { loading.value = false }
   loadFolders()
 })
@@ -694,15 +781,15 @@ const handleLogout = () => {
 /* ---------- 顶部栏 ---------- */
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:0 4px 12px; }
 .topbar .ico { width:38px; height:38px; border-radius:50%; background:#fff; display:flex; align-items:center;
-  justify-content:center; font-size:17px; border:1px solid #e6f2ef; box-shadow:0 1px 5px rgba(0,0,0,.04);
+  justify-content:center; font-size:17px; border:1px solid var(--c-primary-line); box-shadow:0 1px 5px rgba(0,0,0,.04);
   cursor:pointer; transition:.15s; }
-.topbar .ico:hover { background:#f2faf8; }
+.topbar .ico:hover { background:var(--c-primary-weak); }
 .topbar .right { display:flex; gap:8px; }
 
 /* ---------- 通栏 Banner ---------- */
 /* v2：头像与昵称一行，右侧放两个操作按钮 */
 .banner { display:flex; align-items:center; gap:12px; border-radius:18px; padding:16px;
-  text-align:left; background:linear-gradient(160deg,#f3fbf9,#fff); border:1px solid #e6f2ef; }
+  text-align:left; background:linear-gradient(160deg,#f3fbf9,#fff); border:1px solid var(--c-primary-line); }
 .banner .av { width:60px; height:60px; flex:0 0 auto; border-radius:50%;
   background:#e6f2e4; color:#4f8a48; display:flex; align-items:center; justify-content:center;
   font-size:24px; font-weight:700; }
@@ -712,9 +799,9 @@ const handleLogout = () => {
 .banner .tagchip { display:inline-flex; align-items:center; gap:4px; margin-top:7px;
   padding:2px 9px; border-radius:999px; background:#f3f8f6; color:#d98200; font-size:11.5px; }
 .banner-ops { margin-left:auto; display:flex; flex-direction:column; gap:6px; flex:0 0 auto; }
-.banner-ops button { padding:6px 12px; border-radius:999px; border:1px solid #cfe6e0;
-  background:#fff; color:#0f766e; font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; }
-.banner-ops button:hover { background:#f2faf8; }
+.banner-ops button { padding:6px 12px; border-radius:999px; border:1px solid var(--c-primary-line);
+  background:#fff; color:var(--c-primary); font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; }
+.banner-ops button:hover { background:var(--c-primary-weak); }
 
 /* ---------- 悬浮统计 ---------- */
 .stats { position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,1fr);
@@ -722,39 +809,38 @@ const handleLogout = () => {
   box-shadow:0 6px 16px rgba(30,90,80,.08); }
 .stat { position:relative; text-align:center; }
 .stat + .stat:before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:1px; background:#e8f3f0; }
-.stat .n { font-size:17px; font-weight:700; color:#0f766e; }
+.stat .n { font-size:17px; font-weight:700; color:var(--c-primary); }
 .stat .l { margin-top:3px; font-size:11px; color:#6b8b85; }
 
 /* ---------- 快捷操作 ---------- */
 .quick { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
 .quick .q { display:flex; align-items:center; gap:10px; padding:12px; background:#fff;
-  border:1px solid #e6f2ef; border-radius:14px; font-size:13.5px; font-weight:500; color:#28504a;
+  border:1px solid var(--c-primary-line); border-radius:14px; font-size:13.5px; font-weight:500; color:#28504a;
   cursor:pointer; transition:.15s; }
-.quick .q:hover { border-color:#a8dcd2; background:#fbfefd; }
-.quick .q i { width:30px; height:30px; border-radius:50%; background:#eef7f5; color:#0f766e;
+.quick .q:hover { border-color:var(--c-primary-hover); background:#fbfefd; }
+.quick .q i { width:30px; height:30px; border-radius:50%; background:#eef7f5; color:var(--c-primary);
   display:flex; align-items:center; justify-content:center; font-style:normal; }
 
 /* ---------- 选项卡 ---------- */
-.tabs { display:flex; gap:6px; margin-bottom:12px; padding:4px; background:#e9f5f2; border-radius:12px; }
+.tabs { display:flex; gap:6px; margin-bottom:12px; padding:4px; background:var(--c-primary-soft); border-radius:12px; }
 .tabs button { flex:1; padding:9px 0; border:none; border-radius:9px; background:transparent;
   font-family:inherit; font-size:13.5px; color:#5f807a; cursor:pointer; transition:.15s; }
-.tabs button.on { background:#fff; color:#0f766e; font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.tabs button.on { background:#fff; color:var(--c-primary); font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.06); }
 .tabs .cnt { margin-left:2px; font-size:11px; color:#9bb5b0; }
-.tabs button.on .cnt { color:#0f766e; }
+.tabs button.on .cnt { color:var(--c-primary); }
 
 /* ---------- 列表卡片 ---------- */
 .list { min-height:200px; }
 /* 虚拟列表容器：列表自身滚动，只挂可视区卡片 */
 .virt-scroll { height: 340px; overflow-y: auto; padding-right: 2px; }
-.virt-foot { text-align:center; padding:10px 0; font-size:12px; color:#9aa3b2; }
-.virt-foot .bar { height:4px; border-radius:99px; background:#eef4f2; overflow:hidden; margin-top:8px; }
-.virt-foot .bar i { display:block; height:100%; background:#0f766e; transition:width .2s; }
+.virt-foot { text-align:center; padding:10px 0; font-size:12px; color:var(--c-text-3); }
+.virt-foot .bar { height:4px; border-radius:99px; background:var(--c-bg); overflow:hidden; margin-top:8px; }
+.virt-foot .bar i { display:block; height:100%; background:var(--c-primary); transition:width .2s; }
 .stat.clickable { cursor:pointer; }
-.stat.clickable .l { color:#0f766e; }
+.stat.clickable .l { color:var(--c-primary); }
 .virt-spacer { position: relative; width: 100%; }
 /* 卡片改成等高（76px，与预览一致），虚拟列表才能精确算偏移 */
-.card { padding:11px 12px; height:76px; margin-bottom:10px; box-sizing:border-box; overflow:hidden;
-  background:#fff; border:1px solid #e6f2ef;
+.card { height:76px; margin-bottom:10px; box-sizing:border-box; overflow:hidden;
   border-radius:16px; cursor:pointer; transition:.16s; }
 .item { align-items:center; }
 .item .thumb { width:54px; height:54px; border-radius:11px; }
@@ -764,58 +850,53 @@ const handleLogout = () => {
 .item .txt .t {
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-.card:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.card:hover { border-color:var(--c-primary-hover); box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .card:active { transform:scale(.985); }
 .item { display:flex; gap:12px; align-items:flex-start; }
 .thumb { width:64px; height:64px; border-radius:12px; flex:0 0 auto; background:#f1f5f4; }
-.item .t { margin-bottom:7px; font-size:14.5px; font-weight:600; line-height:1.45; color:#1d1d1f; }
-.item .m { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:#9aa3b2; }
-.tag { display:inline-flex; align-items:center; gap:3px; padding:1px 8px; border-radius:999px;
-  background:#f1f7f5; color:#4b7a72; font-size:11.5px; }
+.item .t { margin-bottom:7px; font-size:14.5px; font-weight:600; line-height:1.45; color:var(--c-text); }
+.item .m { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--c-text-3); }
 .sep { color:#dfe6e4; }
 .uncollect { color:#d98200; cursor:pointer; }
 .uncollect:hover { text-decoration:underline; }
 
 /* ---------- 草稿卡片 ---------- */
-.draft { padding:13px 14px; margin-bottom:10px; background:#fff; border:1px solid #e6f2ef;
-  border-radius:14px; cursor:pointer; transition:.16s; }
-.draft:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.draft { margin-bottom:10px; border-radius:14px; cursor:pointer; transition:.16s; }
+.draft:hover { border-color:var(--c-primary-hover); box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .draft:active { transform:scale(.985); }
-.draft .dt { margin-bottom:6px; font-size:14.5px; font-weight:600; line-height:1.45; color:#1d1d1f; }
-.draft .dm { display:flex; align-items:center; gap:6px; font-size:12px; color:#9aa3b2; }
-.draft .badge { padding:1px 8px; border-radius:999px; background:#fdf3e3; color:#b3760a; font-size:11px; }
+.draft .dt { margin-bottom:6px; font-size:14.5px; font-weight:600; line-height:1.45; color:var(--c-text); }
+.draft .dm { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--c-text-3); }
 
 /* ---------- 收藏夹 ---------- */
-.grid-hint { grid-column:1/-1; margin-bottom:2px; font-size:12px; color:#9aa3b2; }
+.grid-hint { grid-column:1/-1; margin-bottom:2px; font-size:12px; color:var(--c-text-3); }
 .folders { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
-.folder { display:flex; align-items:center; gap:10px; padding:14px 12px; height:68px; box-sizing:border-box;
-  background:#fff; border:1px solid #e6f2ef; border-radius:15px;
-  cursor:pointer; transition:.16s; }
-.folder:hover { border-color:#a8dcd2; box-shadow:0 4px 14px rgba(30,90,80,.08); }
+.folder { display:flex; align-items:center; gap:10px; height:68px; box-sizing:border-box;
+  border-radius:15px; cursor:pointer; transition:.16s; }
+.folder:hover { border-color:var(--c-primary-hover); box-shadow:0 4px 14px rgba(30,90,80,.08); }
 .folder:active { transform:scale(.985); }
 .folder .ico { width:38px; height:38px; border-radius:11px; background:#f1f7f5; display:flex;
   align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
-.folder .fn { margin-bottom:2px; font-size:13px; font-weight:600; color:#1d1d1f;
+.folder .fn { margin-bottom:2px; font-size:13px; font-weight:600; color:var(--c-text);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.folder .fc { font-size:11.5px; color:#9aa3b2; }
+.folder .fc { font-size:11.5px; color:var(--c-text-3); }
 /* 与普通文件夹卡片严格等高：高度完全由 .folder 的 height 决定，这里不再单独设 min-height */
 .folder.add { justify-content:center; gap:4px; border-style:dashed; color:#7b9891; font-size:12.5px; }
 .folder.add .plus { font-size:22px; line-height:1; }
 
 .backrow { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
 .backrow .bk { display:inline-flex; align-items:center; gap:4px; padding:4px 11px; background:#fff;
-  border:1px solid #e6f2ef; border-radius:999px; font-size:12.5px; color:#4b7a72;
+  border:1px solid var(--c-primary-line); border-radius:999px; font-size:12.5px; color:#4b7a72;
   cursor:pointer; transition:.15s; }
-.backrow .bk:hover { border-color:#a8dcd2; background:#fbfefd; }
+.backrow .bk:hover { border-color:var(--c-primary-hover); background:#fbfefd; }
 .backrow .ttl { font-size:13.5px; font-weight:600; color:#28504a; }
-.backrow .c { margin-left:auto; font-size:12px; color:#9aa3b2; }
+.backrow .c { margin-left:auto; font-size:12px; color:var(--c-text-3); }
 
 /* ---------- 分页 ---------- */
 .pager { display:flex; justify-content:center; align-items:center; gap:6px; margin:18px 0 4px; }
-.pager button { min-width:30px; height:30px; padding:0 6px; border:1px solid #e6f2ef; border-radius:9px;
+.pager button { min-width:30px; height:30px; padding:0 6px; border:1px solid var(--c-primary-line); border-radius:9px;
   background:#fff; font-family:inherit; font-size:13px; color:#4b7a72; cursor:pointer; transition:.15s; }
-.pager button:hover:not(:disabled) { border-color:#a8dcd2; }
-.pager button.on { background:#0f766e; border-color:#0f766e; color:#fff; font-weight:700; }
+.pager button:hover:not(:disabled) { border-color:var(--c-primary-hover); }
+.pager button.on { background:var(--c-primary); border-color:var(--c-primary); color:#fff; font-weight:700; }
 .pager button:disabled { opacity:.4; cursor:not-allowed; }
 .foot-note { margin-top:6px; text-align:center; font-size:12.5px; color:#7b8a88; }
 
@@ -829,6 +910,13 @@ const handleLogout = () => {
 
 /* ---------- 退出登录 ---------- */
 /* 与预览一致的退出按钮：整条描边胶囊按钮，不再是纯文字链接 */
+.theme-row { display:flex; align-items:center; gap:8px; margin:16px 0 4px; }
+.theme-label { font-size:var(--fs-sm); color:var(--c-text-3); }
+.theme-chip {
+  padding:5px 12px; border:1px solid var(--c-primary-line); border-radius:var(--radius-pill);
+  background:var(--c-surface); color:var(--c-text-2); font:inherit; font-size:var(--fs-xs); cursor:pointer;
+}
+.theme-chip.on { background:var(--c-primary); border-color:var(--c-primary); color:#fff; font-weight:600; }
 .logout { display:block; width:100%; margin:18px 0 6px; height:40px;
   border-radius:12px; border:1px solid #f0dcd3; background:#fff;
   color:#c2613a; font-family:inherit; font-size:13.5px; cursor:pointer; transition:.15s; }
@@ -838,7 +926,7 @@ const handleLogout = () => {
 /* 弹窗外观对齐设计稿：薄荷绿主按钮、圆角、自定义关闭按钮 */
 :deep(.el-dialog) { border-radius:18px; overflow:hidden; max-width:380px; }
 :deep(.el-dialog__header) { padding:16px 18px 10px; margin:0; }
-:deep(.el-dialog__title) { font-size:15.5px; font-weight:700; color:#1d1d1f; }
+:deep(.el-dialog__title) { font-size:15.5px; font-weight:700; color:var(--c-text); }
 :deep(.el-dialog__headerbtn) { top:14px; right:12px; width:28px; height:28px;
   border-radius:50%; background:#f3f6f5; }
 :deep(.el-dialog__headerbtn:hover) { background:#e9f3f1; }
@@ -846,27 +934,27 @@ const handleLogout = () => {
 :deep(.el-dialog__body) { padding:0 18px 6px; max-height:60vh; overflow:auto; }
 :deep(.el-dialog__footer) { display:flex; gap:10px; padding:8px 18px 18px; }
 :deep(.el-dialog__footer .el-button) { flex:1; height:40px; margin:0; border-radius:11px; font-size:14px; }
-:deep(.el-dialog__footer .el-button--primary) { background:#0f766e; border-color:#0f766e;
+:deep(.el-dialog__footer .el-button--primary) { background:var(--c-primary); border-color:var(--c-primary);
   color:#fff; font-weight:600; }
 :deep(.el-dialog__footer .el-button--primary:hover),
 :deep(.el-dialog__footer .el-button--primary:focus) { background:#0d6a62; border-color:#0d6a62; }
 :deep(.el-dialog__footer .el-button:not(.el-button--primary)) { background:#f4f7f6;
-  border-color:#e6f2ef; color:#5f807a; }
+  border-color:var(--c-primary-line); color:#5f807a; }
 
 /* 输入框也对齐设计稿：浅底、10px 圆角、聚焦薄荷描边 */
 :deep(.el-dialog .el-input__wrapper),
 :deep(.el-dialog .el-textarea__inner) { border-radius:10px; background:#fbfefd;
-  box-shadow:0 0 0 1px #e6f2ef inset; }
-:deep(.el-dialog .el-input__wrapper.is-focus) { box-shadow:0 0 0 1px #a8dcd2 inset; }
+  box-shadow:0 0 0 1px var(--c-primary-line) inset; }
+:deep(.el-dialog .el-input__wrapper.is-focus) { box-shadow:0 0 0 1px var(--c-primary-hover) inset; }
 
 .dialog-form { padding:4px 0; }
 .form-row { margin-bottom:16px; }
-.form-row label { display:block; margin-bottom:6px; font-size:13px; color:#6b7280; }
+.form-row label { display:block; margin-bottom:6px; font-size:13px; color:var(--c-text-2); }
 .nick-row { display:flex; gap:8px; }
 .nick-row :deep(.el-input) { flex:1; }
-.dice { width:38px; height:38px; flex:0 0 auto; border:1px solid #e6f2ef; border-radius:10px;
+.dice { width:38px; height:38px; flex:0 0 auto; border:1px solid var(--c-primary-line); border-radius:10px;
   background:#fbfefd; font-size:16px; cursor:pointer; transition:.15s; }
-.dice:hover { border-color:#a8dcd2; background:#f2faf8; }
+.dice:hover { border-color:var(--c-primary-hover); background:var(--c-primary-weak); }
 .dice:active { transform:scale(.92); }
 .detect-hint { margin-top:4px; font-size:12px; color:#909399; }
 
@@ -879,7 +967,7 @@ const handleLogout = () => {
   justify-content:center; font-size:17px; line-height:1; cursor:pointer;
   border:2px solid transparent; transition:.15s; }
 .avatar-option:hover { border-color:#cde9e3; }
-.avatar-option.selected { border-color:#a8dcd2; background:#eef7f5; }
+.avatar-option.selected { border-color:var(--c-primary-hover); background:#eef7f5; }
 
 :deep(.city-popper) { --el-cascader-menu-min-width: 100px; }
 </style>

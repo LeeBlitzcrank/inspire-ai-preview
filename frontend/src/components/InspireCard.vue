@@ -1,5 +1,5 @@
 <template>
-  <div class="inspire-card" @click="goDetail">
+  <AppCard class="inspire-card" padding="16px" clickable @click="goDetail">
     <div class="card-header">
       <h3 class="card-title">{{ item.title }}</h3>
       <span class="heat-tag">{{ item.heat }} 热度</span>
@@ -10,9 +10,10 @@
       <span>{{ item.collectCount }} 收藏</span>
       <el-button text size="small" @click.stop="$emit('collect', item.id)">收藏</el-button>
     </div>
-  </div>
+  </AppCard>
 </template>
 <script setup>
+import AppCard from '@/components/base/AppCard.vue'
 import { useRouter } from 'vue-router'
 const props = defineProps(['item'])
 const emit = defineEmits(['collect'])
@@ -20,7 +21,7 @@ const router = useRouter()
 const goDetail = () => { if (props.item.id) router.push({ name: 'InspireDetail', params: { id: props.item.id } }) }
 </script>
 <style scoped>
-.inspire-card { border-radius:16px; border:1px solid #f0f3f9; background:#fff; padding:16px; cursor:pointer; transition:all 0.2s; }
+.inspire-card { border-radius:16px; transition:all 0.2s; }
 .inspire-card:hover { border-color:#e1e6f0; box-shadow:0 2px 8px rgba(120,140,180,0.06); }
 .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .card-title { font-size:16px; font-weight:500; color:#1d1d1f; margin:0; }
