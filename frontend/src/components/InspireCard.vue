@@ -18,7 +18,11 @@ import { useRouter } from 'vue-router'
 const props = defineProps(['item'])
 const emit = defineEmits(['collect'])
 const router = useRouter()
-const goDetail = () => { if (props.item.id) router.push({ name: 'InspireDetail', params: { id: props.item.id } }) }
+const goDetail = () => {
+  if (props.item.id !== null && props.item.id !== undefined && String(props.item.id).trim()) {
+    router.push({ name: 'InspireDetail', params: { id: String(props.item.id) } })
+  }
+}
 </script>
 <style scoped>
 .inspire-card { border-radius:16px; transition:all 0.2s; }

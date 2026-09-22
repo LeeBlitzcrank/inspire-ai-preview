@@ -125,17 +125,17 @@ npm run dev      # http://localhost:5173
 
 ### 表结构
 
-共 **35 张表**，按功能分组：
+共 **45 张表**，按功能分组：
 
 | 模块 | 表 | 数量 |
 |------|-----|------|
 | 灵感核心 | `inspire_main`, `inspire_content`, `inspire_version` | 3 |
 | 收藏（分表） | `collect_0` ~ `collect_9`, `collect_folder` | 11 |
-| 点赞（分表） | `inspire_like_0` ~ `inspire_like_9` | 10 |
+| 点赞（分表） | `user_like_0` ~ `user_like_9` | 10 |
 | 用户 | `user`, `password_reset` | 2 |
-| 评论 | `inspire_comment` | 1 |
+| 评论（分表） | `inspire_comment_0` ~ `inspire_comment_9` | 10 |
 | 关注 | `user_follow` | 1 |
-| 消息 | `message_conversation`, `message` | 2 |
+| 消息 | `message_conversation`, `conversation_member`, `message` | 3 |
 | 通知 | `user_notification` | 1 |
 | AI 调用 | `ai_call_log` | 1 |
 | 管理 | `admin_user`, `admin_config` | 2 |
@@ -146,7 +146,7 @@ npm run dev      # http://localhost:5173
 
 **Docker 环境：** 修改 `docker/init/init.sql`，然后 `docker compose down -v && docker compose up -d mysql` 重新初始化。
 
-**本地环境：** 修改对应模块的 `src/main/resources/schema.sql`，重启后 Spring Boot 会自动执行。
+**本地环境：** 当前采用 `docker/init/init.sql` 作为基线，修改结构后执行 `./reset-data.sh` 全量重建并重新生成演示数据。
 
 ## 部署
 

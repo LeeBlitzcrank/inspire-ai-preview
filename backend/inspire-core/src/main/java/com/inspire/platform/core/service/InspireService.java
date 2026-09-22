@@ -56,6 +56,6 @@ public interface InspireService {
     void renameCollectFolder(Long userId, Long folderId, String name);
     void collectToFolder(Long userId, Long inspireId, Long folderId);
     void moveCollectToFolder(Long userId, Long inspireId, Long folderId);
-    List<com.inspire.platform.core.dto.InspireVO> listCollectsByFolder(Long userId, Long folderId);
+    PageResult<InspireVO> listCollectsByFolder(Long userId, Long folderId, int page, int size);
     java.util.List<java.util.Map<String, Object>> getHotTags();
 }

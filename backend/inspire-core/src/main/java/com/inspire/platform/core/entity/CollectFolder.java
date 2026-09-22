@@ -1,6 +1,7 @@
 package com.inspire.platform.core.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,6 +22,8 @@ public class CollectFolder {
     private String name;
     private String icon;
     private Integer sortOrder;
+    @TableField(exist = false)
+    private Integer count;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

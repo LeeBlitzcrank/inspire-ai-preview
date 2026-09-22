@@ -21,9 +21,7 @@ spring:
   # SQL 初始化
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      continue-on-error: true
+      mode: never
 
   # 邮件配置（找回密码用）
   mail:

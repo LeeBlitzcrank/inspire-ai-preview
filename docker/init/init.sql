@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   `img` VARCHAR(255) DEFAULT '' COMMENT '封面图',
   `images` TEXT DEFAULT NULL COMMENT '多图JSON数组',
   `tag` VARCHAR(30) NOT NULL COMMENT '分类',
+  `category_id` BIGINT DEFAULT NULL COMMENT '一级分类ID',
+  `sub_category_id` BIGINT DEFAULT NULL COMMENT '二级分类ID',
   `user_id` BIGINT NOT NULL COMMENT '发布人ID',
   `status` TINYINT DEFAULT 0 COMMENT '0草稿 1已发布',
   `view_count` BIGINT DEFAULT 0,
@@ -22,7 +24,11 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   PRIMARY KEY (`id`),
   KEY `idx_tag_deleted` (`tag`,`deleted`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_status_time` (`status`,`create_time`)
+  KEY `idx_status_time` (`status`,`create_time`),
+  KEY `idx_category_status_time` (`category_id`,`sub_category_id`,`status`,`deleted`,`create_time`),
+  KEY `idx_user_status_time` (`user_id`,`status`,`deleted`,`create_time`),
+  KEY `idx_status_deleted_time` (`status`,`deleted`,`create_time`),
+  KEY `idx_status_deleted_heat` (`status`,`deleted`,`heat`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感主表';
 CREATE TABLE IF NOT EXISTS `inspire_content` (
   `inspire_id` BIGINT NOT NULL,
@@ -31,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `inspire_content` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`inspire_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感正文附表';
-CREATE TABLE IF NOT EXISTS `collect_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `collect_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `folder_id` BIGINT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`), KEY `idx_user_folder_time` (`user_id`,`folder_id`,`create_time`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `collect_1`  LIKE `collect_0`;
 CREATE TABLE IF NOT EXISTS `collect_2`  LIKE `collect_0`;
 CREATE TABLE IF NOT EXISTS `collect_3`  LIKE `collect_0`;
@@ -42,32 +48,44 @@ CREATE TABLE IF NOT EXISTS `collect_7`  LIKE `collect_0`;
 CREATE TABLE IF NOT EXISTS `collect_8`  LIKE `collect_0`;
 CREATE TABLE IF NOT EXISTS `collect_9`  LIKE `collect_0`;
 
--- ========== 点赞分表 inspire_like_0 ~ inspire_like_9 ==========
-CREATE TABLE IF NOT EXISTS `inspire_like_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_inspire_user` (`inspire_id`,`user_id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS `inspire_like_1`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_2`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_3`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_4`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_5`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_6`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_7`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_8`  LIKE `inspire_like_0`;
-CREATE TABLE IF NOT EXISTS `inspire_like_9`  LIKE `inspire_like_0`;
+-- ========== 新点赞分表 user_like_0 ~ user_like_9（按 user_id % 10） ==========
+CREATE TABLE IF NOT EXISTS `user_like_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`), KEY `idx_inspire_user` (`inspire_id`,`user_id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `user_like_1`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_2`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_3`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_4`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_5`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_6`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_7`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_8`  LIKE `user_like_0`;
+CREATE TABLE IF NOT EXISTS `user_like_9`  LIKE `user_like_0`;
 
--- ========== 评论表 ==========
-CREATE TABLE IF NOT EXISTS `inspire_comment` (
+-- ========== 新评论分表 inspire_comment_0 ~ inspire_comment_9（按 inspire_id % 10） ==========
+CREATE TABLE IF NOT EXISTS `inspire_comment_0` (
   `id` BIGINT NOT NULL,
-  `inspire_id` BIGINT NOT NULL COMMENT '灵感ID',
-  `user_id` BIGINT NOT NULL COMMENT '评论人ID',
-  `username` VARCHAR(60) NOT NULL COMMENT '评论人昵称',
-  `content` VARCHAR(500) NOT NULL COMMENT '评论内容',
+  `inspire_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `username` VARCHAR(60) NOT NULL,
+  `avatar` VARCHAR(255) DEFAULT '',
+  `parent_id` BIGINT DEFAULT 0,
+  `reply_user_id` BIGINT DEFAULT 0,
+  `reply_username` VARCHAR(60) DEFAULT '',
+  `content` VARCHAR(500) NOT NULL,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted` TINYINT DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_inspire_id` (`inspire_id`),
-  KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感评论表';
+  KEY `idx_inspire_deleted_time` (`inspire_id`,`deleted`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `inspire_comment_1` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_2` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_3` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_4` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_5` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_6` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_7` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_8` LIKE `inspire_comment_0`;
+CREATE TABLE IF NOT EXISTS `inspire_comment_9` LIKE `inspire_comment_0`;
 CREATE TABLE IF NOT EXISTS `ai_call_log` (
   `id` BIGINT NOT NULL,
   `call_date` DATE NOT NULL,
@@ -85,7 +103,9 @@ CREATE TABLE IF NOT EXISTS `user_follow` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_follow` (`follower_id`,`followee_id`),
   KEY `idx_follower` (`follower_id`),
-  KEY `idx_followee` (`followee_id`)
+  KEY `idx_followee` (`followee_id`),
+  KEY `idx_follower_time` (`follower_id`,`create_time`),
+  KEY `idx_followee_time` (`followee_id`,`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
 CREATE TABLE IF NOT EXISTS `collect_folder` (
   `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `name` VARCHAR(50) NOT NULL,
@@ -102,7 +122,9 @@ CREATE TABLE IF NOT EXISTS `message_conversation` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_users` (`user1_id`, `user2_id`),
-  KEY `idx_user1` (`user1_id`), KEY `idx_user2` (`user2_id`)
+  KEY `idx_user1` (`user1_id`), KEY `idx_user2` (`user2_id`),
+  KEY `idx_user1_time` (`user1_id`, `last_time`),
+  KEY `idx_user2_time` (`user2_id`, `last_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `message` (
   `id` BIGINT NOT NULL, `conversation_id` BIGINT NOT NULL,
@@ -112,6 +134,19 @@ CREATE TABLE IF NOT EXISTS `message` (
   PRIMARY KEY (`id`),
   KEY `idx_conversation` (`conversation_id`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `conversation_member` (
+  `id` BIGINT NOT NULL,
+  `conversation_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `unread_count` INT DEFAULT 0,
+  `last_time` DATETIME DEFAULT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_conversation_user` (`conversation_id`,`user_id`),
+  KEY `idx_user_time` (`user_id`,`last_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `user` (
   `id` BIGINT NOT NULL COMMENT '雪花用户ID',
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号，唯一不可重复',
@@ -119,10 +154,12 @@ CREATE TABLE IF NOT EXISTS `user` (
   `email` VARCHAR(100) DEFAULT '' COMMENT '用户邮箱（必填，用于找回密码）',
   `avatar` VARCHAR(255) DEFAULT '' COMMENT '用户头像URL',
   `nickname` VARCHAR(50) DEFAULT '' COMMENT '用户昵称',
+  `role` VARCHAR(20) DEFAULT 'user' COMMENT '角色: admin/core/user',
   `city` VARCHAR(32) DEFAULT '' COMMENT '常居城市',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '信息更新时间',
   `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除 0正常 1已删除',
+  `status` TINYINT DEFAULT 1 COMMENT '状态: 1正常 0冻结',
   `ext_json` JSON DEFAULT NULL COMMENT '扩展字段：性别、生日、个性签名等',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
@@ -176,7 +213,9 @@ CREATE TABLE IF NOT EXISTS `user_notification` (
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_type` (`type`)
+  KEY `idx_type` (`type`),
+  KEY `idx_user_deleted_time` (`user_id`,`deleted`,`create_time`),
+  KEY `idx_user_unread` (`user_id`,`deleted`,`is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表';
 
 CREATE TABLE IF NOT EXISTS `inspire_version` (
@@ -256,20 +295,97 @@ INSERT INTO `sys_category` (id, parent_id, name, icon, sort_order, status) VALUE
   (1003, 0, '电影', '🎬', 3, 1),
   (1004, 0, '穿搭', '👗', 4, 1),
   (1005, 0, '文案', '✍️', 5, 1),
-  (1101, 1001, '鸡腿', '', 1, 1),
-  (1102, 1001, '火锅', '', 2, 1),
-  (1103, 1001, '烧烤', '', 3, 1),
-  (1201, 1002, '跑步', '', 1, 1),
-  (1202, 1002, '健身', '', 2, 1),
-  (1203, 1002, '篮球', '', 3, 1),
-  (1301, 1003, '悬疑片', '', 1, 1),
-  (1302, 1003, '纪录片', '', 2, 1),
-  (1303, 1003, '喜剧片', '', 3, 1),
-  (1401, 1004, '夏日穿搭', '', 1, 1),
-  (1402, 1004, '通勤穿搭', '', 2, 1),
-  (1501, 1005, '短视频文案', '', 1, 1),
-  (1502, 1005, '朋友圈文案', '', 2, 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+  (1006, 0, '家居', '🏠', 6, 1),
+  (1007, 0, '旅行', '🏕', 7, 1),
+  (1008, 0, '摄影', '📷', 8, 1),
+  (1009, 0, '生活', '🌿', 9, 1),
+  (1010, 0, '手作', '🧶', 10, 1),
+  (1101, 1001, '一人食快手菜', '', 1, 1),
+  (1102, 1001, '周末煲汤', '', 2, 1),
+  (1103, 1001, '空气炸锅', '', 3, 1),
+  (1104, 1001, '早餐搭配', '', 4, 1),
+  (1105, 1001, '手冲咖啡', '', 5, 1),
+  (1106, 1001, '深夜食堂', '', 6, 1),
+  (1107, 1001, '减脂餐', '', 7, 1),
+  (1108, 1001, '烤箱甜点', '', 8, 1),
+  (1201, 1002, '晨跑习惯', '', 1, 1),
+  (1202, 1002, '居家训练', '', 2, 1),
+  (1203, 1002, '爬山路线', '', 3, 1),
+  (1204, 1002, '骑行通勤', '', 4, 1),
+  (1205, 1002, '拉伸放松', '', 5, 1),
+  (1206, 1002, '配速提升', '', 6, 1),
+  (1207, 1002, '核心训练', '', 7, 1),
+  (1208, 1002, '羽毛球', '', 8, 1),
+  (1301, 1003, '老电影重看', '', 1, 1),
+  (1302, 1003, '周末片单', '', 2, 1),
+  (1303, 1003, '纪录片推荐', '', 3, 1),
+  (1304, 1003, '冷门佳作', '', 4, 1),
+  (1305, 1003, '导演风格', '', 5, 1),
+  (1306, 1003, '配乐记录', '', 6, 1),
+  (1307, 1003, '影院体验', '', 7, 1),
+  (1308, 1003, '剧集短评', '', 8, 1),
+  (1401, 1004, '秋冬叠穿', '', 1, 1),
+  (1402, 1004, '极简衣橱', '', 2, 1),
+  (1403, 1004, '通勤穿搭', '', 3, 1),
+  (1404, 1004, '小个子比例', '', 4, 1),
+  (1405, 1004, '配饰点缀', '', 5, 1),
+  (1406, 1004, '色彩搭配', '', 6, 1),
+  (1407, 1004, '基础款搭配', '', 7, 1),
+  (1408, 1004, '换季整理', '', 8, 1),
+  (1501, 1005, '朋友圈文案', '', 1, 1),
+  (1502, 1005, '情绪记录', '', 2, 1),
+  (1503, 1005, '读书笔记', '', 3, 1),
+  (1504, 1005, '年度总结', '', 4, 1),
+  (1505, 1005, '写信给自己', '', 5, 1),
+  (1506, 1005, '短句收集', '', 6, 1),
+  (1507, 1005, '日常碎碎念', '', 7, 1),
+  (1508, 1005, '自我介绍', '', 8, 1),
+  (1601, 1006, '小户型收纳', '', 1, 1),
+  (1602, 1006, '灯光氛围', '', 2, 1),
+  (1603, 1006, '原木风搭配', '', 3, 1),
+  (1604, 1006, '租房改造', '', 4, 1),
+  (1605, 1006, '阳台绿植', '', 5, 1),
+  (1606, 1006, '厨房动线', '', 6, 1),
+  (1607, 1006, '衣柜整理', '', 7, 1),
+  (1608, 1006, '客厅配色', '', 8, 1),
+  (1701, 1007, '秋日露营', '', 1, 1),
+  (1702, 1007, '城市漫步', '', 2, 1),
+  (1703, 1007, '周末短途', '', 3, 1),
+  (1704, 1007, '一个人的旅行', '', 4, 1),
+  (1705, 1007, '行李收纳', '', 5, 1),
+  (1706, 1007, '青旅体验', '', 6, 1),
+  (1707, 1007, '自驾路线', '', 7, 1),
+  (1708, 1007, '小众目的地', '', 8, 1),
+  (1801, 1008, '手机摄影', '', 1, 1),
+  (1802, 1008, '胶片色调', '', 2, 1),
+  (1803, 1008, '窗口人像', '', 3, 1),
+  (1804, 1008, '街拍构图', '', 4, 1),
+  (1805, 1008, '夜景拍摄', '', 5, 1),
+  (1806, 1008, '静物布光', '', 6, 1),
+  (1807, 1008, '旅行记录', '', 7, 1),
+  (1808, 1008, '生活抓拍', '', 8, 1),
+  (1901, 1009, '早起习惯', '', 1, 1),
+  (1902, 1009, '记账复盘', '', 2, 1),
+  (1903, 1009, '桌面整理', '', 3, 1),
+  (1904, 1009, '情绪管理', '', 4, 1),
+  (1905, 1009, '通勤时间', '', 5, 1),
+  (1906, 1009, '周末计划', '', 6, 1),
+  (1907, 1009, '断舍离', '', 7, 1),
+  (1908, 1009, '独处时光', '', 8, 1),
+  (2001, 1010, '陶艺入门', '', 1, 1),
+  (2002, 1010, '编织围巾', '', 2, 1),
+  (2003, 1010, '手工皂', '', 3, 1),
+  (2004, 1010, '干花相框', '', 4, 1),
+  (2005, 1010, '帆布改造', '', 5, 1),
+  (2006, 1010, '皮质小物', '', 6, 1),
+  (2007, 1010, '手账排版', '', 7, 1),
+  (2008, 1010, '羊毛毡', '', 8, 1)
+ON DUPLICATE KEY UPDATE
+  `parent_id` = VALUES(`parent_id`),
+  `name` = VALUES(`name`),
+  `icon` = VALUES(`icon`),
+  `sort_order` = VALUES(`sort_order`),
+  `status` = VALUES(`status`);
 
 -- 初始化词云词条
 INSERT INTO `sys_word_cloud` (id, word, weight, sort_order, status) VALUES

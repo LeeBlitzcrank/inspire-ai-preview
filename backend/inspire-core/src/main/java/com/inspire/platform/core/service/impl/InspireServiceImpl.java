@@ -67,9 +67,11 @@ public class InspireServiceImpl implements InspireService {
         if (m.getStatus() != 1 && (loginUserId == null || !m.getUserId().equals(loginUserId))) {
             throw new BusinessException("灵感不存在");
         }
-        m.setViewCount(m.getViewCount() + 1); mainMapper.updateById(m);
+        // 原子更新单列，避免详情页把整行字段重新写一遍，也避免并发下的计数丢失。
+        jdbcTemplate.update("UPDATE inspire_main SET view_count = view_count + 1 WHERE id = ?", id);
+        m.setViewCount(m.getViewCount() + 1);
         InspireContent c = contentMapper.selectById(id);
-        return toVO(m, loginUserId, c != null ? c.getContent() : "");
+        return toDetailVO(m, loginUserId, c != null ? c.getContent() : "");
     }
 
     @Override
@@ -252,7 +254,7 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public void like(Long userId, Long inspireId) {
         checkUserExists(userId);
-        ShardContext.setByInspireId(inspireId);
+        ShardContext.setByUserId(userId);
         try {
             if (likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
                     .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId)) != null) {
@@ -289,7 +291,7 @@ public class InspireServiceImpl implements InspireService {
     public void unlike(Long userId, Long inspireId) {
         checkUserExists(userId);
 
-        ShardContext.setByInspireId(inspireId);
+        ShardContext.setByUserId(userId);
         try { likeMapper.delete(Wrappers.lambdaQuery(LikeAction.class)
                 .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId));
         } finally { ShardContext.clear(); }
@@ -408,8 +410,25 @@ public class InspireServiceImpl implements InspireService {
 
     @Override
     public List<CollectFolder> getCollectFolders(Long userId) {
-        return collectFolderMapper.selectList(Wrappers.lambdaQuery(CollectFolder.class)
+        List<CollectFolder> folders = collectFolderMapper.selectList(Wrappers.lambdaQuery(CollectFolder.class)
                 .eq(CollectFolder::getUserId, userId).orderByAsc(CollectFolder::getSortOrder));
+        if (folders.isEmpty()) {
+            return folders;
+        }
+
+        int shard = (int) Math.floorMod(userId, 10);
+        Map<Long, Integer> counts = new HashMap<>();
+        try {
+            jdbcTemplate.query(
+                    "SELECT folder_id, COUNT(*) AS c FROM collect_" + shard
+                            + " WHERE user_id = ? AND folder_id IS NOT NULL GROUP BY folder_id",
+                    rs -> { counts.put(rs.getLong("folder_id"), rs.getInt("c")); },
+                    userId);
+        } catch (Exception e) {
+            log.warn("批量统计收藏夹数量失败: userId={}", userId, e);
+        }
+        folders.forEach(folder -> folder.setCount(counts.getOrDefault(folder.getId(), 0)));
+        return folders;
     }
 
     @Override @Transactional
@@ -450,46 +469,45 @@ public class InspireServiceImpl implements InspireService {
     }
 
     @Override
-    public List<InspireVO> listCollectsByFolder(Long userId, Long folderId) {
+    public PageResult<InspireVO> listCollectsByFolder(Long userId, Long folderId, int page, int size) {
         ShardContext.setByUserId(userId);
+        Page<CollectAction> collectPage;
         try {
-            List<CollectAction> collects;
             if (folderId != null && folderId > 0) {
-                collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
+                collectPage = collectMapper.selectPage(new Page<>(page, size), Wrappers.lambdaQuery(CollectAction.class)
                         .eq(CollectAction::getUserId, userId)
                         .eq(CollectAction::getFolderId, folderId)
                         .orderByDesc(CollectAction::getCreateTime));
             } else {
-                collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
+                collectPage = collectMapper.selectPage(new Page<>(page, size), Wrappers.lambdaQuery(CollectAction.class)
                         .eq(CollectAction::getUserId, userId)
                         .isNull(CollectAction::getFolderId)
                         .orderByDesc(CollectAction::getCreateTime));
             }
-            if (collects.isEmpty()) {
-                return List.of();
-            }
-            List<Long> ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
-            // 查 inspire_main 前清除分片（inspire_main 不分表）
-            ShardContext.clear();
-            List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
-                    .in(InspireMain::getId, ids));
-            Map<Long, InspireMain> map = mains.stream().collect(Collectors.toMap(InspireMain::getId, m -> m));
-            List<InspireVO> result = new ArrayList<>();
-            // Build nickname map + collect/like status in batch
-            Map<Long, String> nicknameMap = buildNicknameMap(mains);
-            Set<Long> collectedIds = buildCollectedIds(userId, ids);
-            Set<Long> likedIds = buildLikedIds(ids, userId);
-            for (CollectAction c : collects) {
-                InspireMain m = map.get(c.getInspireId());
-                if (m != null) {
-                    InspireVO vo = singleToVO(m, nicknameMap.get(m.getUserId()), null);
-                    vo.setCollected(true);
-                    vo.setLiked(likedIds.contains(m.getId()));
-                    result.add(vo);
-                }
-            }
-            return result;
         } finally { ShardContext.clear(); }
+
+        List<CollectAction> collects = collectPage.getRecords();
+        if (collects.isEmpty()) {
+            return new PageResult<>(List.of(), collectPage.getTotal());
+        }
+        List<Long> ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
+        List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                .in(InspireMain::getId, ids));
+        Map<Long, InspireMain> map = mains.stream().collect(Collectors.toMap(InspireMain::getId, m -> m));
+        Map<Long, String> nicknameMap = buildNicknameMap(mains);
+        Set<Long> likedIds = buildLikedIdsByUser(ids, userId);
+
+        List<InspireVO> result = new ArrayList<>();
+        for (CollectAction c : collects) {
+            InspireMain m = map.get(c.getInspireId());
+            if (m != null) {
+                InspireVO vo = singleToVO(m, nicknameMap.get(m.getUserId()), null);
+                vo.setCollected(true);
+                vo.setLiked(likedIds.contains(m.getId()));
+                result.add(vo);
+            }
+        }
+        return new PageResult<>(result, collectPage.getTotal());
     }
 
 
@@ -537,7 +555,7 @@ public class InspireServiceImpl implements InspireService {
         if (loginUserId != null) {
             List<Long> inspireIds = mains.stream().map(InspireMain::getId).collect(Collectors.toList());
             collectedIds = buildCollectedIds(loginUserId, inspireIds);
-            likedIds = buildLikedIds(inspireIds, loginUserId);
+            likedIds = buildLikedIdsByUser(inspireIds, loginUserId);
         }
 
         // 3. Build VOs
@@ -575,22 +593,74 @@ public class InspireServiceImpl implements InspireService {
     private Set<Long> buildCollectedIds(Long userId, List<Long> inspireIds) {        if (inspireIds.isEmpty()) {
         return Collections.emptySet();
     }
-        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIds(List<Long> inspireIds, Long userId) {        if (inspireIds.isEmpty()) {
-        return Collections.emptySet();
+        int shard = (int)(Math.abs(userId) % 10);        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));        try {            List<Object> params = new ArrayList<>();            params.add(userId);            params.addAll(inspireIds);            List<Long> found = jdbcTemplate.queryForList(                "SELECT inspire_id FROM collect_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                Long.class, params.toArray());            return new HashSet<>(found);        } catch (Exception e) {            log.warn("批量查询收藏状态失败", e);            return Collections.emptySet();        }    }    private Set<Long> buildLikedIdsByUser(List<Long> inspireIds, Long userId) {
+        if (inspireIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        int shard = (int) Math.floorMod(userId, 10);
+        String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        try {
+            List<Object> params = new ArrayList<>();
+            params.add(userId);
+            params.addAll(inspireIds);
+            List<Long> found = jdbcTemplate.queryForList(
+                    "SELECT inspire_id FROM user_like_" + shard
+                            + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",
+                    Long.class, params.toArray());
+            return new HashSet<>(found);
+        } catch (Exception e) {
+            log.warn("批量查询点赞状态失败: userId={}", userId, e);
+            return Collections.emptySet();
+        }
     }
-        Set<Long> liked = new HashSet<>();        Map<Integer, List<Long>> grouped = inspireIds.stream()                .collect(Collectors.groupingBy(id -> (int)(Math.abs(id) % 10)));        for (Map.Entry<Integer, List<Long>> entry : grouped.entrySet()) {            int shard = entry.getKey();            List<Long> ids = entry.getValue();            String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));            try {                List<Object> params = new ArrayList<>();                params.add(userId);                params.addAll(ids);                List<Long> found = jdbcTemplate.queryForList(                    "SELECT inspire_id FROM inspire_like_" + shard + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")",                    Long.class, params.toArray());                liked.addAll(found);            } catch (Exception e) {                log.warn("批量查询点赞状态失败: shard={}", shard, e);            }        }        return liked;    }    private InspireVO toVO(InspireMain m, Long loginUserId, String content) {
+
+    /**
+     * 详情专用转换：一次补齐作者头像和当前用户关注状态，
+     * 避免前端进入详情后再额外请求用户信息和完整关注列表。
+     */
+    private InspireVO toDetailVO(InspireMain m, Long loginUserId, String content) {
         String nickname = "";
-        try { nickname = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, m.getUserId()); } catch(Exception e) {}
+        String avatar = "";
+        try {
+            Map<String, Object> profile = jdbcTemplate.queryForMap(
+                    "SELECT nickname, avatar FROM user WHERE id=?", m.getUserId());
+            nickname = Objects.toString(profile.get("nickname"), "");
+            avatar = Objects.toString(profile.get("avatar"), "");
+        } catch (Exception ignored) {}
+
         InspireVO vo = singleToVO(m, nickname, content);
-        if (loginUserId != null) {
-            ShardContext.setByUserId(loginUserId);
-            try { vo.setCollected(collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
-                    .eq(CollectAction::getUserId, loginUserId).eq(CollectAction::getInspireId, m.getId())) != null);
-            } finally { ShardContext.clear(); }
-            ShardContext.setByInspireId(m.getId());
-            try { vo.setLiked(likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
-                    .eq(LikeAction::getInspireId, m.getId()).eq(LikeAction::getUserId, loginUserId)) != null);
-            } finally { ShardContext.clear(); }
+        vo.setAvatar(avatar);
+        if (loginUserId == null) {
+            return vo;
+        }
+
+        ShardContext.setByUserId(loginUserId);
+        try {
+            vo.setCollected(collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
+                    .eq(CollectAction::getUserId, loginUserId)
+                    .eq(CollectAction::getInspireId, m.getId())) != null);
+        } finally {
+            ShardContext.clear();
+        }
+
+        ShardContext.setByUserId(loginUserId);
+        try {
+            vo.setLiked(likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
+                    .eq(LikeAction::getUserId, loginUserId)
+                    .eq(LikeAction::getInspireId, m.getId())) != null);
+        } finally {
+            ShardContext.clear();
+        }
+
+        if (!loginUserId.equals(m.getUserId())) {
+            try {
+                Integer following = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM user_follow WHERE follower_id = ? AND followee_id = ?",
+                        Integer.class, loginUserId, m.getUserId());
+                vo.setFollowing(following != null && following > 0);
+            } catch (Exception e) {
+                log.warn("查询详情关注状态失败: userId={}, authorId={}", loginUserId, m.getUserId(), e);
+            }
         }
         return vo;
     }
@@ -605,7 +675,10 @@ public class InspireServiceImpl implements InspireService {
             try { vo.setImages(objectMapper.readValue(m.getImages(), new TypeReference<java.util.List<String>>() {})); }
             catch (Exception e) { log.warn("解析多图失败", e); }
         }
-        vo.setTag(m.getTag()); vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
+        vo.setTag(m.getTag());
+        vo.setCategoryId(m.getCategoryId());
+        vo.setSubCategoryId(m.getSubCategoryId());
+        vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
         vo.setShareCount(m.getShareCount());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());
         vo.setPublishCity(m.getPublishCity()); vo.setCreateTime(m.getCreateTime());

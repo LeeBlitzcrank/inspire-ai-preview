@@ -17,7 +17,8 @@ export const getInspireDetail = (id) => request.get(`/inspire/public/${id}`)
 // 导致「我的发布」只显示几条、且因为没有更多而直接显示「已经到底啦」。
 export const getMyInspires = (page = 1, size = 20) =>
   request.get('/inspire/my', { params: { page, size } })
-export const getMyDrafts = () => request.get('/inspire/my/drafts')
+export const getMyDrafts = (page = 1, size = 20) =>
+  request.get('/inspire/my/drafts', { params: { page, size } })
 export const getMyCollects = (page = 1, size = 20) =>
   request.get('/inspire/my/collects', { params: { page, size } })
 export const createInspire = (data) => request.post('/inspire', data)
@@ -105,7 +106,8 @@ export const getCollectFolders = () => request.get('/inspire/collect/folders')
 export const deleteCollectFolder = (id) => request.delete(`/inspire/collect/folder/${id}`)
 export const renameCollectFolder = (id, name) => request.put(`/inspire/collect/folder/${id}`, { name })
 export const collectToFolder = (inspireId, folderId) => request.post(`/inspire/collect/${inspireId}/folder`, { folderId })
-export const getCollectListByFolder = (folderId) => request.get('/inspire/collect/list', { params: { folderId } })
+export const getCollectListByFolder = (folderId, page = 1, size = 20) =>
+  request.get('/inspire/collect/list', { params: { folderId, page, size } })
 
 export const moveCollectToFolder = (inspireId, folderId) => request.put(`/inspire/collect/${inspireId}/move`, { folderId })
 export const uploadFromUrl = (url) => request.post('/file/upload-from-url', { url })

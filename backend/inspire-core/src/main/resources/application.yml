@@ -7,9 +7,7 @@ spring:
     active: dev
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      continue-on-error: true
+      mode: never
   servlet:
     multipart:
       # 图片 5MB / 视频 50MB，这里放宽到 100MB：超过业务限制时由业务层返回友好提示，

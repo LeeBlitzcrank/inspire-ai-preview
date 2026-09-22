@@ -43,7 +43,7 @@
     <!-- 选中文件夹后的收藏列表 -->
     <div v-if="activeFolder !== null" class="list-head" id="c-list-head">
       <span class="t2">{{ activeFolderName }}</span>
-      <span class="n">共 {{ collectedInspires.length }} 条</span>
+      <span class="n">共 {{ collectTotal }} 条</span>
     </div>
     <AppState
       :state="collectState"
@@ -51,7 +51,7 @@
       empty-icon="⭐"
       empty-text="该文件夹还没有收藏灵感"
       error-text="收藏内容加载失败"
-      @retry="loadCollects"
+      @retry="loadCollects(1, false)"
     >
     <!-- 虚拟列表：只渲染可视区，滚到底继续放出一批（与预览一致） -->
     <div
@@ -87,11 +87,11 @@
       </div>
     </div>
     <div v-if="activeFolder !== null && collectedInspires.length" class="virt-foot" id="c-foot">
-      <template v-if="visibleCount < collectedInspires.length">
-        滚到底继续加载… 已显示 {{ visibleCount }} / {{ collectedInspires.length }} 条
-        <div class="bar"><i :style="{ width: Math.round(visibleCount / collectedInspires.length * 100) + '%' }"></i></div>
+      <template v-if="visibleCount < collectTotal">
+        滚到底继续加载… 已显示 {{ visibleCount }} / {{ collectTotal }} 条
+        <div class="bar"><i :style="{ width: Math.round(visibleCount / (collectTotal || 1) * 100) + '%' }"></i></div>
       </template>
-      <template v-else>— 已经到底啦，共 {{ collectedInspires.length }} 条 —</template>
+      <template v-else>— 已经到底啦，共 {{ collectTotal }} 条 —</template>
     </div>
     </AppState>
     <!-- 新建收藏夹：与预览一致（带字段标题 + 图标输入 + 胶囊按钮） -->
@@ -177,7 +177,9 @@ const loadFolders = async () => {
   folderError.value = ''
   try { const res = await getCollectFolders(); folders.value = res.data || []
     if (folders.value.length > 0 && !activeFolder.value) { activeFolder.value = folders.value[0].id; loadCollects() }
-    loadFolderCounts()
+    folderCounts.value = Object.fromEntries(
+      folders.value.map(f => [f.id, Number(f.count || 0)])
+    )
   } catch (e) {
     folders.value = []
     folderError.value = e?.message || 'load folders failed'
@@ -186,34 +188,43 @@ const loadFolders = async () => {
   }
 }
 
-/**
- * 收藏夹条数：接口不返回每个夹子的数量，这里逐个拉一次列表取 length。
- * （夹子数量很少，6 个左右，并发请求没有压力）
- */
 const folderCounts = ref({})
-const loadFolderCounts = async () => {
-  const list = folders.value.filter(f => f && f.id != null)
-  await Promise.all(list.map(async f => {
-    try {
-      const r = await getCollectListByFolder(f.id)
-      folderCounts.value[f.id] = (r.data || []).length
-    } catch (e) { folderCounts.value[f.id] = 0 }
-  }))
-}
-const selectFolder = (id) => { activeFolder.value = id; loadCollects() }
-const loadCollects = async () => {
+const selectFolder = (id) => { activeFolder.value = id; loadCollects(1, false) }
+const collectPage = ref(1)
+const collectTotal = ref(0)
+const collectHasMore = ref(false)
+const collectLoadingMore = ref(false)
+
+const loadCollects = async (page = 1, append = false) => {
   if (!activeFolder.value) { collectedInspires.value = []; return }
   // 换文件夹时回到第一批
-  visibleCount.value = PAGE_STEP
-  listScrollTop.value = 0
-  collectLoading.value = true
-  collectError.value = ''
-  try { const res = await getCollectListByFolder(activeFolder.value); collectedInspires.value = res.data || [] }
-  catch (e) {
+  if (!append) {
+    visibleCount.value = PAGE_STEP
+    listScrollTop.value = 0
     collectedInspires.value = []
+    collectPage.value = 1
+    collectTotal.value = 0
+    collectHasMore.value = false
+    collectLoading.value = true
+  } else {
+    collectLoadingMore.value = true
+  }
+  collectError.value = ''
+  try {
+    const res = await getCollectListByFolder(activeFolder.value, page, PAGE_STEP)
+    const rows = res.data?.records || []
+    collectedInspires.value = append ? [...collectedInspires.value, ...rows] : rows
+    collectTotal.value = Number(res.data?.total || 0)
+    collectHasMore.value = collectedInspires.value.length < collectTotal.value
+    collectPage.value = collectHasMore.value ? page + 1 : page
+    if (append) visibleCount.value = Math.min(visibleCount.value + PAGE_STEP, collectTotal.value)
+  }
+  catch (e) {
+    if (!append) collectedInspires.value = []
     collectError.value = e?.message || 'load collects failed'
   } finally {
     collectLoading.value = false
+    collectLoadingMore.value = false
   }
 }
 
@@ -241,6 +252,10 @@ const onListScroll = (e) => {
   if (visibleCount.value < collectedInspires.value.length &&
       e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 200) {
     visibleCount.value = Math.min(visibleCount.value + PAGE_STEP, collectedInspires.value.length)
+  } else if (visibleCount.value >= collectedInspires.value.length &&
+      collectHasMore.value && !collectLoadingMore.value &&
+      e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 200) {
+    loadCollects(collectPage.value, true)
   }
 }
 const handleCreate = async () => {
@@ -266,10 +281,14 @@ const removeFolder = async (f) => {
   } catch (e) { console.error(e) }
 }
 const handleRemoveFromFolder = async (id) => {
-  try { await collectInspire(id); ElMessage.success('已取消收藏'); loadCollects() }
+  try { await collectInspire(id); ElMessage.success('已取消收藏'); loadCollects(1, false) }
   catch (e) { ElMessage.error('操作失败') }
 }
-const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
+const goDetail = (id) => {
+  if (id !== null && id !== undefined && String(id).trim()) {
+    router.push({ name: 'InspireDetail', params: { id: String(id) } })
+  }
+}
 
 /* 与预览一致的展示辅助 */
 const folderCount = (f) => folderCounts.value[f.id] ?? f.count ?? f.inspireCount ?? 0

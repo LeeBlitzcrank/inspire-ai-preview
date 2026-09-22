@@ -57,6 +57,8 @@ public class EsSearchService implements SearchService {
                 vo.setTitle(src.path("title").asText());
                 vo.setImg(src.path("img").asText());
                 vo.setTag(src.path("tag").asText());
+                if (src.hasNonNull("category_id")) vo.setCategoryId(src.path("category_id").asLong());
+                if (src.hasNonNull("sub_category_id")) vo.setSubCategoryId(src.path("sub_category_id").asLong());
                 vo.setHeat(src.path("heat").asInt());
                 vo.setViewCount(src.path("view_count").asLong());
                 vo.setLikeCount(src.path("like_count").asInt());

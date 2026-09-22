@@ -14,6 +14,10 @@ public class InspireVO {
     @Schema(description = "多图列表") private java.util.List<String> images;
     @Schema(description = "分类") private String tag;
     @JsonSerialize(using = ToStringSerializer.class)
+    @Schema(description = "一级分类ID") private Long categoryId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    @Schema(description = "二级分类ID") private Long subCategoryId;
+    @JsonSerialize(using = ToStringSerializer.class)
     @Schema(description = "发布人ID") private Long userId;
     @Schema(description = "发布人用户名") private String username;
     @Schema(description = "发布人昵称") private String nickname;
@@ -27,4 +31,5 @@ public class InspireVO {
     @Schema(description = "灵感正文（仅在详情接口返回）") private String content;
     @Schema(description = "当前用户是否已收藏") private Boolean collected = false;
     @Schema(description = "当前用户是否已点赞") private Boolean liked = false;
+    @Schema(description = "当前登录用户是否已关注作者") private Boolean following = false;
 }

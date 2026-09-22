@@ -216,7 +216,11 @@ const goNotifications = () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/notifications')
 }
-const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
+const goDetail = (id) => {
+  if (id !== null && id !== undefined && String(id).trim()) {
+    router.push({ name: 'InspireDetail', params: { id: String(id) } })
+  }
+}
 
 const fetchUnreadCount = async () => {
   try {
@@ -473,7 +477,7 @@ const newFolderName = ref('')
   }
   const goDetailSwipe = () => {
   if (!wasSwiped.value && currentCard.value) {
-    router.push('/detail/' + currentCard.value.inspireId)
+    router.push({ name: 'InspireDetail', params: { id: String(currentCard.value.inspireId) } })
   }
   wasSwiped.value = false
 }
@@ -514,7 +518,7 @@ const nextCard = async () => {
   const goToCardDetail = () => {
     const c = currentCard.value
     if (c && c.inspireId) {
-      router.push({ name: 'InspireDetail', params: { id: c.inspireId } })
+      router.push({ name: 'InspireDetail', params: { id: String(c.inspireId) } })
     }
   }
   const swipeLeft = () => {

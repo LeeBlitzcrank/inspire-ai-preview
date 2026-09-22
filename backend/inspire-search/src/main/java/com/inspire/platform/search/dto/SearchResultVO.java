@@ -10,6 +10,10 @@ public class SearchResultVO {
     @Schema(description = "灵感标题", example = "鸡腿的五种神仙吃法") private String title;
     @Schema(description = "封面图") private String img;
     @Schema(description = "分类", example = "美食") private String tag;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
+    @Schema(description = "一级分类ID") private Long categoryId;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
+    @Schema(description = "二级分类ID") private Long subCategoryId;
     @Schema(description = "热度") private Integer heat;
     @Schema(description = "浏览量") private Long viewCount;
     @Schema(description = "点赞数") private Integer likeCount;

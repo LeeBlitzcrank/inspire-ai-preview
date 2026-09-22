@@ -222,12 +222,14 @@ services:
       inspire-ai: { condition: service_started }
       inspire-core: { condition: service_started }
       inspire-admin: { condition: service_started }
+      inspire-search: { condition: service_started }
     environment:
       <<: *common-env
       routes_auth_service: http://inspire-auth:8081
       routes_ai_service: http://inspire-ai:8082
       routes_core_service: http://inspire-core:8083
       routes_admin_service: http://inspire-admin:8085
+      routes_search_service: http://inspire-search:8086
     volumes: [ ./log/inspire-gateway:/logs ]
 
   # -------- MinIO 对象存储 + Nginx 图片缓存 --------

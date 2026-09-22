@@ -23,7 +23,7 @@ public class MysqlSearchService implements SearchService {
         int offset = (page - 1) * size;
         String like = "%" + keyword + "%";
 
-        String sql = "SELECT id, title, img, tag, heat, view_count, like_count, collect_count, publish_city, create_time " +
+        String sql = "SELECT id, title, img, tag, category_id, sub_category_id, heat, view_count, like_count, collect_count, publish_city, create_time " +
                      "FROM inspire_main WHERE status = 1 AND deleted = 0 " +
                      "AND (title LIKE ? OR tag LIKE ?) " +
                      (tag != null && !tag.isEmpty() ? "AND tag = ? " : "") +
@@ -43,6 +43,10 @@ public class MysqlSearchService implements SearchService {
             vo.setTitle(rs.getString("title"));
             vo.setImg(rs.getString("img"));
             vo.setTag(rs.getString("tag"));
+            long categoryId = rs.getLong("category_id");
+            vo.setCategoryId(rs.wasNull() ? null : categoryId);
+            long subCategoryId = rs.getLong("sub_category_id");
+            vo.setSubCategoryId(rs.wasNull() ? null : subCategoryId);
             vo.setHeat(rs.getInt("heat"));
             vo.setViewCount(rs.getLong("view_count"));
             vo.setLikeCount(rs.getInt("like_count"));

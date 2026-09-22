@@ -27,8 +27,10 @@ public class MyBatisPlusConfig implements MetaObjectHandler {
             }
             return tableName;
         });
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        // 动态分表必须先于分页插件执行，否则分页 count SQL 会在表名改写前生成，
+        // 直接查不存在的 collect / inspire_comment 基表。
         interceptor.addInnerInterceptor(dynamic);
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
     }
 

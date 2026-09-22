@@ -43,10 +43,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (count == 0) {
             AdminUser admin = new AdminUser();
             admin.setUsername("admin");
-            admin.setPassword(PASSWORD_ENCODER.encode("admin123"));
+            admin.setPassword(PASSWORD_ENCODER.encode("112233"));
             admin.setNickname("超级管理员");
             adminUserMapper.insert(admin);
-            log.info("默认管理员已创建: admin / admin123");
+            log.info("默认管理员已创建: admin / 112233");
         }
     }
 

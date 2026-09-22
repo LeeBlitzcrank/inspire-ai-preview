@@ -6,31 +6,38 @@
       <button class="round-button" aria-label="分享" @click="handleShare">···</button>
     </header>
 
-    <section class="gallery">
-      <video
-        v-if="isVideo(mainImage)"
-        class="gallery-main video-main"
-        :src="mainImage"
-        controls
-        playsinline
-        preload="metadata"
-      ></video>
-      <img v-else class="gallery-main" :src="mainImage" alt="灵感配图" @error="mainImageError = true">
-      <div v-if="imageList.length > 1" class="thumbs">
-        <button
-          v-for="(image, index) in imageList"
-          :key="image + index"
-          class="thumb-button"
-          :class="{ active: activeImageIndex === index }"
-          type="button"
-          @click="selectImage(index)"
-        >
-          <video v-if="isVideo(image)" class="thumb-item" :src="image" muted playsinline preload="metadata"></video>
-          <img v-else class="thumb-item" :src="image" :alt="`图片 ${index + 1}`">
-        </button>
-      </div>
-      <div class="image-count">{{ activeImageIndex + 1 }}/{{ imageList.length }} · 点击缩略图切换</div>
-    </section>
+    <AppState
+      :state="detailState"
+      :rows="5"
+      loading-variant="text"
+      error-text="灵感加载失败，请稍后重试"
+      @retry="reloadDetail"
+    >
+      <section class="gallery">
+        <video
+          v-if="isVideo(mainImage)"
+          class="gallery-main video-main"
+          :src="mainImage"
+          controls
+          playsinline
+          preload="metadata"
+        ></video>
+        <img v-else class="gallery-main" :src="mainImage" alt="灵感配图" @error="mainImageError = true">
+        <div v-if="imageList.length > 1" class="thumbs">
+          <button
+            v-for="(image, index) in imageList"
+            :key="image + index"
+            class="thumb-button"
+            :class="{ active: activeImageIndex === index }"
+            type="button"
+            @click="selectImage(index)"
+          >
+            <video v-if="isVideo(image)" class="thumb-item" :src="image" muted playsinline preload="metadata"></video>
+            <img v-else class="thumb-item" :src="image" :alt="`图片 ${index + 1}`">
+          </button>
+        </div>
+        <div class="image-count">{{ activeImageIndex + 1 }}/{{ imageList.length }} · 点击缩略图切换</div>
+      </section>
 
     <article class="article">
       <div class="kicker">{{ tagList[0] || '灵感手账' }}</div>
@@ -175,31 +182,32 @@
         </span>
         <span v-else>已显示全部 {{ commentTotal }} 条评论</span>
       </div>
-    </article>
+      </article>
 
-    <div class="bottom-action-bar">
-      <form class="quick-comment" @submit.prevent="submitComment">
-        <input
-          v-model="quickCommentText"
-          :readonly="!isLogin"
-          placeholder="说点什么..."
-          maxlength="200"
-          enterkeyhint="send"
-          aria-label="快速评论"
-          @focus="handleQuickCommentFocus"
-        >
-      </form>
-      <div class="action-group">
-        <button class="action-item" :class="{ active: liked }" type="button" @click="handleLike">
-          <span class="action-symbol">{{ liked ? '♥' : '♡' }}</span>
-          <span>{{ detail.likeCount ?? 0 }}</span>
-        </button>
-        <button class="action-item" :class="{ active: collected }" type="button" @click="toggleCollect">
-          <span class="action-symbol">{{ collected ? '★' : '☆' }}</span>
-          <span>{{ detail.collectCount ?? 0 }}</span>
-        </button>
+      <div class="bottom-action-bar">
+        <form class="quick-comment" @submit.prevent="submitComment">
+          <input
+            v-model="quickCommentText"
+            :readonly="!isLogin"
+            placeholder="说点什么..."
+            maxlength="200"
+            enterkeyhint="send"
+            aria-label="快速评论"
+            @focus="handleQuickCommentFocus"
+          >
+        </form>
+        <div class="action-group">
+          <button class="action-item" :class="{ active: liked }" type="button" @click="handleLike">
+            <span class="action-symbol">{{ liked ? '♥' : '♡' }}</span>
+            <span>{{ detail.likeCount ?? 0 }}</span>
+          </button>
+          <button class="action-item" :class="{ active: collected }" type="button" @click="toggleCollect">
+            <span class="action-symbol">{{ collected ? '★' : '☆' }}</span>
+            <span>{{ detail.collectCount ?? 0 }}</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </AppState>
 
     <div v-if="showSharePanel" class="overlay" @click.self="showSharePanel = false">
       <div class="share-panel">
@@ -244,9 +252,7 @@ import {
   createComment,
   followUser,
   getComments,
-  getFollowing,
   getInspireDetail,
-  getPublicUserInfo,
   likeInspire,
   shareInspire,
   uncollectInspire,
@@ -265,6 +271,8 @@ const FALLBACK_IMAGE = 'https://picsum.photos/id/102/900/650'
 const DEFAULT_DESC = '把此刻的灵感慢慢写下来，给图片、文字和评论区留出舒服的呼吸感。'
 
 const detail = ref({})
+const detailLoading = ref(false)
+const detailError = ref('')
 const liked = ref(false)
 const collected = ref(false)
 const isFollowing = ref(false)
@@ -288,9 +296,16 @@ const replyTarget = ref(null)
 const replyToUser = ref(null)
 const submittingComment = ref(false)
 let scrollTicking = false
+let detailRequestSeq = 0
+let commentRequestSeq = 0
 
 const isLogin = computed(() => localStorage.getItem('isLogin'))
 const currentUserId = computed(() => localStorage.getItem('userId'))
+const detailState = computed(() => {
+  if (detailLoading.value && !detail.value.id) return 'loading'
+  if (detailError.value && !detail.value.id) return 'error'
+  return 'ready'
+})
 
 const isOwnInspire = computed(() => {
   if (!detail.value.userId || !isLogin.value) return false
@@ -461,19 +476,22 @@ const regroupComments = () => {
   comments.value = roots
 }
 
-const loadComments = async (reset = false) => {
-  if (!detail.value.id || commentLoading.value) return
+const loadComments = async (reset = false, inspireIdOverride = null) => {
+  const inspireId = String(inspireIdOverride || detail.value.id || '')
+  if (!inspireId || commentLoading.value) return
   if (!isLogin.value) {
     comments.value = []
     allCommentRecords.value = []
     commentTotal.value = 0
     return
   }
+  const requestSeq = ++commentRequestSeq
   commentLoading.value = true
   commentError.value = ''
   const targetPage = reset ? 1 : commentPage.value
   try {
-    const res = await getComments(detail.value.id, { page: targetPage, size: 20 })
+    const res = await getComments(inspireId, { page: targetPage, size: 20 })
+    if (requestSeq !== commentRequestSeq || String(detail.value.id) !== inspireId) return
     if (res.code !== 200) return
     const data = res.data || {}
     const records = Array.isArray(data) ? data : (data.records || [])
@@ -484,44 +502,72 @@ const loadComments = async (reset = false) => {
     commentPage.value = targetPage + 1
     regroupComments()
   } catch (e) {
+    if (requestSeq !== commentRequestSeq || String(detail.value.id) !== inspireId) return
     commentError.value = e?.message || 'load comments failed'
     ElMessage.error('评论加载失败')
   } finally {
-    commentLoading.value = false
+    if (requestSeq === commentRequestSeq) {
+      commentLoading.value = false
+    }
   }
 }
 
-const loadData = async (id) => {
+const resetDetailState = () => {
+  detail.value = {}
+  liked.value = false
+  collected.value = false
+  isFollowing.value = false
+  activeImageIndex.value = 0
+  mainImageError.value = false
   authorAvatarError.value = false
+  comments.value = []
+  allCommentRecords.value = []
+  commentPage.value = 1
+  commentTotal.value = 0
+  commentLoading.value = false
+  commentError.value = ''
+}
+
+const loadData = async (rawId) => {
+  const id = String(rawId || '').trim()
+  if (!id) {
+    detailError.value = '灵感地址无效'
+    return
+  }
+
+  const requestSeq = ++detailRequestSeq
+  commentRequestSeq += 1
+  resetDetailState()
+  detailLoading.value = true
+  detailError.value = ''
+
+  // 评论不依赖详情响应体，和详情请求并行，避免“详情返回后再等一轮评论”。
+  if (isLogin.value) loadComments(true, id)
+
   try {
     const res = await getInspireDetail(id)
-    if (res.code === 200) {
-      detail.value = res.data || {}
-      liked.value = !!detail.value.liked
-      collected.value = !!detail.value.collected
+    if (requestSeq !== detailRequestSeq) return
+    if (res?.code !== 200 || !res.data?.id) {
+      throw new Error(res?.msg || '灵感不存在或已被删除')
     }
-  } catch (e) {}
-
-  if (isLogin.value && detail.value.userId) {
-    try {
-      const userRes = await getPublicUserInfo(detail.value.userId)
-      if (userRes.code === 200 && userRes.data) {
-        detail.value.avatar = userRes.data.avatar
-        authorAvatarError.value = false
-      }
-    } catch (e) {}
+    detail.value = res.data
+    liked.value = !!detail.value.liked
+    collected.value = !!detail.value.collected
+    isFollowing.value = !!detail.value.following
+    detailLoading.value = false
+  } catch (e) {
+    if (requestSeq !== detailRequestSeq) return
+    detailError.value = e?.response?.data?.msg || e?.message || '灵感加载失败'
+    detailLoading.value = false
+    return
   }
 
-  await loadComments(true)
+  if (requestSeq !== detailRequestSeq) return
+  authorAvatarError.value = false
+}
 
-  if (isLogin.value && detail.value.userId) {
-    try {
-      const res = await getFollowing()
-      if (res.code === 200 && res.data) {
-        isFollowing.value = res.data.some(item => String(item.id) === String(detail.value.userId))
-      }
-    } catch (e) {}
-  }
+const reloadDetail = () => {
+  if (route.params.id) loadData(route.params.id)
 }
 
 watch(() => route.params.id, id => { if (id) loadData(id) }, { immediate: true })
@@ -634,7 +680,11 @@ const handleScroll = () => {
 }
 
 onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }))
-onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
+onBeforeUnmount(() => {
+  detailRequestSeq += 1
+  commentRequestSeq += 1
+  window.removeEventListener('scroll', handleScroll)
+})
 
 const likeComment = (commentItem) => {
   commentItem.liked = !commentItem.liked

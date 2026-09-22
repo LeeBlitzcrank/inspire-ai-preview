@@ -2,6 +2,7 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.CommentCreateRequest;
 import com.inspire.platform.core.dto.CommentVO;
 import com.inspire.platform.core.entity.InspireComment;
@@ -13,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -27,12 +30,18 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Page<CommentVO> listByInspireId(Long inspireId, int page, int size) {
-        Page<InspireComment> pg = commentMapper.selectPage(
-                new Page<>(page, size),
-                new LambdaQueryWrapper<InspireComment>()
-                        .eq(InspireComment::getInspireId, inspireId)
-                        .eq(InspireComment::getDeleted, 0)
-                        .orderByDesc(InspireComment::getCreateTime));
+        Page<InspireComment> pg;
+        ShardContext.setByInspireId(inspireId);
+        try {
+            pg = commentMapper.selectPage(
+                    new Page<>(page, size),
+                    new LambdaQueryWrapper<InspireComment>()
+                            .eq(InspireComment::getInspireId, inspireId)
+                            .eq(InspireComment::getDeleted, 0)
+                            .orderByDesc(InspireComment::getCreateTime));
+        } finally {
+            ShardContext.clear();
+        }
 
         Page<CommentVO> voPage = new Page<>(pg.getCurrent(), pg.getSize(), pg.getTotal());
         voPage.setRecords(pg.getRecords().stream().map(c -> toVO(c)).toList());
@@ -45,8 +54,9 @@ public class CommentServiceImpl implements CommentService {
         vo.setInspireId(c.getInspireId());
         vo.setUserId(c.getUserId());
         vo.setUsername(c.getUsername());
-        try { vo.setAvatar(jdbcTemplate.queryForObject("SELECT avatar FROM user WHERE id=?", String.class, c.getUserId())); } catch(Exception e) { vo.setAvatar(c.getAvatar()); }
-        try { vo.setNickname(jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, c.getUserId())); } catch(Exception e) { vo.setNickname(c.getUsername()); }        vo.setContent(c.getContent());
+        vo.setAvatar(c.getAvatar());
+        vo.setNickname(c.getUsername());
+        vo.setContent(c.getContent());
         vo.setParentId(c.getParentId());
         vo.setReplyUserId(c.getReplyUserId());
         vo.setReplyUsername(c.getReplyUsername());
@@ -57,18 +67,36 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public void create(Long userId, CommentCreateRequest request) {
+        String nickname = request.getUsername();
+        String avatar = request.getAvatar();
+        try {
+            Map<String, Object> profile = jdbcTemplate.queryForMap(
+                    "SELECT nickname, avatar FROM user WHERE id=?", userId);
+            nickname = java.util.Objects.toString(profile.get("nickname"), String.valueOf(userId));
+            avatar = java.util.Objects.toString(profile.get("avatar"), "");
+        } catch (Exception e) {
+            nickname = nickname != null ? nickname : String.valueOf(userId);
+            avatar = avatar != null ? avatar : "";
+        }
+
         InspireComment c = new InspireComment();
         c.setId(nextId());
         c.setInspireId(request.getInspireId());
         c.setUserId(userId);
-        c.setUsername(request.getUsername() != null ? request.getUsername() : String.valueOf(userId));
-        c.setAvatar(request.getAvatar() != null ? request.getAvatar() : "");
+        c.setUsername(nickname);
+        c.setAvatar(avatar);
         c.setContent(request.getContent());
         c.setParentId(request.getParentId() != null ? request.getParentId() : 0L);
         c.setReplyUserId(request.getReplyUserId() != null ? request.getReplyUserId() : 0L);
         c.setReplyUsername(request.getReplyUsername() != null ? request.getReplyUsername() : "");
         c.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
-        commentMapper.insert(c);
+        int commentShard = (int) Math.floorMod(request.getInspireId(), 10);
+        ShardContext.setByInspireId(request.getInspireId());
+        try {
+            commentMapper.insert(c);
+        } finally {
+            ShardContext.clear();
+        }
         log.info("评论创建: id={}, inspireId={}, userId={}, parentId={}",
                 c.getId(), request.getInspireId(), userId, c.getParentId());
 
@@ -88,7 +116,8 @@ public class CommentServiceImpl implements CommentService {
             if (request.getParentId() != null && request.getParentId() > 0L) {
                 // 回复评论 → 通知被回复者
                 String replyOwnerId = jdbcTemplate.queryForObject(
-                    "SELECT user_id FROM inspire_comment WHERE id=?", String.class, request.getParentId());
+                    "SELECT user_id FROM inspire_comment_" + commentShard + " WHERE id=?",
+                    String.class, request.getParentId());
                 if (replyOwnerId != null) {
                     notificationService.notify(Long.parseLong(replyOwnerId), "reply", userId,
                         myName, "回复了你的评论: " + request.getContent(),
@@ -111,12 +140,17 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
-    public void deleteById(Long commentId, Long userId) {
-        commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
-                .eq(InspireComment::getId, commentId)
-                .eq(InspireComment::getUserId, userId));
-        commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
-                .eq(InspireComment::getParentId, commentId));
+    public void deleteById(Long inspireId, Long commentId, Long userId) {
+        ShardContext.setByInspireId(inspireId);
+        try {
+            commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
+                    .eq(InspireComment::getId, commentId)
+                    .eq(InspireComment::getUserId, userId));
+            commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
+                    .eq(InspireComment::getParentId, commentId));
+        } finally {
+            ShardContext.clear();
+        }
         log.info("评论删除: commentId={}, userId={}", commentId, userId);
     }
 

@@ -2,8 +2,10 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.inspire.platform.core.entity.ConversationMember;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
+import com.inspire.platform.core.mapper.ConversationMemberMapper;
 import com.inspire.platform.core.mapper.MessageConversationMapper;
 import com.inspire.platform.core.mapper.MessageMapper;
 import com.inspire.platform.core.service.MessageService;
@@ -28,6 +30,7 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageMapper messageMapper;
     private final MessageConversationMapper conversationMapper;
+    private final ConversationMemberMapper conversationMemberMapper;
     private final JdbcTemplate jdbcTemplate;
 
     @Override @Transactional
@@ -71,12 +74,12 @@ public class MessageServiceImpl implements MessageService {
         conv.setLastContent(content);
         conv.setLastTime(now);
         conv.setUpdateTime(now);
-        if (fromUserId == uid1) {
-            conv.setUnreadUser2(conv.getUnreadUser2() + 1);
-        } else {
-            conv.setUnreadUser1(conv.getUnreadUser1() + 1);
-        }
         conversationMapper.updateById(conv);
+        ensureConversationMembers(conv, now);
+        jdbcTemplate.update(
+                "UPDATE conversation_member SET unread_count = unread_count + 1, last_time = ?, update_time = ? "
+                        + "WHERE conversation_id = ? AND user_id = ?",
+                now, now, conv.getId(), toUserId);
         
         log.info("私信发送: from={}, to={}, content={}", fromUserId, toUserId, content);
         return msg;
@@ -84,27 +87,37 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public List<MessageConversation> getConversations(Long userId) {
-        List<MessageConversation> list = conversationMapper.selectList(Wrappers.lambdaQuery(MessageConversation.class)
-                .and(w -> w.eq(MessageConversation::getUser1Id, userId)
-                        .or().eq(MessageConversation::getUser2Id, userId))
-                .orderByDesc(MessageConversation::getLastTime));
-        // 填充对方用户信息
-        for (MessageConversation c : list) {
-            Long otherId = c.getUser1Id().equals(userId) ? c.getUser2Id() : c.getUser1Id();
-            try {
-                String nickname = jdbcTemplate.queryForObject(
-                    "SELECT nickname FROM user WHERE id=?", String.class, otherId);
-                String username = jdbcTemplate.queryForObject(
-                    "SELECT username FROM user WHERE id=?", String.class, otherId);
-                c.setTargetNickname(nickname);
-                c.setTargetUsername(username);
-            } catch (Exception ignored) {}
-        }
-        return list;
+        return jdbcTemplate.query(
+                "SELECT c.id, c.user1_id, c.user2_id, c.last_content, cm.last_time, cm.unread_count, "
+                        + "u.id AS target_id, u.nickname, u.username "
+                        + "FROM conversation_member cm "
+                        + "JOIN message_conversation c ON c.id = cm.conversation_id "
+                        + "JOIN user u ON u.id = CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END "
+                        + "WHERE cm.user_id = ? ORDER BY cm.last_time DESC",
+                (rs, n) -> {
+                    MessageConversation c = new MessageConversation();
+                    c.setId(rs.getLong("id"));
+                    c.setUser1Id(rs.getLong("user1_id"));
+                    c.setUser2Id(rs.getLong("user2_id"));
+                    c.setLastContent(rs.getString("last_content"));
+                    c.setLastTime(rs.getTimestamp("last_time") != null
+                            ? rs.getTimestamp("last_time").toLocalDateTime() : null);
+                    c.setUnreadUser1(rs.getInt("unread_count"));
+                    c.setUnreadUser2(rs.getInt("unread_count"));
+                    c.setTargetNickname(rs.getString("nickname"));
+                    c.setTargetUsername(rs.getString("username"));
+                    return c;
+                }, userId, userId);
     }
 
     @Override
     public List<Message> getMessages(Long userId, Long conversationId, int page, int size) {
+        Integer member = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
+                Integer.class, conversationId, userId);
+        if (member == null || member == 0) {
+            throw new RuntimeException("无权查看此会话");
+        }
         return messageMapper.selectList(Wrappers.lambdaQuery(Message.class)
                 .eq(Message::getConversationId, conversationId)
                 .orderByDesc(Message::getCreateTime)
@@ -113,48 +126,32 @@ public class MessageServiceImpl implements MessageService {
 
     @Override @Transactional
     public int markAsRead(Long userId, Long conversationId) {
-        MessageConversation conv = conversationMapper.selectById(conversationId);
-        if (conv == null) {
-            return 0;
-        }
-        if (conv.getUser1Id().equals(userId)) {
-            conv.setUnreadUser1(0);
-        } else {
-            conv.setUnreadUser2(0);
-        }
-        conversationMapper.updateById(conv);
-        return 1;
+        return jdbcTemplate.update(
+                "UPDATE conversation_member SET unread_count = 0, update_time = ? "
+                        + "WHERE conversation_id = ? AND user_id = ?",
+                LocalDateTime.now(ZONE), conversationId, userId);
     }
 
     @Override
     public int unreadCount(Long userId) {
-        List<MessageConversation> list = conversationMapper.selectList(Wrappers.lambdaQuery(MessageConversation.class)
-                .and(w -> w.eq(MessageConversation::getUser1Id, userId)
-                        .or().eq(MessageConversation::getUser2Id, userId)));
-        int count = 0;
-        for (MessageConversation c : list) {
-            if (c.getUser1Id().equals(userId)) {
-                count += c.getUnreadUser1();
-            } else {
-                count += c.getUnreadUser2();
-            }
-        }
-        return count;
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(unread_count), 0) FROM conversation_member WHERE user_id = ?",
+                Integer.class, userId);
+        return count == null ? 0 : count;
     }
 
     @Override @Transactional
     public void deleteConversation(Long userId, Long conversationId) {
-        MessageConversation conv = conversationMapper.selectById(conversationId);
-        if (conv == null) {
-            return;
-        }
-        // 允许会话中的任一方删除
-        if (!conv.getUser1Id().equals(userId) && !conv.getUser2Id().equals(userId)) {
+        Integer member = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
+                Integer.class, conversationId, userId);
+        if (member == null || member == 0) {
             throw new RuntimeException("无权删除此会话");
         }
         messageMapper.delete(Wrappers.lambdaQuery(Message.class)
                 .eq(Message::getConversationId, conversationId));
         conversationMapper.deleteById(conversationId);
+        jdbcTemplate.update("DELETE FROM conversation_member WHERE conversation_id = ?", conversationId);
         log.info("删除会话: conversationId={}, userId={}", conversationId, userId);
     }
 
@@ -176,22 +173,47 @@ public class MessageServiceImpl implements MessageService {
             conv.setUnreadUser2(0);
             conversationMapper.insert(conv);
         }
+        ensureConversationMembers(conv, LocalDateTime.now(ZONE));
         return conv;
     }
 
 
     @Override @Transactional
     public void deleteAllConversations(Long userId) {
-        List<MessageConversation> list = conversationMapper.selectList(
-            com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(MessageConversation.class)
-                .and(w -> w.eq(MessageConversation::getUser1Id, userId)
-                        .or().eq(MessageConversation::getUser2Id, userId)));
-        for (MessageConversation c : list) {
+        List<Long> ids = jdbcTemplate.queryForList(
+                "SELECT conversation_id FROM conversation_member WHERE user_id = ?",
+                Long.class, userId);
+        for (Long id : ids) {
             messageMapper.delete(com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(Message.class)
-                    .eq(Message::getConversationId, c.getId()));
-            conversationMapper.deleteById(c.getId());
+                    .eq(Message::getConversationId, id));
+            conversationMapper.deleteById(id);
+            jdbcTemplate.update("DELETE FROM conversation_member WHERE conversation_id = ?", id);
         }
-        log.info("清空所有会话: userId={}, count={}", userId, list.size());
+        log.info("清空所有会话: userId={}, count={}", userId, ids.size());
+    }
+
+    private void ensureConversationMembers(MessageConversation conv, LocalDateTime now) {
+        for (Long memberId : List.of(conv.getUser1Id(), conv.getUser2Id())) {
+            Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
+                    Integer.class, conv.getId(), memberId);
+            if (exists == null || exists == 0) {
+                ConversationMember member = new ConversationMember();
+                member.setId(nextId());
+                member.setConversationId(conv.getId());
+                member.setUserId(memberId);
+                member.setUnreadCount(0);
+                member.setLastTime(conv.getLastTime() != null ? conv.getLastTime() : now);
+                member.setCreateTime(now);
+                member.setUpdateTime(now);
+                conversationMemberMapper.insert(member);
+            } else {
+                jdbcTemplate.update(
+                        "UPDATE conversation_member SET last_time = ?, update_time = ? "
+                                + "WHERE conversation_id = ? AND user_id = ?",
+                        conv.getLastTime() != null ? conv.getLastTime() : now, now, conv.getId(), memberId);
+            }
+        }
     }
 
 }

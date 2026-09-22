@@ -75,7 +75,7 @@ public class EsSyncService {
         }
     }
 
-    @Scheduled(fixedDelay = 300000)
+    @Scheduled(initialDelay = 15000, fixedDelay = 300000)
     public void batchSync() {
         if (!isEnabled() || mainMapper == null) {
             return;
@@ -99,7 +99,8 @@ public class EsSyncService {
                 bulkBody.append(objectMapper.writeValueAsString(doc)).append("\n");
             }
 
-            Request req = new Request("POST", "/_bulk");
+            // 种子数据刚写完时立即要求 refresh，避免搜索还要等 ES 的下一次 refresh。
+            Request req = new Request("POST", "/_bulk?refresh=true");
             req.setJsonEntity(bulkBody.toString());
             org.elasticsearch.client.Response resp = getClient().performRequest(req);
             String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
@@ -119,6 +120,8 @@ public class EsSyncService {
         doc.put("title", main.getTitle());
         doc.put("img", main.getImg());
         doc.put("tag", main.getTag());
+        doc.put("category_id", main.getCategoryId());
+        doc.put("sub_category_id", main.getSubCategoryId());
         doc.put("user_id", main.getUserId());
         doc.put("view_count", main.getViewCount());
         doc.put("like_count", main.getLikeCount());

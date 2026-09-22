@@ -102,7 +102,11 @@ import { ElMessage } from 'element-plus'
 import { searchInspires, getInspireList, getCollectFolders, createCollectFolder, collectToFolder } from '@/api/inspire.js'
 import { thumbOf, srcsetOf } from '@/utils/media.js'
 const router = useRouter()
-const goDetail = (id) => { router.push({ name: 'InspireDetail', params: { id } }) }
+const goDetail = (id) => {
+  if (id !== null && id !== undefined && String(id).trim()) {
+    router.push({ name: 'InspireDetail', params: { id: String(id) } })
+  }
+}
 const goCreate = () => {
   if (!localStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
   router.push('/create')

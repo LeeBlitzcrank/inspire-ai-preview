@@ -257,13 +257,15 @@ public class InspireController {
 
     @GetMapping("/collect/list")
     @Operation(summary = "按文件夹获取收藏列表")
-    public Result<List<InspireVO>> collectList(@RequestParam(required = false) Long folderId,
-                                                HttpServletRequest request) {
+    public Result<PageResult<InspireVO>> collectList(@RequestParam(required = false) Long folderId,
+                                                     @RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "20") int size,
+                                                     HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        return Result.success(inspireService.listCollectsByFolder(userId, folderId));
+        return Result.success(inspireService.listCollectsByFolder(userId, folderId, page, size));
     }
 
 

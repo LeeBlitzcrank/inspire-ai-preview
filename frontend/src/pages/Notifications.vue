@@ -108,7 +108,7 @@ const handleClick = async (item) => {
   }
   // 跳转到灵感详情
   if (item.targetId && item.targetId !== 'null' && item.targetId !== '0') {
-    router.push({ name: 'InspireDetail', params: { id: item.targetId } })
+    router.push({ name: 'InspireDetail', params: { id: String(item.targetId) } })
   }
 }
 

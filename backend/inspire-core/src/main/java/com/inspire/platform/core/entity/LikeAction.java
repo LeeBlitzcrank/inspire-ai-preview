@@ -5,8 +5,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("inspire_like")
-@Schema(description = "用户点赞记录（分表 inspire_like_0~9，按inspire_id%10路由）")
+@TableName("user_like")
+@Schema(description = "用户点赞记录（分表 user_like_0~9，按user_id%10路由）")
 public class LikeAction {
     private Long id;
     @Schema(description = "点赞用户ID") private Long userId;

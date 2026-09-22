@@ -43,7 +43,7 @@ public class CommentController {
     public Result<Void> delete(@PathVariable Long id,
                                 @PathVariable Long commentId,
                                 @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
-        commentService.deleteById(commentId, userId);
+        commentService.deleteById(id, commentId, userId);
         return Result.success("删除成功", null);
     }
 }

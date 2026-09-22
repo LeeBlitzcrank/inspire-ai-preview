@@ -47,17 +47,23 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 "SELECT COUNT(*) FROM inspire_main WHERE DATE(create_time) = CURDATE()", Long.class));
         vo.setTodayRegister(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM user WHERE DATE(create_time) = CURDATE()", Long.class));
-        vo.setTodayLikes(sumShards("inspire_like_", today));
+        vo.setTodayLikes(sumShards("user_like_", today));
         vo.setTodayCollects(sumShards("collect_", today));
-        vo.setTotalLikes(sumShards("inspire_like_", ""));
+        vo.setTotalLikes(sumShards("user_like_", ""));
         vo.setTotalCollects(sumShards("collect_", ""));
 
         // DAU: 今日有发布/点赞/收藏/评论的用户数（去重）
         try {
+            StringBuilder commentUnion = new StringBuilder();
+            for (int i = 0; i < 10; i++) {
+                if (i > 0) commentUnion.append(" UNION ALL ");
+                commentUnion.append("SELECT user_id FROM inspire_comment_").append(i)
+                        .append(" WHERE DATE(create_time) = CURDATE() AND deleted = 0");
+            }
             Long dau = jdbcTemplate.queryForObject(
                 "SELECT COUNT(DISTINCT user_id) FROM ("
                 + " SELECT user_id FROM inspire_main WHERE DATE(create_time) = CURDATE()"
-                + " UNION SELECT user_id FROM inspire_comment WHERE DATE(create_time) = CURDATE()"
+                + " UNION " + commentUnion
                 + ") u", Long.class);
             vo.setDau(dau != null ? dau : 0);
         } catch (Exception e) { vo.setDau(0); }

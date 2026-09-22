@@ -6,6 +6,6 @@ import lombok.Data;
 public class LoginRequest {
     @Schema(description = "管理员账号", example = "admin")
     @NotBlank private String username;
-    @Schema(description = "密码", example = "admin123")
+    @Schema(description = "密码", example = "112233")
     @NotBlank private String password;
 }

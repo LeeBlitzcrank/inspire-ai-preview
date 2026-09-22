@@ -21,6 +21,7 @@ import com.inspire.platform.core.mapper.LikeMapper;
 import com.inspire.platform.core.mapper.MessageConversationMapper;
 import com.inspire.platform.core.mapper.MessageMapper;
 import com.inspire.platform.core.service.ImageVariantService;
+import com.inspire.platform.core.service.es.EsSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -58,8 +59,9 @@ import java.util.Set;
  * 幂等：目标用户已有灵感数据时直接跳过，重复启动不会重复灌。
  *
  * 分表规则必须和 ShardContext 一致，写错会出现「插了数据但页面显示 0」：
- *   collect_N       按 user_id    % 10
- *   inspire_like_N  按 inspire_id % 10
+ *   collect_N         按 user_id    % 10
+ *   user_like_N       按 user_id    % 10
+ *   inspire_comment_N 按 inspire_id % 10
  *
  * 热度公式与 HeatScoreTask 保持一致：heat = view + like*10 + collect*20
  */
@@ -81,6 +83,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final ImageVariantService imageVariantService;
+    private final EsSyncService esSyncService;
 
     @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
     private String cdnDomain;
@@ -95,6 +98,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final long COMMENT_ID = ID_BASE + 700_000L;
     private static final long FOLLOW_ID = ID_BASE + 800_000L;
     private static final long CONV_ID = ID_BASE + 900_000L;
+    private static final long MEMBER_ID = ID_BASE + 910_000L;
     private static final long MSG_ID = ID_BASE + 950_000L;
     private static final long NOTIFY_ID = ID_BASE + 990_000L;
 
@@ -119,7 +123,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private String demoAdminPassword;
 
     private long inspireSeq = 0, folderSeq = 0, collectSeq = 0, likeSeq = 0;
-    private long commentSeq = 0, convSeq = 0, msgSeq = 0, notifySeq = 0, followSeq = 0;
+    private long commentSeq = 0, convSeq = 0, msgSeq = 0, memberSeq = 0, notifySeq = 0, followSeq = 0;
 
     /** 用户名 / 昵称 / 头像 / 城市 / 灵感条数 */
     private static final String[][] NEW_USERS = {
@@ -128,27 +132,15 @@ public class DemoDataSeeder implements ApplicationRunner {
             {"user003", "文艺胶片", "📷", "上海", "500"}
     };
 
-    private static final String[] TAGS = {
-            "家居", "美食", "旅行", "摄影", "穿搭", "运动", "文案", "电影", "生活", "手作"
-    };
+    private record CategoryChoice(Long categoryId, String categoryName,
+                                  Long subCategoryId, String subCategoryName) {}
+
+    /** 从 sys_category 动态加载，种子灵感严格引用后台两级分类。 */
+    private final List<CategoryChoice> categoryChoices = new ArrayList<>();
 
     private static final String[] CITIES = {
             "北京", "上海", "杭州", "成都", "广州", "深圳", "西安", "重庆", "南京", "厦门", "长沙", "苏州"
     };
-
-    /** 每个分类下的具体选题，用来拼标题与正文 */
-    private static final Map<String, String[]> TOPICS = Map.of(
-            "家居", new String[]{"小户型收纳", "灯光氛围", "原木风搭配", "租房改造", "阳台绿植", "厨房动线", "衣柜整理", "客厅配色"},
-            "美食", new String[]{"一人食快手菜", "周末煲汤", "空气炸锅", "早餐搭配", "手冲咖啡", "深夜食堂", "减脂餐", "烤箱甜点"},
-            "旅行", new String[]{"秋日露营", "城市漫步", "周末短途", "一个人的旅行", "行李收纳", "青旅体验", "自驾路线", "小众目的地"},
-            "摄影", new String[]{"手机摄影", "胶片色调", "窗口人像", "街拍构图", "夜景拍摄", "静物布光", "旅行记录", "生活抓拍"},
-            "穿搭", new String[]{"秋冬叠穿", "极简衣橱", "通勤穿搭", "小个子比例", "配饰点缀", "色彩搭配", "基础款搭配", "换季整理"},
-            "运动", new String[]{"晨跑习惯", "居家训练", "爬山路线", "骑行通勤", "拉伸放松", "配速提升", "核心训练", "羽毛球"},
-            "文案", new String[]{"朋友圈文案", "情绪记录", "读书笔记", "年度总结", "写信给自己", "短句收集", "日常碎碎念", "自我介绍"},
-            "电影", new String[]{"老电影重看", "周末片单", "纪录片推荐", "冷门佳作", "导演风格", "配乐记录", "影院体验", "剧集短评"},
-            "生活", new String[]{"早起习惯", "记账复盘", "桌面整理", "情绪管理", "通勤时间", "周末计划", "断舍离", "独处时光"},
-            "手作", new String[]{"陶艺入门", "编织围巾", "手工皂", "干花相框", "帆布改造", "皮质小物", "手账排版", "羊毛毡"}
-    );
 
     /** 每个分类的正文句库（不带句号，拼接时统一补） */
     private static final Map<String, String[]> SENTENCES = Map.of(
@@ -315,6 +307,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         // 先把演示图生成进 MinIO，后面的灵感直接引用（不依赖外部图源）
         ensureDemoImages();
+        loadCategoryChoices();
 
         Map<Long, List<Long>> userFolders = new HashMap<>();
         for (Long uid : allUsers) {
@@ -339,6 +332,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         ensureConversations(allUsers);
         generateNotifications();
 
+        // 种子完成后立即同步 ES，避免搜索功能等下一次定时任务才可用。
+        esSyncService.batchSync();
         log.info("[DemoSeeder] 演示数据生成完成");
     }
 
@@ -427,6 +422,34 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ==================== 灵感 + 互动 ====================
 
+    private void loadCategoryChoices() {
+        categoryChoices.clear();
+        Map<Long, String> parents = new LinkedHashMap<>();
+        jdbcTemplate.query(
+                "SELECT id, name FROM sys_category "
+                        + "WHERE parent_id = 0 AND status = 1 AND deleted = 0 "
+                        + "ORDER BY sort_order, id",
+                rs -> { parents.put(rs.getLong("id"), rs.getString("name")); });
+
+        for (Map.Entry<Long, String> parent : parents.entrySet()) {
+            Long parentId = parent.getKey();
+            String parentName = parent.getValue();
+            jdbcTemplate.query(
+                    "SELECT id, name FROM sys_category "
+                            + "WHERE parent_id = ? AND status = 1 AND deleted = 0 "
+                            + "ORDER BY sort_order, id",
+                    rs -> {
+                        categoryChoices.add(new CategoryChoice(
+                                parentId, parentName, rs.getLong("id"), rs.getString("name")));
+                    },
+                    parentId);
+        }
+        if (categoryChoices.isEmpty()) {
+            throw new IllegalStateException("sys_category 没有可用二级分类，拒绝生成虚空种子数据");
+        }
+        log.info("[DemoSeeder] 已加载后台分类组合 {} 组", categoryChoices.size());
+    }
+
     private void generateForUser(Long ownerId, int want, List<Long> allUsers,
                                  Map<Long, List<Long>> userFolders) {
         List<Long> others = new ArrayList<>();
@@ -436,9 +459,9 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         log.info("[DemoSeeder] 开始为用户 {} 生成 {} 条灵感…", ownerId, want);
         for (int i = 0; i < want; i++) {
-            String tag = TAGS[rnd.nextInt(TAGS.length)];
-            String[] topics = TOPICS.get(tag);
-            String topic = topics[rnd.nextInt(topics.length)];
+            CategoryChoice category = categoryChoices.get(rnd.nextInt(categoryChoices.size()));
+            String tag = category.categoryName();
+            String topic = category.subCategoryName();
 
             long inspireId = INSPIRE_ID + (inspireSeq++);
             LocalDateTime createTime = now()
@@ -463,6 +486,8 @@ public class DemoDataSeeder implements ApplicationRunner {
             m.setImg(img);
             m.setImages("[\"" + img + "\",\"" + demoImage(inspireId + 7) + "\"]");
             m.setTag(tag);
+            m.setCategoryId(category.categoryId());
+            m.setSubCategoryId(category.subCategoryId());
             m.setUserId(ownerId);
             m.setStatus(1);
             m.setViewCount(view);
@@ -479,9 +504,9 @@ public class DemoDataSeeder implements ApplicationRunner {
             content.setContent(buildContent(tag, topic));
             contentMapper.insert(content);
 
-            // 点赞明细：按 inspire_id % 10 分表
+            // 点赞明细：按 user_id % 10 分表
             for (Long actor : likers) {
-                ShardContext.setByInspireId(inspireId);
+                ShardContext.setByUserId(actor);
                 try {
                     LikeAction a = new LikeAction();
                     a.setId(LIKE_ID + (likeSeq++));
@@ -527,7 +552,12 @@ public class DemoDataSeeder implements ApplicationRunner {
                 cm.setReplyUsername("");
                 cm.setContent(COMMENTS[rnd.nextInt(COMMENTS.length)]);
                 cm.setCreateTime(createTime.plusMinutes(20 + rnd.nextInt(2000)));
-                commentMapper.insert(cm);
+                ShardContext.setByInspireId(inspireId);
+                try {
+                    commentMapper.insert(cm);
+                } finally {
+                    ShardContext.clear();
+                }
             }
 
             if ((i + 1) % 100 == 0) {
@@ -587,13 +617,21 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private long nextCommentId() {
-        Long max = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) FROM inspire_comment", Long.class);
+        StringBuilder union = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            if (i > 0) union.append(" UNION ALL ");
+            union.append("SELECT COALESCE(MAX(id), 0) AS id FROM inspire_comment_").append(i);
+        }
+        Long max = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(id), 0) FROM (" + union + ") t", Long.class);
         return (max == null ? 0L : max) + 1L;
     }
 
     private int countComments(Long inspireId) {
+        int shard = (int) Math.floorMod(inspireId, 10);
         Integer c = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM inspire_comment WHERE inspire_id = ? AND deleted = 0",
+                "SELECT COUNT(*) FROM inspire_comment_" + shard
+                        + " WHERE inspire_id = ? AND deleted = 0",
                 Integer.class, inspireId);
         return c == null ? 0 : c;
     }
@@ -651,7 +689,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
 
         jdbcTemplate.batchUpdate(
-                "INSERT INTO inspire_comment(id, inspire_id, user_id, username, avatar, parent_id, "
+                "INSERT INTO inspire_comment_" + Math.floorMod(inspireId, 10)
+                        + "(id, inspire_id, user_id, username, avatar, parent_id, "
                         + "reply_user_id, reply_username, content, create_time, update_time, deleted) "
                         + "VALUES(?,?,?,?,?,?,?,?,?,?,?,0)",
                 batch);
@@ -843,6 +882,16 @@ public class DemoDataSeeder implements ApplicationRunner {
                 conv.setCreateTime(t.minusDays(1));
                 conv.setUpdateTime(t);
                 conversationMapper.insert(conv);
+                jdbcTemplate.update(
+                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, last_time, create_time, update_time) "
+                                + "VALUES(?,?,?,?,?,?,?)",
+                        MEMBER_ID + (memberSeq++), convId, u1, conv.getUnreadUser1(),
+                        conv.getLastTime(), conv.getCreateTime(), conv.getUpdateTime());
+                jdbcTemplate.update(
+                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, last_time, create_time, update_time) "
+                                + "VALUES(?,?,?,?,?,?,?)",
+                        MEMBER_ID + (memberSeq++), convId, u2, conv.getUnreadUser2(),
+                        conv.getLastTime(), conv.getCreateTime(), conv.getUpdateTime());
             }
         }
     }

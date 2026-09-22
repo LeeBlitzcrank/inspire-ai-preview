@@ -65,6 +65,7 @@ routes:
   core-service: ${routes_core_service:http://localhost:8083}
   recommend-service: ${routes_recommend_service:http://localhost:8084}
   admin-service: ${routes_admin_service:http://localhost:8085}
+  search-service: ${routes_search_service:http://localhost:8086}
 
 logging:
   level:

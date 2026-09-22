@@ -148,7 +148,7 @@
           <div class="backrow">
             <span class="bk" @click="activeFolder = null">← 收藏夹</span>
             <span class="ttl">{{ activeFolder.icon }} {{ activeFolder.name }}</span>
-            <span class="c">共 {{ folderCollects.length }} 条</span>
+            <span class="c">共 {{ folderTotal }} 条</span>
           </div>
           <template>
             <AppCard
@@ -171,6 +171,9 @@
                 </div>
               </div>
             </AppCard>
+            <div v-if="folderHasMore" class="virt-foot" @click="loadMoreFolder">
+              {{ folderLoadingMore ? '加载中…' : `加载更多 · 已显示 ${folderCollects.length}/${folderTotal}` }}
+            </div>
           </template>
         </template>
       </template>
@@ -264,7 +267,7 @@
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserInfo, getMyInspires, getMyCollects,
+import { getUserInfo, getMyInspires, getMyDrafts, getMyCollects,
          uncollectInspire, updateUserInfo, changePassword,
          getCollectFolders, getCollectListByFolder, getFollowing } from '@/api/inspire.js'
 import { cityOptions, findCityPath } from '@/utils/cityData.js'
@@ -336,6 +339,10 @@ const folderCounts = ref({})
 const activeFolder = ref(null)
 const folderCollects = ref([])
 const folderLoading = ref(false)
+const folderPage = ref(1)
+const folderTotal = ref(0)
+const folderHasMore = ref(false)
+const folderLoadingMore = ref(false)
 
 const personalEmptyText = computed(() => {
   if (activeTab.value === 'published') return '还没有发布过灵感'
@@ -397,7 +404,11 @@ const goPage = (p) => {
   else loadPublished(p)
 }
 
-const goDetail = (id) => { if (id) router.push({ name: 'InspireDetail', params: { id } }) }
+const goDetail = (id) => {
+  if (id !== null && id !== undefined && String(id).trim()) {
+    router.push({ name: 'InspireDetail', params: { id: String(id) } })
+  }
+}
 
 // 标签补一个 emoji，和创建页的分类图标保持一致
 const TAG_ICON = {
@@ -455,11 +466,8 @@ const loadPublished = async (reset = false) => {
   publishedError.value = ''
   const nextPage = reset ? 1 : pubLoadedPage.value + 1
   try {
-    const token = localStorage.getItem('token') || ''
-    const resp = await fetch(`/api/inspire/my?page=${nextPage}&size=${PUB_PAGE_SIZE}`, {
-      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
-    })
-    const json = await resp.json()
+    const json = await getMyInspires(nextPage, PUB_PAGE_SIZE)
+    if (json.code !== 200) throw new Error(json.msg || 'load published failed')
     const rows = json.data?.records || []
     publishedList.value = reset ? rows : [...publishedList.value, ...rows]
     pubTotal.value = json.data?.total || 0
@@ -475,11 +483,8 @@ const loadDrafts = async (page) => {
   if (page !== undefined) draftPage.value = page
   draftError.value = ''
   try {
-    const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my/drafts?page=' + draftPage.value + '&size=' + pageSize.value, {
-      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
-    })
-    const json = await resp.json()
+    const json = await getMyDrafts(draftPage.value, pageSize.value)
+    if (json.code !== 200) throw new Error(json.msg || 'load drafts failed')
     draftList.value = json.data?.records || []
     draftTotal.value = json.data?.total || 0
   } catch (e) {
@@ -491,11 +496,8 @@ const loadDrafts = async (page) => {
 const loadCollects = async (page) => {
   if (page !== undefined) collPage.value = page
   try {
-    const token = localStorage.getItem('token') || ''
-    const resp = await fetch('/api/inspire/my/collects?page=' + collPage.value + '&size=' + pageSize.value, {
-      headers: { 'Authorization': 'Bearer ' + token, 'X-Inspire-UserId': '' }
-    })
-    const json = await resp.json()
+    const json = await getMyCollects(collPage.value, pageSize.value)
+    if (json.code !== 200) throw new Error(json.msg || 'load collects failed')
     collectList.value = json.data?.records || []
     collTotal.value = json.data?.total || 0
   } catch (e) { console.error(e) }
@@ -507,14 +509,9 @@ const loadFolders = async () => {
   try {
     const res = await getCollectFolders()
     folders.value = res.data || []
-    const counts = {}
-    await Promise.all(folders.value.map(async f => {
-      try {
-        const r = await getCollectListByFolder(f.id)
-        counts[f.id] = (r.data || []).length
-      } catch (e) { counts[f.id] = 0 }
-    }))
-    folderCounts.value = counts
+    folderCounts.value = Object.fromEntries(
+      folders.value.map(f => [f.id, Number(f.count || 0)])
+    )
   } catch (e) {
     folders.value = []
     folderCounts.value = {}
@@ -522,19 +519,40 @@ const loadFolders = async () => {
   }
 }
 
-// 进入某个收藏夹
-const openFolder = async (f) => {
-  activeFolder.value = f
-  folderLoading.value = true
+const FOLDER_PAGE_SIZE = 20
+
+// 进入某个收藏夹：接口真正分页，首屏只拿 20 条
+const openFolder = async (f, append = false) => {
+  if (!append) {
+    activeFolder.value = f
+    folderCollects.value = []
+    folderPage.value = 1
+    folderTotal.value = 0
+    folderHasMore.value = false
+    folderLoading.value = true
+  } else {
+    folderLoadingMore.value = true
+  }
   folderCollectsError.value = ''
   try {
-    const res = await getCollectListByFolder(f.id)
-    folderCollects.value = res.data || []
+    const res = await getCollectListByFolder(f.id, folderPage.value, FOLDER_PAGE_SIZE)
+    const rows = res.data?.records || []
+    folderCollects.value = append ? [...folderCollects.value, ...rows] : rows
+    folderTotal.value = Number(res.data?.total || 0)
+    folderHasMore.value = folderCollects.value.length < folderTotal.value
+    if (folderHasMore.value) folderPage.value += 1
   } catch (e) {
-    folderCollects.value = []
+    if (!append) folderCollects.value = []
     folderCollectsError.value = e?.message || 'load folder collects failed'
   } finally {
     folderLoading.value = false
+    folderLoadingMore.value = false
+  }
+}
+
+const loadMoreFolder = () => {
+  if (activeFolder.value && folderHasMore.value && !folderLoadingMore.value) {
+    openFolder(activeFolder.value, true)
   }
 }
 
@@ -672,10 +690,11 @@ const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
 onMounted(async () => {
   loading.value = true
+  const foldersPromise = loadFolders()
   try {
     const [userRes, pubRes, colRes, folRes] = await Promise.all([
       getUserInfo(), getMyInspires(1, PUB_PAGE_SIZE), getMyCollects(1, pageSize.value),
-      getFollowing().catch(() => ({ data: [] }))
+      getFollowing().catch(() => ({ data: [] })), foldersPromise
     ])
     userInfo.value = userRes.data || {}
     if (userRes.data?.avatar) localStorage.setItem('userAvatar', userRes.data.avatar)
@@ -694,7 +713,6 @@ onMounted(async () => {
     pageError.value = e?.message || 'load personal failed'
   }
   finally { loading.value = false }
-  loadFolders()
 })
 
 const switchTab = async (tab) => {

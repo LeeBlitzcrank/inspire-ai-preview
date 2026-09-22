@@ -7,5 +7,5 @@ import com.inspire.platform.core.dto.CommentVO;
 public interface CommentService {
     Page<CommentVO> listByInspireId(Long inspireId, int page, int size);
     void create(Long userId, CommentCreateRequest request);
-    void deleteById(Long commentId, Long userId);
+    void deleteById(Long inspireId, Long commentId, Long userId);
 }
