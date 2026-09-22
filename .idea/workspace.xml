@@ -4,23 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 个人页&amp;我的收藏夹优化">
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 设计系统与主题切换">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/docker/minio/nginx/nginx.conf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/InspireCard.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/InspireCard.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Collections.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Following.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Following.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Messages.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Notifications.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Personal.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Search.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Search.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/index.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/reset-data.sh" beforeDir="false" afterPath="$PROJECT_DIR$/reset-data.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/start.sh" beforeDir="false" afterPath="$PROJECT_DIR$/start.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -191,15 +184,7 @@
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
       <workItem from="1789909706268" duration="17014000" />
-      <workItem from="1789976086790" duration="34148000" />
-    </task>
-    <task id="LOCAL-00019" summary="init 扩展分享裂变&amp;分享后续数据分析功能">
-      <option name="closed" value="true" />
-      <created>1782970084959</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1782970084959</updated>
+      <workItem from="1789976086790" duration="37047000" />
     </task>
     <task id="LOCAL-00020" summary="init 多图上传、版本历史、编辑/草稿模式">
       <option name="closed" value="true" />
@@ -585,7 +570,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790088845174</updated>
     </task>
-    <option name="localTasksCounter" value="68" />
+    <task id="LOCAL-00068" summary="feat(create): 设计系统与主题切换">
+      <option name="closed" value="true" />
+      <created>1790092271339</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1790092271339</updated>
+    </task>
+    <option name="localTasksCounter" value="69" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -618,7 +611,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="init 管理员后台开发，监控大屏，灵感管理，推送配置" />
     <MESSAGE value="init 引入Flink接入RocketMQ" />
     <MESSAGE value="init 前端页面动画&amp;用户体验优化" />
     <MESSAGE value="init 灵感创建引入deepseek&amp;引入redis缓存" />
@@ -643,7 +635,8 @@
     <MESSAGE value="feat(create): AI探索薄荷绿书法词云" />
     <MESSAGE value="feat(create): 灵感详情薄荷绿书法词云" />
     <MESSAGE value="feat(create): 个人页&amp;我的收藏夹优化" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 个人页&amp;我的收藏夹优化" />
+    <MESSAGE value="feat(create): 设计系统与主题切换" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 设计系统与主题切换" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

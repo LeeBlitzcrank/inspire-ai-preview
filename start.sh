@@ -17,6 +17,7 @@ fi
 
 echo "==> 启动容器（保留数据卷）…"
 docker compose up -d --build
+bash "$(dirname "$0")/docker/minio/init-public-policy.sh"
 docker compose ps
 
 # 前端：重新打包 +（重新）启动 dev server

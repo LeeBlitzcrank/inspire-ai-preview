@@ -45,6 +45,7 @@ echo "==> 初始化 MinIO 存储桶 …"
 docker exec inspire-minio mc alias set local http://localhost:9000 minioadmin minioadmin123 || true
 docker exec inspire-minio mc mb local/inspire-img || true
 docker exec inspire-minio mc version enable local/inspire-img || true
+bash "$(dirname "$0")/docker/minio/init-public-policy.sh"
 
 docker compose ps
 

@@ -850,8 +850,20 @@ const handleFile = async (e) => {
 }
 
 const removeImage = (idx) => { form.value.images.splice(idx, 1) }
+
+// 词云字体只在录入页按需加载，避免全局阻塞首屏。
+const loadWordCloudFont = () => {
+  if (document.getElementById('ma-shan-zheng-font')) return
+  const link = document.createElement('link')
+  link.id = 'ma-shan-zheng-font'
+  link.rel = 'stylesheet'
+  link.href = 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap'
+  document.head.appendChild(link)
+}
+
 // 编辑模式：预填表单
 onMounted(async () => {
+  loadWordCloudFont()
   loadCloudWords()
   loadTags()
   if (route.params.id) {

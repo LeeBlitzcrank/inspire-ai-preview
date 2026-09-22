@@ -1146,3 +1146,29 @@ jev
 10. （立即做）主题色切换 — 现在薄荷绿是写死的，抽成 CSS 变量后可以「薄荷绿 / 暖橙 / 莫兰迪灰」几套一键换。
 这些做完了给我一个md文档
 
+
+主要瓶颈
+1. 图片每次都经过后端接口
+   图片地址是 /api/file/view?key=...，实测 cf-cache-status: DYNAMIC。即使只有 24KB，也要 Cloudflare → Gateway → Core → MinIO 走一圈，所以首张图就要 2.5 秒。页面多张图时会明显拖慢。
+2. 公开接口没有缓存
+   推荐、分类、词云等接口每次访问都会重新回源，接口 TTFB 约 1.5–2 秒。首页至少要等接口返回，才能渲染推荐卡片。
+3. HTML 和静态资源缓存策略不够好
+   哈希 JS/CSS 只缓存 4 小时，不是一年 immutable。主 JS 第一次请求约 1.2–3.4 秒，且目前是 Gzip，没有启用 Brotli。第二次请求能命中 Cloudflare，但新用户和换设备用户仍然慢。
+4. Google 字体是全局阻塞资源
+   fonts.googleapis.com 的样式表放在所有页面的 <head> 里，但实际上只有灵感录入页的词云需要。国内网络经常加载慢甚至超时，会拖住首屏渲染。
+5. HTML 首页没有走 Cloudflare 缓存
+   虽然响应头写了 cache-control: max-age=600，但实测仍是 cf-cache-status: DYNAMIC，也就是每次打开首页都要回源。
+优先修复顺序
+1. Cloudflare 增加缓存规则：
+   - /assets/*：缓存 1 年，immutable
+   - /api/file/view*：Cache Everything，30 天
+   - 分类、词云、推荐公开接口：缓存 1–5 分钟
+   - HTML：缓存 5 分钟，配合 stale-while-revalidate
+   - 开启 Brotli
+2. 图片不要再走 Spring 接口代理，直接走 img.20sherry.com 或 MinIO/CDN 域名。
+3. 分类、词云、推荐接口增加 Redis 缓存，避免每次都查数据库/Milvus。
+4. 把 Google 字体从全局 index.html 移除，只在灵感录入页异步加载，或者直接自托管字体。
+这几项里，收益最大的是 图片 CDN 化 + 公开接口缓存 + Cloudflare Cache Rules。手机壳本身只是 CSS 缩放，不是生产慢的主要原因。
+
+当前隧道启动需要我自己手动启动，可以随项目去启动么？
+

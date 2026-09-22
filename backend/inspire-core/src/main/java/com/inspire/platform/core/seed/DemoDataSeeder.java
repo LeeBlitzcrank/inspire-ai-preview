@@ -80,6 +80,9 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
 
+    @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
+    private String cdnDomain;
+
     /** 固定 ID 段：当前雪花 ID 约 2.27e17，这里从 1e17 起，绝不会撞号 */
     private static final long ID_BASE = 100_000_000_000_000_000L;
     private static final long USER_ID = ID_BASE + 1L;
@@ -694,7 +697,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final int DEMO_IMAGE_COUNT = 60;
     private static final String DEMO_IMAGE_PREFIX = "upload/demo/";
 
-    /** 已就绪的演示图访问地址（走本站取图接口，不依赖 img.20sherry.com） */
+    /** 已就绪的演示图访问地址（公开图片直接走 CDN） */
     private final List<String> demoImageUrls = new ArrayList<>();
 
     /**
@@ -715,7 +718,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                             .contentType("image/jpeg")
                             .build());
                 }
-                demoImageUrls.add("/api/file/view?key=" + key);
+                demoImageUrls.add(cdnDomain.replaceAll("/+$", "") + "/" + key);
             } catch (Exception e) {
                 log.warn("[DemoSeeder] 演示图生成失败 key={}: {}", key, e.getMessage());
             }
