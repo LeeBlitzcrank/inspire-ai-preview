@@ -3,14 +3,18 @@ package com.inspire.platform.core.controller;
 import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import lombok.extern.slf4j.Slf4j;
 
+import javax.imageio.ImageIO;
 import javax.net.ssl.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,12 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.Arrays;
-import javax.imageio.ImageIO;
-import java.io.ByteArrayInputStream;
-import java.awt.image.BufferedImage;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 
 @Tag(name = "文件上传", description = "图片/视频上传")
 @RestController
@@ -153,7 +151,9 @@ public class FileController {
             return Result.error("视频不能超过 50MB");
         }
         String mime = file.getContentType();
-        if (mime != null && !mime.isBlank() && !VIDEO_MIME_TYPES.contains(mime.toLowerCase())) {
+        if (mime != null && !mime.isBlank()
+                && !VIDEO_MIME_TYPES.contains(mime.toLowerCase())
+                && !"application/octet-stream".equalsIgnoreCase(mime)) {
             return Result.error("仅支持 mp4 / webm / mov 格式的视频");
         }
         try {

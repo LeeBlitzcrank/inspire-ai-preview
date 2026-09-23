@@ -730,6 +730,9 @@ const visibleReplies = (commentItem) => {
 const expandReplies = (commentItem) => {
   commentItem._repliesExpanded = true
   commentItem._visibleReplyCount = Math.min(3, commentItem.replies.length)
+  if ((commentItem.replies?.length || 0) < Number(commentItem.replyCount || 0)) {
+    loadMoreReplies(commentItem)
+  }
 }
 
 const loadMoreReplies = (commentItem) => {

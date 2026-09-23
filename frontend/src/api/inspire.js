@@ -55,6 +55,10 @@ export const adminManualPush = (data) => request.post('/admin/config/push', data
 // ===== 文件上传 =====
 export const uploadFile = (formData, onUploadProgress) => request.post('/file/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
+  // 视频和原图上传可能超过 15 秒，不能沿用普通接口的全局超时。
+  timeout: 180000,
+  maxBodyLength: Infinity,
+  maxContentLength: Infinity,
   onUploadProgress
 })
 

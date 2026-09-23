@@ -873,8 +873,8 @@ const performVideoUpload = async (task) => {
     }
   } catch (e) {
     task.status = 'failed'
-    task.error = e?.message || '网络中断，请重试'
-    ElMessage.error('视频上传失败')
+    task.error = e?.response?.data?.msg || e?.message || '网络中断，请重试'
+    ElMessage.error(task.error)
   } finally {
     uploadingCount.value = Math.max(0, uploadingCount.value - 1)
   }
@@ -1002,7 +1002,7 @@ const uploadOne = async (raw) => {
   } catch (err) {
     const idx = form.value.images.indexOf(localUrl)
     if (idx >= 0) form.value.images.splice(idx, 1)
-    ElMessage.error('上传失败')
+    ElMessage.error(err?.response?.data?.msg || err?.message || '上传失败')
   } finally {
     URL.revokeObjectURL(localUrl)
     delete imageProgress.value[localUrl]
