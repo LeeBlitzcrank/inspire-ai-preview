@@ -137,6 +137,25 @@ CREATE TABLE IF NOT EXISTS `user_ai_history` (
   KEY `idx_user_ai_history` (`user_id`,`deleted`,`create_time`),
   KEY `idx_cache_key` (`cache_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户AI探索历史';
+
+CREATE TABLE IF NOT EXISTS `web_vital_metric` (
+  `id` BIGINT NOT NULL,
+  `metric_name` VARCHAR(16) NOT NULL,
+  `metric_value` DOUBLE NOT NULL DEFAULT 0,
+  `metric_rating` VARCHAR(16) DEFAULT '',
+  `metric_delta` DOUBLE DEFAULT 0,
+  `navigation_type` VARCHAR(32) DEFAULT '',
+  `page_path` VARCHAR(255) DEFAULT '',
+  `device_type` VARCHAR(32) DEFAULT '',
+  `browser` VARCHAR(64) DEFAULT '',
+  `app_version` VARCHAR(64) DEFAULT '',
+  `user_id` BIGINT DEFAULT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_vital_name_time` (`metric_name`,`create_time`),
+  KEY `idx_vital_path_time` (`page_path`,`create_time`),
+  KEY `idx_vital_user_time` (`user_id`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Web Vitals性能指标';
 CREATE TABLE IF NOT EXISTS `user_follow` (
   `id` BIGINT NOT NULL,
   `follower_id` BIGINT NOT NULL COMMENT '关注者',

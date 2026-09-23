@@ -1,14 +1,21 @@
 package com.inspire.platform.core.entity;
+
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
 @TableName("inspire_main")
 @Schema(description = "灵感主表")
 public class InspireMain {
-    @Schema(description = "灵感ID") @TableId(type = IdType.INPUT) private Long id;
+    @Schema(description = "灵感ID")
+    @TableId(type = IdType.INPUT)
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long id;
     @Schema(description = "灵感标题", example = "鸡腿的五种神仙吃法") private String title;
     @Schema(description = "封面图") private String img;
     @Schema(description = "多图JSON数组") private String images;

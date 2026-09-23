@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@vueuse/core": "^14.3.0",
@@ -14,9 +16,11 @@
     "pinia": "^2.1.7",
     "qrcode": "^1.5.4",
     "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "web-vitals": "^6.2.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "unplugin-auto-import": "^21.1.0",
     "unplugin-vue-components": "^32.1.0",
