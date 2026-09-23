@@ -11,11 +11,12 @@ public class InspireComment {
     private Long id;
     private Long inspireId;
     private Long userId;
-    private String username;
+    private String authorNickname;
     private String avatar;
     private Long parentId;
+    private Long rootId;
     private Long replyUserId;
-    private String replyUsername;
+    private String replyNickname;
     private String content;
     private Integer likeCount;
     private LocalDateTime createTime;

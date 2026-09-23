@@ -63,12 +63,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { login } from '@/api/auth.js'
-import { setRememberMe } from '@/utils/tokenStorage.js'
-import { useAuthStore } from '@/stores/auth'
+import {ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {login} from '@/api/auth.js'
+import {setRememberMe} from '@/utils/tokenStorage.js'
+import {useAuthStore} from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -101,7 +101,7 @@ const handleLogin = async () => {
       sessionStorage.setItem('token', data.accessToken)
       sessionStorage.setItem('isLogin', '1')
       sessionStorage.setItem('userAccount', data.username || form.value.account)
-      sessionStorage.setItem('userNickname', data.nickname || data.username || form.value.account)
+      sessionStorage.setItem('userNickname', data.nickname || '灵感用户')
       if (data.avatar) sessionStorage.setItem('userAvatar', data.avatar)
 
       const userId = data.userId || parseJwtUserId(data.accessToken)

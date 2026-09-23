@@ -1,5 +1,7 @@
 package com.inspire.platform.auth.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -20,7 +22,11 @@ public class TokenResponse {
     @Schema(description = "AccessToken过期秒数", example = "900")
     private Long expiresIn;
 
+    @Schema(description = "是否为本地开发长登录会话")
+    private Boolean longLived;
+
     @Schema(description = "用户ID", example = "196312085385187329")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
     @Schema(description = "用户名", example = "alice")
@@ -40,6 +46,8 @@ public class TokenResponse {
     public void setRefreshToken(String v) { this.refreshToken = v; }
     public Long getExpiresIn() { return expiresIn; }
     public void setExpiresIn(Long v) { this.expiresIn = v; }
+    public Boolean getLongLived() { return longLived; }
+    public void setLongLived(Boolean v) { this.longLived = v; }
     public Long getUserId() { return userId; }
     public void setUserId(Long v) { this.userId = v; }
     public String getUsername() { return username; }

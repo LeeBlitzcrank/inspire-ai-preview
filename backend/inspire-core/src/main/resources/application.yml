@@ -20,6 +20,12 @@ spring:
     resources:
       cache:
         period: 86400
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    table: flyway_schema_history_core
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -48,6 +54,6 @@ inspire:
     cdn-domain: ${INSPIRE_CDN_DOMAIN:https://img.20sherry.com}
   minio:
     endpoint: ${INSPIRE_MINIO_ENDPOINT:http://localhost:9000}
-    access-key: ${INSPIRE_MINIO_ACCESS_KEY:minioadmin}
-    secret-key: ${INSPIRE_MINIO_SECRET_KEY:minioadmin123}
+    access-key: ${INSPIRE_MINIO_ACCESS_KEY}
+    secret-key: ${INSPIRE_MINIO_SECRET_KEY}
     bucket: ${INSPIRE_MINIO_BUCKET:inspire-img}

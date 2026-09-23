@@ -8,7 +8,6 @@ public class CommentCreateRequest {
     private Long inspireId;
     @NotBlank
     private String content;
-    private String username;
     private String avatar;
     private Long parentId;
     private Long replyUserId;

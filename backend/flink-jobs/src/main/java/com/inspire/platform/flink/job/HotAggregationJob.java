@@ -24,8 +24,11 @@ public class HotAggregationJob {
             .map((MapFunction<UserBehavior, String>) b -> {
                 String key = "hot:" + b.city + ":" + b.tag;
                 try {
-                    Jedis jedis = new Jedis("localhost", 6379);
-                    jedis.auth("123456");
+                    String host = System.getenv().getOrDefault("INSPIRE_REDIS_HOST", "localhost");
+                    int port = Integer.parseInt(System.getenv().getOrDefault("INSPIRE_REDIS_PORT", "6379"));
+                    Jedis jedis = new Jedis(host, port);
+                    String password = System.getenv().getOrDefault("INSPIRE_REDIS_PASSWORD", "");
+                    if (!password.isBlank()) jedis.auth(password);
                     jedis.incr(key);
                     jedis.expire(key, 600);
                     jedis.close();

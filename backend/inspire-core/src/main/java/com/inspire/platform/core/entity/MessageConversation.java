@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -19,14 +20,15 @@ public class MessageConversation {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long user2Id;
     private String lastContent;
+    private Long lastMessageId;
     private LocalDateTime lastTime;
-    private Integer unreadUser1;
-    private Integer unreadUser2;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
     @TableField(exist = false)
     private String targetNickname;
     @TableField(exist = false)
-    private String targetUsername;
+    private Integer unreadUser1;
+    @TableField(exist = false)
+    private Integer unreadUser2;
 }

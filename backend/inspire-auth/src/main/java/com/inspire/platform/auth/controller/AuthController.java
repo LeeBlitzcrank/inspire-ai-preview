@@ -7,7 +7,6 @@ import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -102,15 +101,21 @@ public class AuthController {
         return Result.success(user);
     }
 
-    @Operation(summary = "公开用户信息", description = "无需Token，按userId查询用户基本信息")
+    @Operation(summary = "公开用户信息", description = "无需Token，仅返回昵称等公开信息，不返回登录账号")
     @GetMapping("/user/public/{id}")
-    public Result<User> publicUserInfo(@PathVariable Long id) {
+    public Result<Map<String, Object>> publicUserInfo(@PathVariable Long id) {
         User user = authService.getUserById(id);
         if (user == null) {
             return Result.error("用户不存在");
         }
-        user.setPassword(null);
-        return Result.success(user);
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", String.valueOf(user.getId()));
+        data.put("nickname", user.getNickname() == null || user.getNickname().isBlank()
+                ? "灵感创作者" : user.getNickname());
+        data.put("avatar", user.getAvatar());
+        data.put("city", user.getCity());
+        data.put("createTime", user.getCreateTime());
+        return Result.success(data);
     }
 
     @Operation(summary = "修改个人信息", description = "修改昵称、头像、城市等，只传需要修改的字段")

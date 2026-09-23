@@ -58,6 +58,20 @@
         <span v-for="tag in tagList" :key="tag" class="tag">#{{ tag }}</span>
       </div>
 
+      <button
+        v-if="detail.quoteInspireId"
+        class="quote-entry"
+        type="button"
+        @click="router.push(`/detail/${detail.quoteInspireId}`)"
+      >
+        <img v-if="detail.quoteImg" :src="thumbOf(detail.quoteImg, 240)" alt="">
+        <span class="quote-copy">
+          <small>引用自 {{ detail.quoteNickname || '灵感创作者' }}</small>
+          <b>{{ detail.quoteTitle || '查看原灵感' }}</b>
+        </span>
+        <span class="quote-arrow">›</span>
+      </button>
+
       <button v-if="detail.seriesId" class="series-entry" type="button" @click="router.push(`/series/${detail.seriesId}`)">
         <span class="series-entry-label">系列 · {{ detail.seriesName }}</span>
         <b>{{ detail.seriesOrder }}/{{ detail.seriesTotal }}</b>
@@ -72,10 +86,10 @@
             alt="头像"
             @error="authorAvatarError = true"
           >
-          <span v-else>{{ avatarText(detail.avatar, detail.nickname || detail.username) }}</span>
+          <span v-else>{{ avatarText(detail.avatar, detail.nickname) }}</span>
         </div>
         <div class="author-meta">
-          <b>{{ detail.nickname || detail.username || '灵感创作者' }}</b>
+          <b>{{ detail.nickname || '灵感创作者' }}</b>
           <small>{{ publishText }}</small>
         </div>
         <button v-if="!isOwnInspire && isLogin" class="follow-button" type="button" @click="handleToggleFollow">
@@ -139,9 +153,9 @@
                 alt="头像"
                 @error="commentItem._avatarErr = true"
               >
-              <span v-else>{{ avatarText(commentItem.avatar, commentItem.nickname || commentItem.username) }}</span>
+              <span v-else>{{ avatarText(commentItem.avatar, commentItem.nickname) }}</span>
             </span>
-            <b>{{ commentItem.nickname || commentItem.username || '宁静小猫' }}</b>
+            <b>{{ commentItem.nickname || '灵感用户' }}</b>
             <span>{{ commentItem.createTime ? formatCommentTime(commentItem.createTime) : '' }}</span>
           </div>
           <p class="comment-text">{{ commentItem.content }}</p>
@@ -167,9 +181,9 @@
                     alt="头像"
                     @error="reply._avatarErr = true"
                   >
-                  <span v-else>{{ avatarText(reply.avatar, reply.nickname || reply.username) }}</span>
+                  <span v-else>{{ avatarText(reply.avatar, reply.nickname) }}</span>
                 </span>
-                <b>{{ reply.nickname || reply.username || '宁静小猫' }}</b>
+                <b>{{ reply.nickname || '灵感用户' }}</b>
                 <span>{{ reply.createTime ? formatCommentTime(reply.createTime) : '' }}</span>
               </div>
               <p class="comment-text">
@@ -180,7 +194,7 @@
                 <span class="comment-like" :class="{ liked: reply.liked }" @click="toggleCommentLike(reply)">
                   ♡ {{ reply.likeCount ?? 0 }}
                 </span>
-                <span @click="replyTo(reply, { userId: reply.userId, username: reply.nickname || reply.username })">回复</span>
+                <span @click="replyTo(reply, { userId: reply.userId, nickname: reply.nickname || '灵感用户' })">回复</span>
               </div>
             </div>
 
@@ -216,10 +230,27 @@
               class="reply-box"
               @submit.prevent="submitReply(commentItem)"
             >
+              <div v-if="mentionOpen && mentionTarget === 'reply'" class="mention-panel reply-mention-panel">
+                <div v-if="mentionLoading" class="mention-empty">加载中…</div>
+                <div v-else-if="!mentionCandidates.length" class="mention-empty">没有匹配的关注用户</div>
+                <button
+                  v-for="user in mentionCandidates"
+                  :key="user.id"
+                  type="button"
+                  class="mention-item"
+                  @mousedown.prevent="selectMention(user)"
+                >
+                  <span>{{ avatarText(user.avatar, user.nickname) }}</span>
+                  <b>{{ user.nickname || '灵感用户' }}</b>
+                  <small>已关注</small>
+                </button>
+              </div>
               <input
                 v-model="replyText"
-                :placeholder="replyToUser ? `回复 @${replyToUser.username}` : '回复...'"
+                :placeholder="replyToUser ? `回复 @${replyToUser.nickname}` : '回复...'"
                 maxlength="200"
+                @input="onMentionInput($event, 'reply')"
+                @keydown.esc="closeMention"
               >
               <button type="submit" :disabled="!replyText.trim() || submittingComment">发送</button>
               <button type="button" class="reply-cancel" @click="cancelReply">取消</button>
@@ -244,6 +275,21 @@
       </article>
 
       <div class="bottom-action-bar">
+        <div v-if="mentionOpen && mentionTarget === 'quick'" class="mention-panel quick-mention-panel">
+          <div v-if="mentionLoading" class="mention-empty">加载中…</div>
+          <div v-else-if="!mentionCandidates.length" class="mention-empty">没有匹配的关注用户</div>
+          <button
+            v-for="user in mentionCandidates"
+            :key="user.id"
+            type="button"
+            class="mention-item"
+            @mousedown.prevent="selectMention(user)"
+          >
+            <span>{{ avatarText(user.avatar, user.nickname) }}</span>
+            <b>{{ user.nickname || '灵感用户' }}</b>
+            <small>已关注</small>
+          </button>
+        </div>
         <form class="quick-comment" @submit.prevent="submitComment">
           <input
             v-model="quickCommentText"
@@ -253,16 +299,19 @@
             enterkeyhint="send"
             aria-label="快速评论"
             @focus="handleQuickCommentFocus"
+            @input="onMentionInput($event, 'quick')"
+            @keydown.esc="closeMention"
           >
         </form>
-        <div class="action-group">
-          <button class="action-item" :class="{ active: liked }" type="button" @click="handleLike">
-            <span class="action-symbol">{{ liked ? '♥' : '♡' }}</span>
-            <span>{{ detail.likeCount ?? 0 }}</span>
+        <div class="mini-action-group">
+          <button class="mini-action" type="button" title="引用再创作" @click="quoteCreate">
+            <span>❝</span><small>引用</small>
           </button>
-          <button class="action-item" :class="{ active: collected }" type="button" @click="toggleCollect">
-            <span class="action-symbol">{{ collected ? '★' : '☆' }}</span>
-            <span>{{ detail.collectCount ?? 0 }}</span>
+          <button class="mini-action" :class="{ active: liked }" type="button" title="点赞" @click="handleLike">
+            <span>{{ liked ? '♥' : '♡' }}</span><small>{{ detail.likeCount ?? 0 }}</small>
+          </button>
+          <button class="mini-action" :class="{ active: collected }" type="button" title="收藏" @click="toggleCollect">
+            <span>{{ collected ? '★' : '☆' }}</span><small>{{ detail.collectCount ?? 0 }}</small>
           </button>
         </div>
       </div>
@@ -365,6 +414,7 @@ import {
   followUser,
   getCommentReplies,
   getComments,
+  getFollowing,
   getInspireDetail,
   likeComment as likeCommentApi,
   likeInspire,
@@ -375,6 +425,7 @@ import {
   unlikeInspire
 } from '@/api/inspire.js'
 import {sanitizeHtml} from '@/utils/sanitizeHtml.js'
+import {thumbOf} from '@/utils/media.js'
 
 // 海报封面代理：站外图片经本站转发，返回的响应带 ACAO，canvas 不会被跨域污染
 const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
@@ -420,6 +471,14 @@ const replyText = ref('')
 const replyTarget = ref(null)
 const replyToUser = ref(null)
 const submittingComment = ref(false)
+const mentionOpen = ref(false)
+const mentionLoading = ref(false)
+const mentionLoaded = ref(false)
+const mentionTarget = ref('')
+const mentionStart = ref(0)
+const mentionEnd = ref(0)
+const mentionQuery = ref('')
+const mentionUsers = ref([])
 let detailRequestSeq = 0
 let commentRequestSeq = 0
 let loadingDetailId = ''
@@ -490,12 +549,25 @@ const commentState = computed(() => {
 })
 const loadedCommentCount = computed(() => comments.value.length)
 const commentHasMore = computed(() => !commentLoading.value && comments.value.length < commentTotal.value)
+const mentionCandidates = computed(() => {
+  const keyword = mentionQuery.value.trim().toLowerCase()
+  if (!keyword) return mentionUsers.value.slice(0, 10)
+  return mentionUsers.value.filter(user => {
+    const nickname = String(user.nickname || '').toLowerCase()
+    return nickname.includes(keyword)
+  }).slice(0, 10)
+})
 
 const isImageAvatar = (avatar) => typeof avatar === 'string'
   && (avatar.startsWith('http') || avatar.startsWith('/') || avatar.startsWith('data:'))
 
 /** 判断媒体地址是否为视频，详情页据此渲染 <video> 播放器 */
 const isVideo = (u) => /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(u || ''))
+
+const quoteCreate = () => {
+  if (!isLogin.value) return requireLogin()
+  router.push({ path: '/create', query: { quoteId: String(detail.value.id) } })
+}
 
 const firstGrapheme = (value) => {
   const chars = Array.from(String(value || '').trim())
@@ -520,6 +592,57 @@ const formatRelativeTime = (value) => {
   const day = date.getDate()
   if (date.getFullYear() === new Date().getFullYear()) return `${month}月${day}日`
   return `${date.getFullYear()}年${month}月${day}日`
+}
+
+const ensureMentionUsers = async () => {
+  if (mentionLoaded.value || mentionLoading.value) return
+  mentionLoading.value = true
+  try {
+    const res = await getFollowing()
+    mentionUsers.value = res.data || []
+    mentionLoaded.value = true
+  } catch (e) {
+    mentionUsers.value = []
+  } finally {
+    mentionLoading.value = false
+  }
+}
+
+const closeMention = () => {
+  mentionOpen.value = false
+  mentionTarget.value = ''
+  mentionQuery.value = ''
+}
+
+const onMentionInput = (event, target) => {
+  const value = target === 'reply' ? replyText.value : quickCommentText.value
+  const cursor = event.target.selectionStart ?? value.length
+  const before = value.slice(0, cursor)
+  const match = before.match(/@([^@\s]*)$/)
+  if (!match) {
+    closeMention()
+    return
+  }
+  mentionOpen.value = true
+  mentionTarget.value = target
+  mentionStart.value = cursor - match[0].length
+  mentionEnd.value = cursor
+  mentionQuery.value = match[1]
+  ensureMentionUsers()
+}
+
+const selectMention = (user) => {
+  const target = mentionTarget.value
+  const value = target === 'reply' ? replyText.value : quickCommentText.value
+  const token = `@${user.nickname || '灵感用户'} `
+  const next = value.slice(0, mentionStart.value) + token + value.slice(mentionEnd.value)
+  if (target === 'reply') replyText.value = next
+  else quickCommentText.value = next
+  closeMention()
+  nextTick(() => {
+    const selector = target === 'reply' ? '.reply-box input' : '.quick-comment input'
+    document.querySelector(selector)?.focus()
+  })
 }
 
 const formatCommentTime = (value) => {
@@ -786,6 +909,7 @@ const collapseReplies = (commentItem) => {
 }
 
 const replyTo = (commentItem, userInfo = null) => {
+  closeMention()
   if (!isLogin.value) { requireLogin(); return }
   let root = commentItem
   if (userInfo) {
@@ -798,6 +922,7 @@ const replyTo = (commentItem, userInfo = null) => {
 }
 
 const cancelReply = () => {
+  closeMention()
   replyTarget.value = null
   replyToUser.value = null
   replyText.value = ''
@@ -847,6 +972,7 @@ const submitComment = async () => {
   if (!quickCommentText.value.trim() || submittingComment.value) return
   submittingComment.value = true
   try {
+    closeMention()
     const res = await createComment(detail.value.id, { content: quickCommentText.value.trim() })
     if (res.code === 200) {
       quickCommentText.value = ''
@@ -873,11 +999,12 @@ const submitReply = async (rootItem) => {
   if (!replyText.value.trim() || submittingComment.value) return
   submittingComment.value = true
   try {
+    closeMention()
     const res = await createComment(detail.value.id, {
       content: replyText.value.trim(),
       parentId: rootItem.id,
       replyUserId: replyToUser.value?.userId || rootItem.userId,
-      replyUsername: replyToUser.value?.username || rootItem.nickname || rootItem.username
+      replyUsername: replyToUser.value?.nickname || rootItem.nickname || '灵感用户'
     })
     if (res.code === 200) {
       ElMessage.success('回复成功')
@@ -1127,7 +1254,7 @@ const makeModernPoster = async (template) => {
     const cover = await loadPosterCover(coverSrc)
     const title = detail.value.title || '未命名灵感'
     const plain = String(detail.value.content || DEFAULT_DESC).replace(/\s+/g, ' ')
-    const authorName = detail.value.nickname || detail.value.username || '灵感创作者'
+    const authorName = detail.value.nickname || '灵感创作者'
     const tag = tagList.value[0] || '灵感'
     const shareUrl = `${window.location.origin}/#/detail/${detail.value.id}`
     const { default: QRCode } = await import('qrcode')
@@ -1328,7 +1455,7 @@ const makePoster = async (template = 'paper') => {
     ctx.lineTo(POSTER_W - pad, footY - 50)
     ctx.stroke()
 
-    const authorName = detail.value.nickname || detail.value.username || '灵感创作者'
+    const authorName = detail.value.nickname || '灵感创作者'
     ctx.fillStyle = '#3f362c'
     ctx.font = '600 34px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
     ctx.fillText(authorName, pad, footY + 20)
@@ -1613,6 +1740,16 @@ h1 {
 .lead :deep(a) { color: #c56025; }
 
 .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.quote-entry {
+  width:100%; margin-top:15px; padding:10px 12px; display:flex; align-items:center; gap:10px;
+  border:1px solid #e6ddd4; border-radius:14px; background:#fffaf5; color:#674026;
+  text-align:left; font:inherit; cursor:pointer;
+}
+.quote-entry img { width:48px; height:48px; flex:0 0 auto; border-radius:10px; object-fit:cover; }
+.quote-copy { flex:1; min-width:0; }
+.quote-copy small { display:block; margin-bottom:4px; color:#a17b5c; font-size:10.5px; }
+.quote-copy b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+.quote-arrow { color:#b19478; font-size:20px; }
 .series-entry {
   width:100%; margin-top:16px; padding:12px 14px; display:flex; align-items:center; gap:10px;
   border:1px solid #cfe6e1; border-radius:14px; background:#f2faf8; color:#0f766e;
@@ -1852,7 +1989,7 @@ h1 {
   font: inherit;
 }
 
-.reply-box { display: flex; gap: 7px; margin-top: 11px; }
+.reply-box { position: relative; display: flex; gap: 7px; margin-top: 11px; }
 
 .reply-box input {
   flex: 1;
@@ -1914,13 +2051,12 @@ h1 {
   left: 50%;
   z-index: 40;
   width: min(100%, 860px);
-  height: 76px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 18px;
+  gap: 8px;
+  padding: 9px 12px 11px;
   transform: translateX(-50%);
-  border-top: 2px dashed #d9905d;
+  border-top: 1px dashed #d9905d;
   background: rgba(255, 239, 218, .97);
   backdrop-filter: blur(12px);
 }
@@ -1928,7 +2064,7 @@ h1 {
 .quick-comment {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 42px;
   overflow: hidden;
   border: 2px solid #e67833;
   border-radius: 999px;
@@ -1948,24 +2084,74 @@ h1 {
 }
 
 .quick-comment input::placeholder { color: #b78a63; }
-.action-group { display: flex; align-items: center; gap: 12px; }
-
-.action-item {
-  min-width: 42px;
+.mini-action-group { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.mini-action {
+  width: 42px;
+  height: 42px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 0;
-  border: 0;
+  justify-content: center;
+  gap: 0;
+  border: 1px solid rgba(214, 159, 112, .5);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .78);
   color: #795238;
-  background: transparent;
-  font-size: 11px;
+  font: inherit;
   cursor: pointer;
 }
-
-.action-item.active { color: #e65f20; }
-.action-symbol { font-size: 22px; line-height: 1; }
+.mini-action span { font-size: 17px; line-height: 1; }
+.mini-action small { margin-top: 2px; font-size: 9px; line-height: 1; }
+.mini-action.active { border-color:#e67833; background:#fff4e7; color:#c85b1d; }
+.mention-panel {
+  position: absolute;
+  z-index: 80;
+  left: 14px;
+  right: 14px;
+  bottom: calc(100% + 8px);
+  max-height: 236px;
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid #dcebe8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(34, 70, 62, .18);
+}
+.reply-mention-panel {
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 7px);
+}
+.mention-empty { padding: 22px 12px; text-align: center; color: #93a5a1; font-size: 12px; }
+.mention-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #294a45;
+  text-align: left;
+  cursor: pointer;
+}
+.mention-item:hover,
+.mention-item:focus-visible { outline: 0; background: #f2faf8; }
+.mention-item > span {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f6f2;
+  color: #0f766e;
+  font-size: 13px;
+}
+.mention-item b { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.mention-item small { color: #9aaba7; font-size: 10.5px; }
 
 .overlay {
   position: fixed;
@@ -2280,9 +2466,9 @@ h1 {
   h1 { font-size: 26px; }
   .lead { font-size: 14.5px; }
   .replies { margin-left: 10px; padding: 9px 10px; }
-  .bottom-action-bar { height: 70px; gap: 8px; padding: 9px 12px; }
+  .bottom-action-bar { gap: 6px; padding: 8px 9px 10px; }
   .quick-comment { height: 42px; }
-  .action-group { gap: 4px; }
-  .action-item { min-width: 36px; }
+  .mini-action-group { gap: 5px; }
+  .mini-action { width: 39px; height: 42px; }
 }
 </style>

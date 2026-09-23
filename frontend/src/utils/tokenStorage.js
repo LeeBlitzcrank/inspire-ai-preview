@@ -14,8 +14,8 @@ const REFRESH_KEY = 'inspire_refresh_token'
 const ACCESS_KEY = 'inspire_access_token'
 const ACTIVE_KEY = 'inspire_last_active'
 const REMEMBER_KEY = 'inspire_remember_me'
+const LONG_LIVED_KEY = 'inspire_long_lived_session'
 const SESSION_TIMEOUT = 15 * 60 * 1000
-const LONG_LIVED_ACCOUNTS = new Set(['user001', 'user002', 'user003', 'admin'])
 
 /** 页面加载时从 sessionStorage 恢复记住的 accessToken */
 function restoreRemembered() {
@@ -33,6 +33,7 @@ export function saveTokens(tokens) {
     if (rememberMe) sessionStorage.setItem(ACCESS_KEY, tokens.accessToken)
   }
   if (tokens.refreshToken) sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken)
+  sessionStorage.setItem(LONG_LIVED_KEY, tokens.longLived ? '1' : '0')
   syncLoginFlag()
   saveLastActive()
 }
@@ -61,6 +62,7 @@ export function clearAllTokens() {
   sessionStorage.removeItem('userAccount')
   sessionStorage.removeItem('userId')
   sessionStorage.removeItem('adminUser')
+  sessionStorage.removeItem(LONG_LIVED_KEY)
 }
 
 export function isLoggedIn() { return !!accessToken }
@@ -84,8 +86,7 @@ export function saveLastActive() {
 
 /** 检查是否超过 15 分钟无操作 */
 export function isSessionExpired() {
-  const account = (sessionStorage.getItem('userAccount') || '').trim().toLowerCase()
-  if (LONG_LIVED_ACCOUNTS.has(account)) return false
+  if (sessionStorage.getItem(LONG_LIVED_KEY) === '1') return false
   const ts = sessionStorage.getItem(ACTIVE_KEY)
   if (!ts) return false
   return Date.now() - parseInt(ts, 10) > SESSION_TIMEOUT

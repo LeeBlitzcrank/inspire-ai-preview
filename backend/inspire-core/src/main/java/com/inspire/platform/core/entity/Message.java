@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -20,5 +21,10 @@ public class Message {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toUserId;
     private String content;
+    private String type;
+    private String extraJson;
+    private Integer isRead;
+    private LocalDateTime recalledAt;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

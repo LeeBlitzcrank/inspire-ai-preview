@@ -11,9 +11,9 @@ import com.inspire.platform.auth.mapper.PasswordResetMapper;
 import com.inspire.platform.auth.mapper.UserMapper;
 import com.inspire.platform.auth.service.AuthService;
 import com.inspire.platform.auth.service.email.EmailService;
-import com.inspire.platform.common.util.JwtUtil;
 import com.inspire.platform.auth.util.RedisSessionUtil;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.util.JwtUtil;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import io.jsonwebtoken.Claims;
@@ -22,8 +22,8 @@ import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
     private final MqProducer mqProducer;
     private final HttpServletRequest request;
 
-    @Value("${inspire.session.long-lived-users:user001,user002,user003,admin}")
+    @Value("${inspire.session.long-lived-users:}")
     private String longLivedUsers;
 
     @Value("${inspire.jwt.long-lived-access-expiration:315360000000}")
@@ -115,6 +115,9 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(request.getEmail());
         user.setNickname(request.getNickname() != null && !request.getNickname().isEmpty()
                 ? request.getNickname() : generateRandomNickname());
+        if (findByNickname(user.getNickname()) != null) {
+            throw new BusinessException("昵称已被使用，请换一个");
+        }
         user.setAvatar(request.getAvatar() != null && !request.getAvatar().isEmpty()
                 ? request.getAvatar() : generateRandomAvatar());
         user.setRole("user"); // 默认普通用户角色
@@ -216,6 +219,7 @@ public class AuthServiceImpl implements AuthService {
         resp.setAccessToken(newAccessToken);
         resp.setRefreshToken(refreshToken);
         resp.setExpiresIn(accessTtl / 1000);
+        resp.setLongLived(isLongLived(user.getUsername()));
         resp.setUserId(user.getId());
         resp.setUsername(user.getUsername());
         resp.setNickname(user.getNickname());
@@ -298,7 +302,12 @@ public class AuthServiceImpl implements AuthService {
     public User updateUserInfo(Long userId, UserUpdateRequest request) {
         User user = getUserById(userId);
         if (request.getNickname() != null) {
-            user.setNickname(request.getNickname().isEmpty() ? user.getUsername() : request.getNickname());
+            String nickname = request.getNickname().isEmpty() ? user.getUsername() : request.getNickname();
+            User sameNickname = findByNickname(nickname);
+            if (sameNickname != null && !sameNickname.getId().equals(userId)) {
+                throw new BusinessException("昵称已被使用，请换一个");
+            }
+            user.setNickname(nickname);
         }
         if (request.getAvatar() != null) {
             user.setAvatar(request.getAvatar());
@@ -390,6 +399,14 @@ public class AuthServiceImpl implements AuthService {
         return userMapper.selectOne(wrapper);
     }
 
+    private User findByNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) return null;
+        return userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                .eq(User::getNickname, nickname)
+                .eq(User::getDeleted, 0)
+                .last("LIMIT 1"));
+    }
+
     private User findByEmail(String email) {
         LambdaQueryWrapper<User> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(User::getEmail, email);
@@ -432,6 +449,7 @@ public class AuthServiceImpl implements AuthService {
         resp.setAccessToken(accessToken);
         resp.setRefreshToken(refreshToken);
         resp.setExpiresIn(accessTtl / 1000);
+        resp.setLongLived(longLived);
         resp.setUserId(user.getId());
         resp.setUsername(user.getUsername());
         resp.setNickname(user.getNickname());

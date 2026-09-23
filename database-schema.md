@@ -1,5 +1,8 @@
 # 数据库表结构文档
 
+> 注意：本文件描述的是早期 v1 结构。2026-09-24 已完成数据库 v2 重构，
+> 最新设计请以 `projectWord/数据库v2重构设计与对比.md` 和 `docker/init/init.sql` 为准。
+
 > 数据库: `inspire_ai_preview` | 表总数: 35 | 引擎: InnoDB | 字符集: utf8mb4
 
 ---

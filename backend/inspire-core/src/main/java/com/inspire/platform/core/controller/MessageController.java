@@ -1,12 +1,14 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.MessageSendRequest;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
 import com.inspire.platform.core.service.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -31,18 +33,15 @@ public class MessageController {
 
     @PostMapping("/send")
     @Operation(summary = "发送私信")
-    public Result<Message> send(@RequestBody Map<String, Object> body,
+    public Result<Message> send(@Valid @RequestBody MessageSendRequest payload,
                                  HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        Long toUserId = body.get("toUserId") != null ? Long.valueOf(body.get("toUserId").toString()) : null;
-        String content = (String) body.get("content");
-        if (toUserId == null || content == null) {
-            return Result.error(400, "参数缺失");
-        }
-        return Result.success(messageService.sendMessage(userId, toUserId, content));
+        return Result.success(messageService.sendMessage(
+                userId, payload.getToUserId(), payload.getContent(),
+                payload.getType(), payload.getExtraJson()));
     }
 
     @GetMapping("/conversations")
@@ -93,25 +92,17 @@ public class MessageController {
         return Result.success(data);
     }
 
-    @PostMapping("/send-by-username")
-    @Operation(summary = "根据用户名发送私信")
-    public Result<Message> sendByUsername(@RequestBody Map<String, String> body,
-                                          HttpServletRequest request) {
+    @PostMapping("/{conversationId}/{id}/recall")
+    @Operation(summary = "撤回私信")
+    public Result<Void> recall(@PathVariable Long conversationId,
+                               @PathVariable Long id,
+                               HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        String username = body.get("username");
-        String content = body.get("content");
-        if (username == null || content == null) {
-            return Result.error(400, "参数缺失");
-        }
-        try {
-            Long toUserId = jdbcTemplate.queryForObject("SELECT id FROM user WHERE username=?", Long.class, username);
-            return Result.success(messageService.sendMessage(userId, toUserId, content));
-        } catch (Exception e) {
-            return Result.error(404, "用户不存在");
-        }
+        messageService.recallMessage(userId, conversationId, id);
+        return Result.success("已撤回", null);
     }
 
     @DeleteMapping("/conversation/{id}")

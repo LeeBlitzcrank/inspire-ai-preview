@@ -17,7 +17,7 @@
     >
     <div class="noti-list">
       <div v-for="item in list" :key="item.id" class="noti-item"
-        :class="{ 'noti-unread': !item.isRead }"
+        :class="{ 'noti-unread': !item.isRead, 'noti-strong': item.type === 'special_publish' }"
         @click="handleClick(item)">
         <div class="noti-dot" v-if="!item.isRead"></div>
         <div class="noti-icon-wrap">
@@ -41,9 +41,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { getNotifications, markNotificationRead, markAllRead } from '@/api/inspire.js'
+import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {getNotifications, markAllRead, markNotificationRead} from '@/api/inspire.js'
 
 const router = useRouter()
 const list = ref([])
@@ -78,7 +78,16 @@ const loadMore = async () => {
 }
 
 const typeIcon = (type) => {
-  const map = { like: '⭐', collect: '🔖', comment: '💬', reply: '↩️', follow: '👤' }
+  const map = {
+    like: '⭐',
+    collect: '🔖',
+    comment: '💬',
+    reply: '↩️',
+    follow: '👤',
+    mention: '@',
+    quote: '❝',
+    special_publish: '🔔'
+  }
   return map[type] || '📌'
 }
 
@@ -138,6 +147,7 @@ onMounted(() => loadMore())
 .noti-item { display:flex; align-items:flex-start; gap:10px; padding:14px 16px; background:#fff; cursor:pointer; transition:0.2s; position:relative; }
 .noti-item:hover { background:#f5f8ff; }
 .noti-unread { background:#f0f6ff; }
+.noti-strong { background:#fff8ec; }
 .noti-dot { position:absolute; left:6px; top:18px; width:6px; height:6px; border-radius:50%; background:#409eff; }
 .noti-icon-wrap { width:36px; height:36px; border-radius:50%; background:#f4f7fd; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .noti-icon { font-size:16px; }

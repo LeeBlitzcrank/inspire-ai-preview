@@ -45,7 +45,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"alice\",\n  \"password\": \"123456\",\n  \"deviceId\": \"postman-test-device\"\n}"
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"deviceId\": \"postman-test-device\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/auth/login",

@@ -193,14 +193,34 @@
               {{ isMine(msg) ? myFirstChar : getOtherName(activeConversation)[0] }}
             </div>
             <div class="msg-stack">
-              <div class="bubble">{{ msg.content }}</div>
-              <div class="msg-time">{{ formatTimeDetail(msg.createTime) }}</div>
+              <div v-if="msg.recalledAt" class="bubble recalled">
+                {{ isMine(msg) ? '你撤回了一条消息' : '对方撤回了一条消息' }}
+              </div>
+              <div v-else-if="msg.type === 'image'" class="bubble image-bubble">
+                <img :src="msg.content" alt="私信图片" @load="scrollMessagesToBottom" @click="previewImage(msg.content)">
+              </div>
+              <div v-else-if="msg.type === 'inspire'" class="bubble inspire-bubble" @click="openInspireCard(msg)">
+                <img v-if="inspireExtra(msg).img" :src="thumbOf(inspireExtra(msg).img, 220)" alt="" @load="scrollMessagesToBottom">
+                <span>
+                  <small>灵感卡片</small>
+                  <b>{{ inspireExtra(msg).title || msg.content || '查看灵感' }}</b>
+                </span>
+              </div>
+              <div v-else class="bubble">{{ msg.content }}</div>
+              <div class="msg-meta">
+                <span>{{ formatTimeDetail(msg.createTime) }}</span>
+                <span v-if="isMine(msg) && !msg.recalledAt">· {{ msg.isRead ? '已读' : '未读' }}</span>
+                <button v-if="isMine(msg) && !msg.recalledAt" type="button" @click="recallMsg(msg)">撤回</button>
+              </div>
             </div>
           </div>
         </AppState>
       </div>
 
       <div class="composer">
+        <input ref="imageInput" class="message-file-input" type="file" accept="image/*" @change="sendImage">
+        <button class="composer-tool" type="button" title="发送图片" @click="imageInput?.click()">🖼</button>
+        <button class="composer-tool" type="button" title="发送灵感卡片" @click="openInspirePicker">🔖</button>
         <input
           v-model="inputMsg"
           data-message-input
@@ -223,6 +243,26 @@
         </button>
       </div>
     </template>
+
+    <el-dialog v-model="inspirePickerOpen" title="发送灵感卡片" width="90%" append-to-body>
+      <div class="inspire-picker">
+        <div v-if="inspirePickerLoading" class="inspire-picker-tip">加载中…</div>
+        <div v-else-if="!myInspireList.length" class="inspire-picker-tip">暂无已发布的灵感</div>
+        <button
+          v-for="item in myInspireList"
+          :key="item.id"
+          type="button"
+          class="inspire-pick-row"
+          @click="sendInspireCard(item)"
+        >
+          <img v-if="item.img" :src="thumbOf(item.img, 180)" alt="">
+          <span>
+            <b>{{ item.title || '无标题' }}</b>
+            <small>{{ item.tag || '灵感' }}</small>
+          </span>
+        </button>
+      </div>
+    </el-dialog>
 
     <div v-if="modal" class="modal-mask" @click.self="closeModal">
       <div class="sheet" role="dialog" aria-modal="true">
@@ -248,12 +288,15 @@ import {computed, nextTick, onBeforeUnmount, onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {getAccessToken} from '@/utils/tokenStorage.js'
+import {thumbOf} from '@/utils/media.js'
+import {getMyInspires, uploadFile} from '@/api/inspire.js'
 import {
   deleteAllConversations,
   deleteConversation,
   getConversations,
   getMessages,
   markMessageRead,
+  recallMessage,
   sendMessage
 } from '@/api/message.js'
 
@@ -283,7 +326,7 @@ const myId = computed(() => {
   return String(sessionStorage.getItem('userId') || '')
 })
 
-const myFirstChar = computed(() => (sessionStorage.getItem('username') || '我')[0])
+const myFirstChar = computed(() => (sessionStorage.getItem('userNickname') || '我')[0])
 const conversations = ref([])
 const conversationLoading = ref(false)
 const conversationError = ref('')
@@ -297,6 +340,10 @@ const filter = ref('all')
 const modal = ref(null)
 const modalBusy = ref(false)
 const sending = ref(false)
+const imageInput = ref(null)
+const inspirePickerOpen = ref(false)
+const inspirePickerLoading = ref(false)
+const myInspireList = ref([])
 const msgBox = ref(null)
 let pollTimer = null
 let pollBusy = false
@@ -324,7 +371,7 @@ const filteredConversations = computed(() => {
     if (filter.value === 'unread' && unread <= 0) return false
     if (!keyword) return true
     const name = getOtherName(conversation)
-    return [name, conversation.targetUsername, conversation.lastContent]
+    return [name, conversation.lastContent]
       .some(value => String(value || '').toLowerCase().includes(keyword))
   })
 })
@@ -339,7 +386,6 @@ const filteredRegularConversations = computed(() => (
 
 const chatSubtitle = computed(() => {
   if (!activeConversation.value) return ''
-  if (activeConversation.value.targetUsername) return `@${activeConversation.value.targetUsername}`
   return '消息会实时同步'
 })
 
@@ -358,7 +404,6 @@ const chatDayLabel = computed(() => {
 const getOtherName = (conversation) => {
   if (!conversation) return '用户'
   if (conversation.targetNickname) return conversation.targetNickname
-  if (conversation.targetUsername) return conversation.targetUsername
   const otherId = String(conversation.user1Id) === String(myId.value)
     ? conversation.user2Id
     : conversation.user1Id
@@ -383,9 +428,24 @@ const avatarStyle = (conversation) => {
 }
 
 const isMine = (message) => String(message.fromUserId) === String(myId.value)
+const extraOf = (message) => {
+  if (!message?.extraJson) return {}
+  try {
+    return typeof message.extraJson === 'string' ? JSON.parse(message.extraJson) : message.extraJson
+  } catch (e) {
+    return {}
+  }
+}
+const inspireExtra = (message) => extraOf(message)
+const previewImage = (url) => window.open(url, '_blank', 'noopener,noreferrer')
+const openInspireCard = (message) => {
+  const id = inspireExtra(message).id
+  if (id) router.push(`/detail/${id}`)
+}
 
 const scrollMessagesToBottom = async () => {
   await nextTick()
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight
 }
 
@@ -476,6 +536,70 @@ const sendMsg = async () => {
     ElMessage.error('发送失败')
   } finally {
     sending.value = false
+  }
+}
+
+const sendImage = async (event) => {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file || sending.value) return
+  const otherId = resolveOtherId(activeConversation.value)
+  if (!otherId) return
+  sending.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const upload = await uploadFile(fd)
+    if (upload.code !== 200 || !upload.data?.url) throw new Error(upload.msg || '上传失败')
+    await sendMessage(otherId, upload.data.url, 'image', JSON.stringify({ width: upload.data.width, height: upload.data.height }))
+    messages.value = await loadMessages(activeConversation.value.id)
+    await scrollMessagesToBottom()
+    loadConversations()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '图片发送失败')
+  } finally {
+    sending.value = false
+  }
+}
+
+const openInspirePicker = async () => {
+  inspirePickerOpen.value = true
+  inspirePickerLoading.value = true
+  try {
+    const res = await getMyInspires(1, 30)
+    myInspireList.value = res.data?.records || []
+  } catch (e) {
+    myInspireList.value = []
+  } finally {
+    inspirePickerLoading.value = false
+  }
+}
+
+const sendInspireCard = async (item) => {
+  const otherId = resolveOtherId(activeConversation.value)
+  if (!otherId || sending.value) return
+  sending.value = true
+  try {
+    const extra = JSON.stringify({ id: item.id, title: item.title, img: item.img, tag: item.tag })
+    await sendMessage(otherId, item.title || '灵感卡片', 'inspire', extra)
+    inspirePickerOpen.value = false
+    messages.value = await loadMessages(activeConversation.value.id)
+    await scrollMessagesToBottom()
+    loadConversations()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '发送失败')
+  } finally {
+    sending.value = false
+  }
+}
+
+const recallMsg = async (message) => {
+  try {
+    await recallMessage(activeConversation.value.id, message.id)
+    messages.value = await loadMessages(activeConversation.value.id)
+    await loadConversations()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '撤回失败')
   }
 }
 
@@ -1000,6 +1124,40 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.98);
   border-top: 1px solid var(--line);
 }
+.message-file-input { display:none; }
+.composer-tool {
+  width:38px; height:38px; flex:0 0 auto; padding:0; border:1px solid #e1eae7; border-radius:11px;
+  background:#fff; font-size:16px; cursor:pointer;
+}
+.bubble.recalled {
+  color:#9aa6a2; background:#f1f5f4; font-style:italic;
+}
+.image-bubble { padding:4px; background:#fff !important; }
+.image-bubble img { display:block; width:180px; max-width:100%; max-height:240px; border-radius:10px; object-fit:cover; cursor:pointer; }
+.inspire-bubble {
+  width:230px; padding:8px !important; display:flex; gap:8px; align-items:center; cursor:pointer;
+  background:#fff !important; border:1px solid #dcebe8 !important; color:#294a45 !important;
+}
+.inspire-bubble img { width:46px; height:46px; border-radius:9px; object-fit:cover; flex:0 0 auto; }
+.inspire-bubble span { min-width:0; display:block; }
+.inspire-bubble small { display:block; margin-bottom:4px; color:#91a39f; font-size:9.5px; }
+.inspire-bubble b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.msg-meta {
+  display:flex; align-items:center; gap:5px; margin-top:4px; color:#9ba6a2; font-size:10px;
+}
+.msg-meta button {
+  margin-left:auto; padding:0; border:0; background:transparent; color:#b85c4b; font-size:10px; cursor:pointer;
+}
+.inspire-picker { max-height:52vh; overflow:auto; }
+.inspire-picker-tip { padding:36px 0; text-align:center; color:#93a5a1; font-size:12.5px; }
+.inspire-pick-row {
+  width:100%; display:flex; align-items:center; gap:10px; padding:10px 2px;
+  border:0; border-bottom:1px solid #eef4f2; background:transparent; text-align:left; cursor:pointer;
+}
+.inspire-pick-row img { width:46px; height:46px; border-radius:10px; object-fit:cover; flex:0 0 auto; }
+.inspire-pick-row span { min-width:0; }
+.inspire-pick-row b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+.inspire-pick-row small { display:block; margin-top:3px; color:#93a5a1; font-size:10.5px; }
 
 .composer input {
   width: 100%;

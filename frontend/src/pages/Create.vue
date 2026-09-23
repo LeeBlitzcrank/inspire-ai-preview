@@ -26,6 +26,15 @@
     </div>
     <div class="form-body">
 
+      <div v-if="quoteSource" class="card quote-create-card">
+        <img v-if="quoteSource.img" :src="thumbOf(quoteSource.img, 240)" alt="">
+        <div class="quote-create-copy">
+          <small>引用 {{ quoteSource.nickname || '灵感创作者' }}</small>
+          <b>{{ quoteSource.title }}</b>
+        </div>
+        <button type="button" @click="quoteSource = null">移除</button>
+      </div>
+
       <!-- AI 探索区 -->
       <div v-if="!editId" class="card ai-card">
         <!-- 薄荷绿书法词云面板（合并原「输入框 + 面包屑」） -->
@@ -402,6 +411,7 @@ const loadTags = async () => {
 }
 const loading = ref(false)
 const form = ref({ title: '', tag: '', content: '', images: [], img: '', publishCity: '' })
+const quoteSource = ref(null)
 const LOCAL_DRAFT_KEY = 'inspire:local-drafts:v1'
 const localDrafts = ref([])
 const localDraftId = ref('')
@@ -434,6 +444,7 @@ const saveLocalDraftNow = () => {
     content: form.value.content,
     images: form.value.images.filter(url => !String(url).startsWith('blob:')),
     img: coverImage.value,
+    quoteInspireId: quoteSource.value?.id || '',
     publishCity: form.value.publishCity,
     updatedAt: Date.now()
   }
@@ -458,6 +469,7 @@ const openLocalDraft = (item) => {
     publishCity: item.publishCity || ''
   }
   coverImage.value = item.img || form.value.images[0] || ''
+  quoteSource.value = null
   setContent(form.value.content)
   draftPanelOpen.value = false
   draftHydrating = false
@@ -466,6 +478,7 @@ const openLocalDraft = (item) => {
 const newLocalDraft = () => {
   form.value = { title: '', tag: '', content: '', images: [], img: '', publishCity: '' }
   coverImage.value = ''
+  quoteSource.value = null
   localDraftId.value = ''
   setContent('')
   draftPanelOpen.value = false
@@ -1310,6 +1323,14 @@ onMounted(async () => {
       }
     } catch (e) { console.error(e) }
   } else {
+    if (route.query.quoteId) {
+      try {
+        const quoteRes = await getInspireDetail(route.query.quoteId)
+        if (quoteRes.code === 200 && quoteRes.data?.id) quoteSource.value = quoteRes.data
+      } catch (e) {
+        console.error('[quote source]', e)
+      }
+    }
     // 新创建时从用户信息自动填充发布城市
     try {
       const userRes = await getUserInfo()
@@ -1334,6 +1355,7 @@ const submit = async (status) => {
   loading.value = true
   try {
     let payload = { ...form.value, status: status !== undefined ? status : 1 }
+    if (!editId.value && quoteSource.value?.id) payload.quoteInspireId = quoteSource.value.id
     payload.img = coverImage.value || payload.images[0] || ''
     payload.images = JSON.stringify(payload.images)
     let res
@@ -1457,6 +1479,12 @@ const useSuggestedImages = async () => {
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 14px; }
 .topbar .page-title { font-size:17px; font-weight:600; }
 .topbar .ico { width:38px; height:38px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 1px 6px rgba(0,0,0,.05); cursor:pointer; }
+.quote-create-card { display:flex; align-items:center; gap:10px; padding:10px 12px; }
+.quote-create-card img { width:48px; height:48px; flex:0 0 auto; border-radius:10px; object-fit:cover; }
+.quote-create-copy { flex:1; min-width:0; }
+.quote-create-copy small { display:block; margin-bottom:4px; color:#a17b5c; font-size:10.5px; }
+.quote-create-copy b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#674026; font-size:12.5px; }
+.quote-create-card button { border:0; background:transparent; color:#b85c4b; font:inherit; font-size:11.5px; cursor:pointer; }
 .topbar-right { display:flex; gap:8px; align-items:center; }
 .draft-ico { position:relative; }
 .local-draft-panel {

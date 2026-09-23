@@ -13,8 +13,7 @@
     <div class="banner" id="p-banner">
       <div class="av" id="p-avatar">{{ avatarText }}</div>
       <div class="who" id="p-who">
-        <h2 id="p-name">{{ userInfo.nickname || userInfo.username || '灵感爱好者' }}</h2>
-        <div class="mail" id="p-account">@{{ userInfo.username || 'user' }}</div>
+        <h2 id="p-name">{{ userInfo.nickname || '灵感爱好者' }}</h2>
         <div v-if="userInfo.city" id="p-city"><span class="tagchip">📍 {{ userInfo.city }}</span></div>
       </div>
       <div class="banner-ops" id="p-ops">
@@ -411,7 +410,7 @@ const reloadActiveTab = async () => {
 const avatarText = computed(() => {
   const a = userInfo.value.avatar
   if (a) return a
-  const n = userInfo.value.nickname || userInfo.value.username
+  const n = userInfo.value.nickname
   return n ? n[0] : '👤'
 })
 

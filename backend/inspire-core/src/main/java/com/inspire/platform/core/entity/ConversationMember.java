@@ -17,6 +17,10 @@ public class ConversationMember {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
     private Integer unreadCount;
+    private Long lastReadMessageId;
+    private Long deletedBeforeMessageId;
+    private Integer deleted;
+    private LocalDateTime lastDeletedAt;
     private LocalDateTime lastTime;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

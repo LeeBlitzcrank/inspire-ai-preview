@@ -55,8 +55,8 @@
 |------|------|--------|
 | `INSPIRE_DEEPSEEK_API_KEY` | AI 创作（必填） | — |
 | `INSPIRE_UNSPLASH_ACCESS_KEY` | AI 配图（可选） | — |
-| `INSPIRE_DB_PASSWORD` | MySQL 密码 | `123456` |
-| `INSPIRE_REDIS_PASSWORD` | Redis 密码 | `123456` |
+| `INSPIRE_DB_PASSWORD` | MySQL 密码 | 必须由本机 `.env` 注入 |
+| `INSPIRE_REDIS_PASSWORD` | Redis 密码 | 必须由本机 `.env` 注入 |
 | `INSPIRE_JWT_SECRET` | JWT 密钥 | 默认 dev 密钥 |
 | `VITE_API_BASE` | 生产环境 API 地址 | — |
 

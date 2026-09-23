@@ -7,7 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -25,9 +27,12 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
         long id = nextId();
+        String targetType = targetId == null ? "user" : "inspire";
+        String eventKey = type + ":" + actorId + ":" + userId + ":" + (targetId == null ? 0 : targetId);
         jdbcTemplate.update(
-            "INSERT INTO user_notification(id, user_id, type, actor_id, actor_name, content, target_id, target_title) VALUES(?,?,?,?,?,?,?,?)",
-            id, userId, type, actorId, actorName, content, targetId, targetTitle
+            "INSERT IGNORE INTO user_notification(id, user_id, type, target_type, actor_id, actor_name, content, "
+                    + "target_id, target_title, event_key) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            id, userId, type, targetType, actorId, actorName, content, targetId, targetTitle, eventKey
         );
         log.debug("通知已创建: type={}, to={}, from={}", type, userId, actorId);
     }
@@ -36,19 +41,23 @@ public class NotificationServiceImpl implements NotificationService {
     public List<Map<String, Object>> list(Long userId, int page, int size) {
         int offset = (page - 1) * size;
         return jdbcTemplate.query(
-            "SELECT id, type, actor_id, actor_name, content, target_id, target_title, is_read, create_time " +
+            "SELECT id, type, target_type, actor_id, actor_name, content, target_id, target_title, "
+                    + "event_key, is_read, read_time, create_time " +
             "FROM user_notification WHERE user_id = ? AND deleted = 0 " +
             "ORDER BY create_time DESC LIMIT ? OFFSET ?",
             (rs, n) -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id", String.valueOf(rs.getLong("id")));
                 m.put("type", rs.getString("type"));
+                m.put("targetType", rs.getString("target_type"));
                 m.put("actorId", String.valueOf(rs.getLong("actor_id")));
                 m.put("actorName", rs.getString("actor_name"));
                 m.put("content", rs.getString("content"));
                 m.put("targetId", String.valueOf(rs.getLong("target_id")));
                 m.put("targetTitle", rs.getString("target_title"));
+                m.put("eventKey", rs.getString("event_key"));
                 m.put("isRead", rs.getInt("is_read"));
+                m.put("readTime", rs.getObject("read_time", java.time.LocalDateTime.class));
                 m.put("createTime", rs.getObject("create_time", java.time.LocalDateTime.class).toString());
                 return m;
             },
@@ -69,11 +78,11 @@ public class NotificationServiceImpl implements NotificationService {
     public void markRead(Long userId, Long notificationId) {
         if (notificationId != null) {
             jdbcTemplate.update(
-                "UPDATE user_notification SET is_read = 1 WHERE id = ? AND user_id = ?",
+                "UPDATE user_notification SET is_read = 1, read_time = NOW() WHERE id = ? AND user_id = ?",
                 notificationId, userId);
         } else {
             jdbcTemplate.update(
-                "UPDATE user_notification SET is_read = 1 WHERE user_id = ? AND deleted = 0",
+                "UPDATE user_notification SET is_read = 1, read_time = NOW() WHERE user_id = ? AND deleted = 0",
                 userId);
         }
     }

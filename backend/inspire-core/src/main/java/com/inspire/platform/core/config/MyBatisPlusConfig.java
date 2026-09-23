@@ -1,9 +1,7 @@
 package com.inspire.platform.core.config;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.DynamicTableNameInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.apache.ibatis.reflection.MetaObject;
 import org.mybatis.spring.annotation.MapperScan;
@@ -19,17 +17,6 @@ public class MyBatisPlusConfig implements MetaObjectHandler {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        DynamicTableNameInnerInterceptor dynamic = new DynamicTableNameInnerInterceptor();
-        dynamic.setTableNameHandler((sql, tableName) -> {
-            String suffix = ShardContext.get();
-            if (suffix != null) {
-                return tableName + "_" + suffix;
-            }
-            return tableName;
-        });
-        // 动态分表必须先于分页插件执行，否则分页 count SQL 会在表名改写前生成，
-        // 直接查不存在的 collect / inspire_comment 基表。
-        interceptor.addInnerInterceptor(dynamic);
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
     }

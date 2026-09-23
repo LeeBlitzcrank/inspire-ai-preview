@@ -2,15 +2,18 @@ package com.inspire.platform.core.service.impl;
 
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.core.dto.InspireVO;
-
 import com.inspire.platform.core.service.FollowService;
-import com.inspire.platform.core.service.NotificationService;import lombok.RequiredArgsConstructor;
+import com.inspire.platform.core.service.NotificationService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -60,16 +63,27 @@ public class FollowServiceImpl implements FollowService {
     }
 
     @Override
+    @Transactional
+    public void setSpecial(Long myId, Long userId, boolean special) {
+        int affected = jdbcTemplate.update(
+                "UPDATE user_follow SET special = ? WHERE follower_id = ? AND followee_id = ?",
+                special ? 1 : 0, myId, userId);
+        if (affected == 0) {
+            throw new BusinessException("请先关注该用户");
+        }
+    }
+
+    @Override
     public List<Map<String, Object>> getFollowing(Long myId) {
         return jdbcTemplate.query(
-            "SELECT uf.followee_id AS id, u.username, u.nickname, u.avatar FROM user_follow uf " +
+            "SELECT uf.followee_id AS id, u.nickname, u.avatar, uf.special FROM user_follow uf " +
             "JOIN user u ON uf.followee_id = u.id WHERE uf.follower_id = ? ORDER BY uf.create_time DESC",
             (rs, n) -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", String.valueOf(rs.getLong("id")));
-                m.put("username", rs.getString("username"));
                 m.put("nickname", rs.getString("nickname"));
                 m.put("avatar", rs.getString("avatar"));
+                m.put("special", rs.getInt("special") == 1);
                 return m;
             }, myId);
     }
@@ -77,12 +91,11 @@ public class FollowServiceImpl implements FollowService {
     @Override
     public List<Map<String, Object>> getFollowers(Long myId) {
         return jdbcTemplate.query(
-            "SELECT uf.follower_id AS id, u.username, u.nickname, u.avatar FROM user_follow uf " +
+            "SELECT uf.follower_id AS id, u.nickname, u.avatar FROM user_follow uf " +
             "JOIN user u ON uf.follower_id = u.id WHERE uf.followee_id = ? ORDER BY uf.create_time DESC",
             (rs, n) -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", String.valueOf(rs.getLong("id")));
-                m.put("username", rs.getString("username"));
                 m.put("nickname", rs.getString("nickname"));
                 m.put("avatar", rs.getString("avatar"));
                 return m;

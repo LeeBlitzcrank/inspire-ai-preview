@@ -2,11 +2,11 @@ package com.inspire.platform.core.seed;
 
 import com.inspire.platform.common.util.TitleUtil;
 import com.inspire.platform.core.config.MinioConfig;
-import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.ImageVariantService;
 import com.inspire.platform.core.service.es.EsSyncService;
+import com.inspire.platform.core.service.impl.InspireServiceImpl;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
@@ -37,10 +37,10 @@ import java.util.List;
  * 开启方式：inspire.demo.seed=true（或环境变量 INSPIRE_DEMO_SEED=true）
  * 幂等：目标用户已有灵感数据时直接跳过，重复启动不会重复灌。
  *
- * 分表规则必须和 ShardContext 一致，写错会出现「插了数据但页面显示 0」：
- *   collect_N         按 user_id    % 10
- *   user_like_N       按 user_id    % 10
- *   inspire_comment_N 按 inspire_id % 10
+ * v2 使用 MySQL HASH 分区，不再维护应用层 10 张分表：
+ *   collect          按 user_id
+ *   user_like        按 user_id
+ *   inspire_comment  按 inspire_id
  *
  * 热度公式与 HeatScoreTask 保持一致：heat = view + like*10 + collect*20
  */
@@ -310,9 +310,13 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         // 先补详情页评论，保证后面任何一步异常都不会影响详情页演示数据
         ensureRichComments(allUsers);
+        ensureMentionSamples(allUsers);
+        ensureSpecialNotificationSample(allUsers);
+        ensureQuotePosts(allUsers);
         ensureSeries(allUsers);
         ensureFollows(allUsers);
         ensureConversations(allUsers);
+        ensureMessageEnhancements();
         generateNotifications();
 
         // 种子完成后立即同步 ES，避免搜索功能等下一次定时任务才可用。
@@ -487,37 +491,27 @@ public class DemoDataSeeder implements ApplicationRunner {
             content.setContent(buildContent(tag, topic));
             contentMapper.insert(content);
 
-            // 点赞明细：按 user_id % 10 分表
+            // 点赞明细：统一分区表
             for (Long actor : likers) {
-                ShardContext.setByUserId(actor);
-                try {
-                    LikeAction a = new LikeAction();
-                    a.setId(LIKE_ID + (likeSeq++));
-                    a.setUserId(actor);
-                    a.setInspireId(inspireId);
-                    a.setCreateTime(createTime.plusMinutes(5 + rnd.nextInt(600)));
-                    likeMapper.insert(a);
-                } finally {
-                    ShardContext.clear();
-                }
+                LikeAction a = new LikeAction();
+                a.setId(LIKE_ID + (likeSeq++));
+                a.setUserId(actor);
+                a.setInspireId(inspireId);
+                a.setCreateTime(createTime.plusMinutes(5 + rnd.nextInt(600)));
+                likeMapper.insert(a);
             }
 
-            // 收藏明细：按 user_id % 10 分表，随机落到该用户的某个收藏夹
+            // 收藏明细：统一分区表，随机落到该用户的某个收藏夹
             for (Long actor : collectors) {
                 List<Long> folders = userFolders.get(actor);
                 if (folders == null || folders.isEmpty()) continue;
-                ShardContext.setByUserId(actor);
-                try {
-                    CollectAction a = new CollectAction();
-                    a.setId(COLLECT_ID + (collectSeq++));
-                    a.setUserId(actor);
-                    a.setInspireId(inspireId);
-                    a.setFolderId(folders.get(rnd.nextInt(folders.size())));
-                    a.setCreateTime(createTime.plusMinutes(10 + rnd.nextInt(900)));
-                    collectMapper.insert(a);
-                } finally {
-                    ShardContext.clear();
-                }
+                CollectAction a = new CollectAction();
+                a.setId(COLLECT_ID + (collectSeq++));
+                a.setUserId(actor);
+                a.setInspireId(inspireId);
+                a.setFolderId(folders.get(rnd.nextInt(folders.size())));
+                a.setCreateTime(createTime.plusMinutes(10 + rnd.nextInt(900)));
+                collectMapper.insert(a);
             }
 
             // 评论 0~3 条
@@ -528,20 +522,16 @@ public class DemoDataSeeder implements ApplicationRunner {
                 cm.setId(COMMENT_ID + (commentSeq++));
                 cm.setInspireId(inspireId);
                 cm.setUserId(actor);
-                cm.setUsername(nickOf(actor));
+                cm.setAuthorNickname(nickOf(actor));
                 cm.setAvatar("");
                 cm.setParentId(0L);
+                cm.setRootId(cm.getId());
                 cm.setReplyUserId(0L);
-                cm.setReplyUsername("");
+                cm.setReplyNickname("");
                 cm.setContent(COMMENTS[rnd.nextInt(COMMENTS.length)]);
                 cm.setLikeCount(rnd.nextInt(12));
                 cm.setCreateTime(createTime.plusMinutes(20 + rnd.nextInt(2000)));
-                ShardContext.setByInspireId(inspireId);
-                try {
-                    commentMapper.insert(cm);
-                } finally {
-                    ShardContext.clear();
-                }
+                commentMapper.insert(cm);
             }
 
             if ((i + 1) % 100 == 0) {
@@ -590,6 +580,157 @@ public class DemoDataSeeder implements ApplicationRunner {
         log.info("[DemoSeeder] 详情页评论填充完成：处理 {} 条灵感，新增 {} 条评论", processed, inserted);
     }
 
+    private void ensureMentionSamples(List<Long> users) {
+        Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM comment_mention", Integer.class);
+        if (exists != null && exists > 0) return;
+        List<Map<String, Object>> targets = jdbcTemplate.queryForList(
+                "SELECT id,title FROM inspire_main WHERE id >= ? AND deleted = 0 AND status = 1 "
+                        + "ORDER BY create_time DESC LIMIT 3",
+                INSPIRE_ID);
+        if (targets.isEmpty() || users.size() < 2) return;
+        long commentId = nextCommentId();
+        for (int i = 0; i < Math.min(3, targets.size()); i++) {
+            Long actor = users.get(i % users.size());
+            Long mentioned = users.get((i + 1) % users.size());
+            String mentionedNickname = jdbcTemplate.queryForObject(
+                    "SELECT nickname FROM user WHERE id = ?", String.class, mentioned);
+            String actorName = jdbcTemplate.queryForObject(
+                    "SELECT nickname FROM user WHERE id = ?", String.class, actor);
+            Map<String, Object> target = targets.get(i);
+            long inspireId = ((Number) target.get("id")).longValue();
+            String title = String.valueOf(target.get("title"));
+            String content = "@" + mentionedNickname + " 这条里提到的思路很适合一起交流";
+            InspireComment comment = new InspireComment();
+            comment.setId(commentId++);
+            comment.setInspireId(inspireId);
+            comment.setUserId(actor);
+            comment.setAuthorNickname(actorName);
+            comment.setAvatar("");
+            comment.setParentId(0L);
+            comment.setRootId(comment.getId());
+            comment.setReplyUserId(0L);
+            comment.setReplyNickname("");
+            comment.setContent(content);
+            comment.setLikeCount(rnd.nextInt(5));
+            comment.setCreateTime(now().minusMinutes(30L + i * 17));
+            commentMapper.insert(comment);
+            jdbcTemplate.update(
+                    "INSERT IGNORE INTO comment_mention"
+                            + "(id, comment_id, inspire_id, mentioned_user_id, display_name, create_time) "
+                            + "VALUES(?,?,?,?,?,?)",
+                    InspireServiceImpl.nextId(), comment.getId(), inspireId, mentioned,
+                    mentionedNickname, comment.getCreateTime());
+            jdbcTemplate.update(
+                    "INSERT INTO user_notification(id,user_id,type,actor_id,actor_name,content,"
+                            + "target_id,target_title,is_read,deleted,create_time) VALUES(?,?,?,?,?,?,?,?,0,0,?)",
+                    InspireServiceImpl.nextId(), mentioned, "mention", actor, actorName,
+                    "在评论中提到了你", inspireId, title, now().minusMinutes(25L - i * 5));
+        }
+    }
+
+    private void ensureSpecialNotificationSample(List<Long> users) {
+        Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_notification WHERE type = 'special_publish'", Integer.class);
+        if (exists != null && exists > 0) return;
+        if (users.size() < 2) return;
+        Long author = users.get(1);
+        Long receiver = users.get(0);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT id,title FROM inspire_main WHERE user_id = ? AND deleted = 0 AND status = 1 "
+                        + "ORDER BY create_time DESC LIMIT 1",
+                author);
+        if (rows.isEmpty()) return;
+        jdbcTemplate.update(
+                "INSERT INTO user_notification(id,user_id,type,actor_id,actor_name,content,"
+                        + "target_id,target_title,is_read,deleted,create_time) VALUES(?,?,?,?,?,?,?,?,0,0,?)",
+                InspireServiceImpl.nextId(), receiver, "special_publish", author, nickOf(author),
+                "发布了新灵感", rows.get(0).get("id"), rows.get(0).get("title"), now().minusMinutes(12));
+    }
+
+    /** 生成引用链种子：原灵感 → 引用版本 → 再引用版本。 */
+    private void ensureQuotePosts(List<Long> users) {
+        Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inspire_main WHERE quote_inspire_id IS NOT NULL AND id >= ?",
+                Integer.class, INSPIRE_ID);
+        if (exists != null && exists > 0) {
+            log.info("[DemoSeeder] 引用种子已存在 {} 条，跳过生成", exists);
+            return;
+        }
+        List<Map<String, Object>> sources = jdbcTemplate.queryForList(
+                "SELECT id, title, tag, img, user_id FROM inspire_main "
+                        + "WHERE id >= ? AND deleted = 0 AND status = 1 "
+                        + "ORDER BY heat DESC LIMIT 3",
+                INSPIRE_ID);
+        if (sources.isEmpty()) return;
+
+        Long maxId = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(id), ?) FROM inspire_main WHERE id >= ? AND id < ?",
+                Long.class, INSPIRE_ID - 1, INSPIRE_ID, SERIES_ID);
+        long idSeq = (maxId == null ? INSPIRE_ID : maxId) + 1;
+        long firstQuoteId = 0L;
+        for (int i = 0; i < sources.size(); i++) {
+            Map<String, Object> source = sources.get(i);
+            long sourceId = ((Number) source.get("id")).longValue();
+            long owner = users.get((i + 1) % users.size());
+            String sourceTitle = String.valueOf(source.get("title"));
+            String title = TitleUtil.truncate("引用手记 · " + sourceTitle);
+            String img = String.valueOf(source.getOrDefault("img", ""));
+            long quoteId = idSeq++;
+            if (firstQuoteId == 0L) firstQuoteId = quoteId;
+
+            InspireMain quote = new InspireMain();
+            quote.setId(quoteId);
+            quote.setTitle(title);
+            quote.setImg(img);
+            quote.setImages("[\"" + img + "\",\"" + demoImage(quoteId + 11) + "\"]");
+            quote.setTag(String.valueOf(source.get("tag")));
+            quote.setUserId(owner);
+            quote.setStatus(1);
+            quote.setQuoteInspireId(sourceId);
+            quote.setViewCount(80L + rnd.nextInt(600));
+            quote.setLikeCount(2 + rnd.nextInt(12));
+            quote.setCollectCount(1 + rnd.nextInt(8));
+            quote.setHeat(120 + rnd.nextInt(800));
+            quote.setShareCount(rnd.nextInt(6));
+            quote.setPublishCity(CITIES[rnd.nextInt(CITIES.length)]);
+            quote.setCreateTime(now().minusHours(i + 1L));
+            mainMapper.insert(quote);
+
+            InspireContent content = new InspireContent();
+            content.setInspireId(quoteId);
+            content.setContent("看完「" + sourceTitle + "」之后，我也做了一版自己的整理。\n\n"
+                    + "原帖给了一个很好的切入点，我补充了自己的执行步骤和踩坑记录。");
+            contentMapper.insert(content);
+        }
+
+        if (firstQuoteId > 0L) {
+            long chainId = idSeq;
+            InspireMain chain = new InspireMain();
+            chain.setId(chainId);
+            chain.setTitle("引用手记 · 再创作");
+            chain.setImg(String.valueOf(sources.get(0).getOrDefault("img", "")));
+            chain.setImages("[\"" + chain.getImg() + "\"]");
+            chain.setTag(String.valueOf(sources.get(0).getOrDefault("tag", "生活")));
+            chain.setUserId(users.get(2));
+            chain.setStatus(1);
+            chain.setQuoteInspireId(firstQuoteId);
+            chain.setViewCount(30L + rnd.nextInt(300));
+            chain.setLikeCount(1 + rnd.nextInt(8));
+            chain.setCollectCount(rnd.nextInt(5));
+            chain.setHeat(70 + rnd.nextInt(300));
+            chain.setPublishCity(CITIES[rnd.nextInt(CITIES.length)]);
+            chain.setCreateTime(now());
+            mainMapper.insert(chain);
+            InspireContent content = new InspireContent();
+            content.setInspireId(chainId);
+            content.setContent("在上一版引用手记上继续补充，把这条灵感链完整串起来。");
+            contentMapper.insert(content);
+        }
+        log.info("[DemoSeeder] 引用链种子生成完成");
+    }
+
+
     /** user_id -> [nickname, avatar]，评论落库时冗余昵称、头像，避免读取时再逐条查库 */
     private Map<Long, String[]> loadUserProfiles() {
         Map<Long, String[]> profiles = new LinkedHashMap<>();
@@ -601,21 +742,14 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private long nextCommentId() {
-        StringBuilder union = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            if (i > 0) union.append(" UNION ALL ");
-            union.append("SELECT COALESCE(MAX(id), 0) AS id FROM inspire_comment_").append(i);
-        }
         Long max = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(MAX(id), 0) FROM (" + union + ") t", Long.class);
+                "SELECT COALESCE(MAX(id), 0) FROM inspire_comment", Long.class);
         return (max == null ? 0L : max) + 1L;
     }
 
     private int countComments(Long inspireId) {
-        int shard = (int) Math.floorMod(inspireId, 10);
         Integer c = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM inspire_comment_" + shard
-                        + " WHERE inspire_id = ? AND deleted = 0",
+                "SELECT COUNT(*) FROM inspire_comment WHERE inspire_id = ? AND deleted = 0",
                 Integer.class, inspireId);
         return c == null ? 0 : c;
     }
@@ -648,24 +782,29 @@ public class DemoDataSeeder implements ApplicationRunner {
             Long actor = actors.get(rnd.nextInt(actors.size()));
             String[] actorProfile = profiles.get(actor);
 
-            long parentId = 0L, replyUserId = 0L;
-            String replyUsername = "";
+            long parentId = 0L, rootId = id, replyUserId = 0L;
+            String replyNickname = "";
             boolean asReply = !commentIds.isEmpty() && rnd.nextInt(100) < 48;
             if (asReply) {
                 int idx = rnd.nextInt(commentIds.size());
                 parentId = commentRootIds.get(idx);
+                rootId = parentId;
                 Long targetUser = commentUsers.get(idx);
                 replyUserId = targetUser;
-                replyUsername = nicknameOf(profiles.get(targetUser), targetUser);
+                replyNickname = nicknameOf(profiles.get(targetUser), targetUser);
             }
 
             Timestamp ts = Timestamp.valueOf(cursor);
             int likeCount = randomCommentLikes(asReply);
+            String commentText = RICH_COMMENTS[rnd.nextInt(RICH_COMMENTS.length)];
+            if (rnd.nextInt(30) == 0) {
+                commentText = "@" + NEW_USERS[rnd.nextInt(NEW_USERS.length)][1] + " " + commentText;
+            }
             batch.add(new Object[]{
                     id, inspireId, actor, nicknameOf(actorProfile, actor),
                     actorProfile == null || actorProfile[1] == null ? "" : actorProfile[1],
-                    parentId, replyUserId, replyUsername,
-                    RICH_COMMENTS[rnd.nextInt(RICH_COMMENTS.length)], likeCount, ts, ts
+                    parentId, rootId, replyUserId, replyNickname,
+                    commentText, likeCount, ts, ts
             });
             commentIds.add(id);
             commentUsers.add(actor);
@@ -674,10 +813,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
 
         jdbcTemplate.batchUpdate(
-                "INSERT INTO inspire_comment_" + Math.floorMod(inspireId, 10)
-                        + "(id, inspire_id, user_id, username, avatar, parent_id, "
-                        + "reply_user_id, reply_username, content, like_count, create_time, update_time, deleted) "
-                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0)",
+                "INSERT INTO inspire_comment"
+                        + "(id, inspire_id, user_id, author_nickname, avatar, parent_id, root_id, "
+                        + "reply_user_id, reply_nickname, content, like_count, create_time, update_time, deleted) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
                 batch);
         return need;
     }
@@ -910,13 +1049,22 @@ public class DemoDataSeeder implements ApplicationRunner {
                         Integer.class, a, b);
                 if (c != null && c > 0) continue;
                 jdbcTemplate.update(
-                        "INSERT INTO user_follow(id, follower_id, followee_id, create_time) VALUES(?,?,?,?)",
-                        FOLLOW_ID + (followSeq++), a, b, now().minusDays(rnd.nextInt(60)));
+                        "INSERT INTO user_follow(id, follower_id, followee_id, special, create_time) VALUES(?,?,?,?,?)",
+                        FOLLOW_ID + (followSeq++), a, b, rnd.nextInt(100) < 30 ? 1 : 0,
+                        now().minusDays(rnd.nextInt(60)));
             }
+        }
+        if (users.size() >= 2) {
+            jdbcTemplate.update("UPDATE user_follow SET special = 1 WHERE follower_id = ? AND followee_id = ?",
+                    users.get(0), users.get(1));
         }
     }
 
     private void ensureConversations(List<Long> users) {
+        List<Map<String, Object>> cardSources = jdbcTemplate.queryForList(
+                "SELECT id,title,img,tag FROM inspire_main WHERE id >= ? AND deleted = 0 AND status = 1 "
+                        + "ORDER BY create_time DESC LIMIT 50",
+                INSPIRE_ID);
         for (int i = 0; i < users.size(); i++) {
             for (int j = i + 1; j < users.size(); j++) {
                 Long u1 = users.get(i);
@@ -932,11 +1080,24 @@ public class DemoDataSeeder implements ApplicationRunner {
                 LocalDateTime t = now().minusDays(15 - i * 3L).withHour(9).withMinute(0).withSecond(0).withNano(0);
                 String last = "";
                 Long lastFrom = u1;
+                Long lastMessageId = null;
 
                 for (int k = 0; k < count; k++) {
                     Long from = (k % 2 == 0) ? u1 : u2;
                     Long to = from.equals(u1) ? u2 : u1;
+                    String type = k % 9 == 4 ? "image" : (k % 11 == 6 ? "inspire" : "text");
                     String text = CHAT[rnd.nextInt(CHAT.length)];
+                    String extraJson = null;
+                    if ("image".equals(type)) {
+                        text = demoImage(convId + k);
+                        extraJson = "{\"width\":800,\"height\":600}";
+                    } else if ("inspire".equals(type) && !cardSources.isEmpty()) {
+                        Map<String, Object> card = cardSources.get((k + i) % cardSources.size());
+                        text = String.valueOf(card.get("title"));
+                        extraJson = "{\"id\":\"" + card.get("id") + "\",\"title\":\"" + card.get("title")
+                                + "\",\"img\":\"" + card.getOrDefault("img", "") + "\",\"tag\":\""
+                                + card.getOrDefault("tag", "") + "\"}";
+                    }
 
                     Message msg = new Message();
                     msg.setId(MSG_ID + (msgSeq++));
@@ -944,10 +1105,21 @@ public class DemoDataSeeder implements ApplicationRunner {
                     msg.setFromUserId(from);
                     msg.setToUserId(to);
                     msg.setContent(text);
+                    msg.setType(type);
+                    msg.setExtraJson(extraJson);
+                    msg.setIsRead(k < count - 2 ? 1 : 0);
+                    if (k == 3 && count > 6) {
+                        msg.setContent("");
+                        msg.setRecalledAt(t);
+                    }
                     msg.setCreateTime(t);
+                    msg.setUpdateTime(t);
                     messageMapper.insert(msg);
+                    lastMessageId = msg.getId();
 
-                    last = text;
+                    last = msg.getRecalledAt() != null ? "消息已撤回"
+                            : "image".equals(type) ? "[图片]"
+                            : "inspire".equals(type) ? "[灵感卡片]" : text;
                     lastFrom = from;
                     t = t.plusMinutes(3 + rnd.nextInt(120));
                 }
@@ -957,6 +1129,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 conv.setUser1Id(u1);
                 conv.setUser2Id(u2);
                 conv.setLastContent(last);
+                conv.setLastMessageId(lastMessageId);
                 conv.setLastTime(t.minusMinutes(5));
                 conv.setUnreadUser1(lastFrom.equals(u1) ? 0 : 1);
                 conv.setUnreadUser2(lastFrom.equals(u2) ? 0 : 1);
@@ -964,17 +1137,62 @@ public class DemoDataSeeder implements ApplicationRunner {
                 conv.setUpdateTime(t);
                 conversationMapper.insert(conv);
                 jdbcTemplate.update(
-                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, last_time, create_time, update_time) "
-                                + "VALUES(?,?,?,?,?,?,?)",
+                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, deleted, last_time, create_time, update_time) "
+                                + "VALUES(?,?,?,?,0,?,?,?)",
                         MEMBER_ID + (memberSeq++), convId, u1, conv.getUnreadUser1(),
                         conv.getLastTime(), conv.getCreateTime(), conv.getUpdateTime());
                 jdbcTemplate.update(
-                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, last_time, create_time, update_time) "
-                                + "VALUES(?,?,?,?,?,?,?)",
+                        "INSERT INTO conversation_member(id, conversation_id, user_id, unread_count, deleted, last_time, create_time, update_time) "
+                                + "VALUES(?,?,?,?,0,?,?,?)",
                         MEMBER_ID + (memberSeq++), convId, u2, conv.getUnreadUser2(),
                         conv.getLastTime(), conv.getCreateTime(), conv.getUpdateTime());
             }
         }
+    }
+
+    /** 为已有会话补齐图片、灵感卡片、已读和撤回演示数据。 */
+    private void ensureMessageEnhancements() {
+        List<Map<String, Object>> cards = jdbcTemplate.queryForList(
+                "SELECT id,title,img,tag FROM inspire_main WHERE id >= ? AND deleted = 0 AND status = 1 "
+                        + "ORDER BY heat DESC LIMIT 30",
+                INSPIRE_ID);
+        List<Long> conversations = jdbcTemplate.queryForList(
+                "SELECT id FROM message_conversation ORDER BY last_time DESC LIMIT 30", Long.class);
+        for (int c = 0; c < conversations.size(); c++) {
+            Long conversationId = conversations.get(c);
+            List<Long> messageIds = jdbcTemplate.queryForList(
+                    "SELECT id FROM message WHERE conversation_id = ? ORDER BY create_time ASC",
+                    Long.class, conversationId);
+            if (messageIds.isEmpty()) continue;
+            for (int i = 0; i < messageIds.size(); i++) {
+                Long messageId = messageIds.get(i);
+                if (i % 7 == 3) {
+                    jdbcTemplate.update(
+                            "UPDATE message SET type='image', content=?, extra_json='{\"width\":800,\"height\":600}', "
+                                    + "recalled_at=NULL, is_read=? WHERE id=?",
+                            demoImage(conversationId + i), i < messageIds.size() - 1 ? 1 : 0, messageId);
+                } else if (i % 11 == 6 && !cards.isEmpty()) {
+                    Map<String, Object> card = cards.get((c + i) % cards.size());
+                    String extra = "{\"id\":\"" + card.get("id") + "\",\"title\":\"" + card.get("title")
+                            + "\",\"img\":\"" + card.getOrDefault("img", "") + "\",\"tag\":\""
+                            + card.getOrDefault("tag", "") + "\"}";
+                    jdbcTemplate.update(
+                            "UPDATE message SET type='inspire', content=?, extra_json=?, recalled_at=NULL, is_read=? WHERE id=?",
+                            String.valueOf(card.get("title")), extra,
+                            i < messageIds.size() - 1 ? 1 : 0, messageId);
+                } else {
+                    jdbcTemplate.update(
+                            "UPDATE message SET type='text', extra_json=NULL, recalled_at=NULL, is_read=? WHERE id=?",
+                            i < messageIds.size() - 1 ? 1 : 0, messageId);
+                }
+            }
+            if (messageIds.size() > 5) {
+                jdbcTemplate.update(
+                        "UPDATE message SET content='', extra_json=NULL, recalled_at=NOW(), is_read=1 WHERE id=?",
+                        messageIds.get(4));
+            }
+        }
+        log.info("[DemoSeeder] 私信图片/灵感卡片/已读/撤回示例已补齐");
     }
 
     /** 通知：取最近的灵感，每用户最多 50 条，避免通知表被灌成几万行 */
@@ -1013,10 +1231,16 @@ public class DemoDataSeeder implements ApplicationRunner {
             if (actors.isEmpty()) continue;
 
             Long actor = actors.get(rnd.nextInt(actors.size()));
-            String[] types = {"like", "collect", "comment"};
+            String[] types = {"like", "collect", "comment", "mention", "quote", "special_publish"};
             String type = types[rnd.nextInt(types.length)];
-            String content = "like".equals(type) ? "点赞了你的灵感"
-                    : "collect".equals(type) ? "收藏了你的灵感" : "评论了你的灵感";
+            String content = switch (type) {
+                case "like" -> "点赞了你的灵感";
+                case "collect" -> "收藏了你的灵感";
+                case "comment" -> "评论了你的灵感";
+                case "mention" -> "在评论中提到了你";
+                case "quote" -> "引用了你的灵感并创作了新版本";
+                default -> "发布了新灵感";
+            };
 
             jdbcTemplate.update(
                     "INSERT INTO user_notification(id,user_id,type,actor_id,actor_name,content,"

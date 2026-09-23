@@ -24,6 +24,7 @@ public class InspireMain {
     @Schema(description = "二级分类ID") private Long subCategoryId;
     @Schema(description = "系列ID") private Long seriesId;
     @Schema(description = "系列内顺序") private Integer seriesOrder;
+    @Schema(description = "引用的灵感ID") private Long quoteInspireId;
     @Schema(description = "发布人ID") private Long userId;
     @Schema(description = "0草稿 1已发布") private Integer status;
     @Schema(description = "浏览量") private Long viewCount;

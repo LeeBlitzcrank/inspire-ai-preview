@@ -18,6 +18,11 @@ public class InspireVO {
     @Schema(description = "系列名称") private String seriesName;
     @Schema(description = "系列内顺序") private Integer seriesOrder;
     @Schema(description = "系列文章总数") private Integer seriesTotal;
+    @Schema(description = "引用的灵感ID") private String quoteInspireId;
+    @Schema(description = "引用灵感标题") private String quoteTitle;
+    @Schema(description = "引用灵感封面") private String quoteImg;
+    @Schema(description = "引用灵感作者ID") private String quoteUserId;
+    @Schema(description = "引用灵感作者昵称") private String quoteNickname;
     @Schema(description = "上一篇ID") private String prevSeriesId;
     @Schema(description = "上一篇标题") private String prevSeriesTitle;
     @Schema(description = "下一篇ID") private String nextSeriesId;
@@ -29,7 +34,6 @@ public class InspireVO {
     @Schema(description = "二级分类ID") private Long subCategoryId;
     @JsonSerialize(using = ToStringSerializer.class)
     @Schema(description = "发布人ID") private Long userId;
-    @Schema(description = "发布人用户名") private String username;
     @Schema(description = "发布人昵称") private String nickname;
     @Schema(description = "头像") private String avatar;
     @Schema(description = "浏览量") private Long viewCount;

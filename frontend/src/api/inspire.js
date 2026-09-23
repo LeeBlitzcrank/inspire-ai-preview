@@ -110,6 +110,8 @@ export const getRecommendList = (params) => cachedGet('/inspire/public/recommend
 // ===== 关注 =====
 export const followUser = (userId) => request.post(`/inspire/follow/${userId}`)
 export const unfollowUser = (userId) => request.delete(`/inspire/follow/${userId}`)
+export const setSpecialFollow = (userId, special) =>
+  request.put(`/inspire/follow/${userId}/special`, { special })
 export const getFollowing = () => request.get('/inspire/follow/following')
 export const getFollowers = () => request.get('/inspire/follow/followers')
 export const getFollowingFeed = (params) => request.get('/inspire/follow/feed', { params })

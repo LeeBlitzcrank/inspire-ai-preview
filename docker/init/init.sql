@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   `sub_category_id` BIGINT DEFAULT NULL COMMENT '二级分类ID',
   `series_id` BIGINT DEFAULT NULL COMMENT '系列ID',
   `series_order` INT DEFAULT 0 COMMENT '系列内顺序',
+  `quote_inspire_id` BIGINT DEFAULT NULL COMMENT '引用的灵感ID',
   `user_id` BIGINT NOT NULL COMMENT '发布人ID',
   `status` TINYINT DEFAULT 0 COMMENT '0草稿 1已发布',
   `view_count` BIGINT DEFAULT 0,
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   KEY `idx_category_status_time` (`category_id`,`sub_category_id`,`status`,`deleted`,`create_time`),
   KEY `idx_user_status_time` (`user_id`,`status`,`deleted`,`create_time`),
   KEY `idx_series_order` (`series_id`,`series_order`),
+  KEY `idx_quote_inspire` (`quote_inspire_id`),
   KEY `idx_status_deleted_time` (`status`,`deleted`,`create_time`),
   KEY `idx_status_deleted_heat` (`status`,`deleted`,`heat`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感主表';
@@ -54,79 +56,84 @@ CREATE TABLE IF NOT EXISTS `inspire_content` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`inspire_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感正文附表';
-CREATE TABLE IF NOT EXISTS `collect_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `folder_id` BIGINT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`), KEY `idx_user_folder_time` (`user_id`,`folder_id`,`create_time`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS `collect_1`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_2`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_3`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_4`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_5`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_6`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_7`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_8`  LIKE `collect_0`;
-CREATE TABLE IF NOT EXISTS `collect_9`  LIKE `collect_0`;
+-- v2：收藏按 user_id HASH 分区，不再维护 collect_0~9。
+CREATE TABLE IF NOT EXISTS `collect` (
+  `id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `inspire_id` BIGINT NOT NULL,
+  `folder_id` BIGINT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`,`id`),
+  UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`),
+  KEY `idx_user_folder_time` (`user_id`,`folder_id`,`create_time`),
+  KEY `idx_user_time` (`user_id`,`create_time`),
+  KEY `idx_inspire_user` (`inspire_id`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`user_id`) PARTITIONS 32;
 
--- ========== 新点赞分表 user_like_0 ~ user_like_9（按 user_id % 10） ==========
-CREATE TABLE IF NOT EXISTS `user_like_0`  ( `id` BIGINT NOT NULL, `user_id` BIGINT NOT NULL, `inspire_id` BIGINT NOT NULL, `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`), KEY `idx_inspire_user` (`inspire_id`,`user_id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS `user_like_1`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_2`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_3`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_4`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_5`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_6`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_7`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_8`  LIKE `user_like_0`;
-CREATE TABLE IF NOT EXISTS `user_like_9`  LIKE `user_like_0`;
+-- v2：点赞按 user_id HASH 分区。
+CREATE TABLE IF NOT EXISTS `user_like` (
+  `id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `inspire_id` BIGINT NOT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`,`id`),
+  UNIQUE KEY `uk_user_inspire` (`user_id`,`inspire_id`),
+  KEY `idx_inspire_user` (`inspire_id`,`user_id`),
+  KEY `idx_user_time` (`user_id`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`user_id`) PARTITIONS 32;
 
--- ========== 新评论分表 inspire_comment_0 ~ inspire_comment_9（按 inspire_id % 10） ==========
-CREATE TABLE IF NOT EXISTS `inspire_comment_0` (
+-- v2：评论按 inspire_id HASH 分区；昵称字段明确命名，避免与登录账号混淆。
+CREATE TABLE IF NOT EXISTS `inspire_comment` (
   `id` BIGINT NOT NULL,
   `inspire_id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
-  `username` VARCHAR(60) NOT NULL,
+  `author_nickname` VARCHAR(60) NOT NULL,
   `avatar` VARCHAR(255) DEFAULT '',
   `parent_id` BIGINT DEFAULT 0,
+  `root_id` BIGINT DEFAULT 0,
   `reply_user_id` BIGINT DEFAULT 0,
-  `reply_username` VARCHAR(60) DEFAULT '',
+  `reply_nickname` VARCHAR(60) DEFAULT '',
   `content` VARCHAR(500) NOT NULL,
   `like_count` INT DEFAULT 0,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted` TINYINT DEFAULT 0,
-  PRIMARY KEY (`id`),
-  KEY `idx_inspire_deleted_time` (`inspire_id`,`deleted`,`create_time`),
-  KEY `idx_inspire_deleted_hot` (`inspire_id`,`deleted`,`like_count`,`create_time`),
+  PRIMARY KEY (`inspire_id`,`id`),
   KEY `idx_inspire_parent_hot` (`inspire_id`,`parent_id`,`deleted`,`like_count`,`create_time`),
-  KEY `idx_inspire_parent_time` (`inspire_id`,`parent_id`,`deleted`,`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS `inspire_comment_1` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_2` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_3` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_4` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_5` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_6` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_7` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_8` LIKE `inspire_comment_0`;
-CREATE TABLE IF NOT EXISTS `inspire_comment_9` LIKE `inspire_comment_0`;
+  KEY `idx_inspire_parent_time` (`inspire_id`,`parent_id`,`deleted`,`create_time`),
+  KEY `idx_user_time` (`user_id`,`deleted`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`inspire_id`) PARTITIONS 32;
 
--- 评论点赞明细按 user_id % 10 分表，避免用户维度高频查询跨分片
-CREATE TABLE IF NOT EXISTS `comment_like_0` (
+-- @提及使用用户ID建立关系，昵称仅作为展示文本。
+CREATE TABLE IF NOT EXISTS `comment_mention` (
+  `id` BIGINT NOT NULL,
+  `comment_id` BIGINT NOT NULL,
+  `inspire_id` BIGINT NOT NULL,
+  `mentioned_user_id` BIGINT NOT NULL,
+  `display_name` VARCHAR(60) NOT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`inspire_id`,`id`),
+  UNIQUE KEY `uk_comment_mentioned` (`inspire_id`,`comment_id`,`mentioned_user_id`),
+  KEY `idx_mentioned_user_time` (`mentioned_user_id`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`inspire_id`) PARTITIONS 32;
+
+-- 评论点赞按 user_id HASH 分区；inspire_id 冗余用于数据清理和分区校验。
+CREATE TABLE IF NOT EXISTS `comment_like` (
   `id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
   `comment_id` BIGINT NOT NULL,
+  `inspire_id` BIGINT NOT NULL,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`user_id`,`id`),
   UNIQUE KEY `uk_user_comment` (`user_id`,`comment_id`),
-  KEY `idx_comment_id` (`comment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS `comment_like_1` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_2` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_3` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_4` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_5` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_6` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_7` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_8` LIKE `comment_like_0`;
-CREATE TABLE IF NOT EXISTS `comment_like_9` LIKE `comment_like_0`;
+  KEY `idx_comment_user` (`comment_id`,`user_id`),
+  KEY `idx_inspire_time` (`inspire_id`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`user_id`) PARTITIONS 32;
 CREATE TABLE IF NOT EXISTS `ai_call_log` (
   `id` BIGINT NOT NULL,
   `call_date` DATE NOT NULL,
@@ -177,11 +184,13 @@ CREATE TABLE IF NOT EXISTS `user_follow` (
   `id` BIGINT NOT NULL,
   `follower_id` BIGINT NOT NULL COMMENT '关注者',
   `followee_id` BIGINT NOT NULL COMMENT '被关注者',
+  `special` TINYINT NOT NULL DEFAULT 0 COMMENT '特别关注：0否 1是',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_follow` (`follower_id`,`followee_id`),
   KEY `idx_follower` (`follower_id`),
   KEY `idx_followee` (`followee_id`),
+  KEY `idx_followee_special` (`followee_id`,`special`),
   KEY `idx_follower_time` (`follower_id`,`create_time`),
   KEY `idx_followee_time` (`followee_id`,`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
@@ -190,40 +199,51 @@ CREATE TABLE IF NOT EXISTS `collect_folder` (
   `icon` VARCHAR(10) DEFAULT '📁', `sort_order` INT DEFAULT 0,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`), KEY `idx_user_id` (`user_id`)
+  PRIMARY KEY (`id`), KEY `idx_user_id` (`user_id`),
+  UNIQUE KEY `uk_user_name` (`user_id`,`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `message_conversation` (
   `id` BIGINT NOT NULL, `user1_id` BIGINT NOT NULL, `user2_id` BIGINT NOT NULL,
+  `last_message_id` BIGINT DEFAULT NULL,
   `last_content` VARCHAR(500) DEFAULT '', `last_time` DATETIME,
-  `unread_user1` INT DEFAULT 0, `unread_user2` INT DEFAULT 0,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_users` (`user1_id`, `user2_id`),
-  KEY `idx_user1` (`user1_id`), KEY `idx_user2` (`user2_id`),
   KEY `idx_user1_time` (`user1_id`, `last_time`),
   KEY `idx_user2_time` (`user2_id`, `last_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `message` (
   `id` BIGINT NOT NULL, `conversation_id` BIGINT NOT NULL,
   `from_user_id` BIGINT NOT NULL, `to_user_id` BIGINT NOT NULL,
-  `content` VARCHAR(1000) NOT NULL,
+  `content` VARCHAR(1000) NOT NULL DEFAULT '',
+  `type` VARCHAR(20) NOT NULL DEFAULT 'text' COMMENT 'text/image/inspire',
+  `extra_json` JSON DEFAULT NULL COMMENT '图片尺寸或灵感卡片信息',
+  `is_read` TINYINT NOT NULL DEFAULT 0,
+  `recalled_at` DATETIME DEFAULT NULL,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_conversation` (`conversation_id`, `create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`conversation_id`,`id`),
+  KEY `idx_conversation_time` (`conversation_id`, `create_time`),
+  KEY `idx_conversation_unread` (`conversation_id`,`to_user_id`,`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+PARTITION BY HASH(`conversation_id`) PARTITIONS 32;
 
 CREATE TABLE IF NOT EXISTS `conversation_member` (
   `id` BIGINT NOT NULL,
   `conversation_id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
   `unread_count` INT DEFAULT 0,
+  `last_read_message_id` BIGINT DEFAULT 0,
+  `deleted_before_message_id` BIGINT DEFAULT 0,
+  `deleted` TINYINT NOT NULL DEFAULT 0,
+  `last_deleted_at` DATETIME DEFAULT NULL,
   `last_time` DATETIME DEFAULT NULL,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_conversation_user` (`conversation_id`,`user_id`),
-  KEY `idx_user_time` (`user_id`,`last_time`)
+  KEY `idx_user_deleted_time` (`user_id`,`deleted`,`last_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS `user` (
   `id` BIGINT NOT NULL COMMENT '雪花用户ID',
@@ -241,6 +261,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `ext_json` JSON DEFAULT NULL COMMENT '扩展字段：性别、生日、个性签名等',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
+  UNIQUE KEY `uk_nickname` (`nickname`),
   UNIQUE KEY `uk_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户主表';
 CREATE TABLE IF NOT EXISTS `password_reset` (
@@ -252,7 +273,7 @@ CREATE TABLE IF NOT EXISTS `password_reset` (
   `used` TINYINT DEFAULT 0 COMMENT '是否已使用 0未使用 1已使用',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_token` (`token`),
+  UNIQUE KEY `uk_token` (`token`),
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='密码重置令牌表';
 CREATE TABLE IF NOT EXISTS `admin_user` (
@@ -281,17 +302,21 @@ CREATE TABLE IF NOT EXISTS `user_notification` (
   `id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
   `type` VARCHAR(20) NOT NULL,
+  `target_type` VARCHAR(20) DEFAULT 'inspire',
   `actor_id` BIGINT NOT NULL,
   `actor_name` VARCHAR(60) NOT NULL,
   `content` VARCHAR(200) NOT NULL,
   `target_id` BIGINT DEFAULT NULL,
   `target_title` VARCHAR(120) DEFAULT '',
+  `event_key` VARCHAR(160) DEFAULT NULL,
   `is_read` TINYINT DEFAULT 0,
+  `read_time` DATETIME DEFAULT NULL,
   `deleted` TINYINT DEFAULT 0,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_type` (`type`),
+  UNIQUE KEY `uk_event_key` (`event_key`),
   KEY `idx_user_deleted_time` (`user_id`,`deleted`,`create_time`),
   KEY `idx_user_unread` (`user_id`,`deleted`,`is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表';
@@ -308,7 +333,7 @@ CREATE TABLE IF NOT EXISTS `inspire_version` (
   `change_summary` VARCHAR(500) DEFAULT '',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_inspire_id` (`inspire_id`)
+  KEY `idx_inspire_version` (`inspire_id`,`version_number` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感版本历史';
 
 -- =============================================
@@ -330,7 +355,7 @@ CREATE TABLE IF NOT EXISTS `sys_upload_image` (
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_file_key` (`file_key`),
+  UNIQUE KEY `uk_file_key` (`file_key`),
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图片上传元数据表';
 

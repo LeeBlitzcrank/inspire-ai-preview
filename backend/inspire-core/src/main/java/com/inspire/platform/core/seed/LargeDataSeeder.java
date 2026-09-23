@@ -249,42 +249,39 @@ public class LargeDataSeeder implements ApplicationRunner {
     }
 
     private void generateLikesAndCollects() {
-        Map<Integer, List<Object[]>> likes = new HashMap<>();
-        Map<Integer, List<Object[]>> collects = new HashMap<>();
+        List<Object[]> likes = new ArrayList<>();
+        List<Object[]> collects = new ArrayList<>();
         long likeSeq = 0, collectSeq = 0;
         for (int i = 0; i < INSPIRE_COUNT; i++) {
             LocalDateTime base = now().minusDays(rnd.nextInt(365));
             for (int k = 0; k < 4; k++) {
                 int actor = Math.floorMod(i * 37 + k * 997, USER_COUNT);
-                int shard = actor % 10;
-                likes.computeIfAbsent(shard, key -> new ArrayList<>()).add(new Object[]{
+                likes.add(new Object[]{
                         LIKE_ID + likeSeq++, userId(actor), inspireId(i),
                         Timestamp.valueOf(base.plusMinutes(rnd.nextInt(2000)))
                 });
 
                 int collector = Math.floorMod(i * 53 + k * 883 + 7, USER_COUNT);
-                int collectShard = collector % 10;
-                collects.computeIfAbsent(collectShard, key -> new ArrayList<>()).add(new Object[]{
+                collects.add(new Object[]{
                         COLLECT_ID + collectSeq++, userId(collector), inspireId(i),
                         folderId(collector % FOLDER_COUNT),
                         Timestamp.valueOf(base.plusMinutes(rnd.nextInt(2000)))
                 });
             }
             if ((i + 1) % 2000 == 0) {
-                flushShards(likes,
-                        "INSERT INTO user_like_", "(id,user_id,inspire_id,create_time) VALUES(?,?,?,?)");
-                flushShards(collects,
-                        "INSERT INTO collect_", "(id,user_id,inspire_id,folder_id,create_time) VALUES(?,?,?,?,?)");
+                flush("INSERT INTO user_like(id,user_id,inspire_id,create_time) VALUES(?,?,?,?)", likes);
+                flush("INSERT INTO collect(id,user_id,inspire_id,folder_id,create_time) VALUES(?,?,?,?,?)", collects);
             }
         }
-        flushShards(likes, "INSERT INTO user_like_", "(id,user_id,inspire_id,create_time) VALUES(?,?,?,?)");
-        flushShards(collects, "INSERT INTO collect_", "(id,user_id,inspire_id,folder_id,create_time) VALUES(?,?,?,?,?)");
+        flush("INSERT INTO user_like(id,user_id,inspire_id,create_time) VALUES(?,?,?,?)", likes);
+        flush("INSERT INTO collect(id,user_id,inspire_id,folder_id,create_time) VALUES(?,?,?,?,?)", collects);
         log.info("[LargeSeeder] 点赞明细生成完成: {}，收藏明细生成完成: {}", likeSeq, collectSeq);
     }
 
     private void generateComments() {
-        Map<Integer, List<Object[]>> comments = new HashMap<>();
-        Map<Integer, List<Object[]>> commentLikes = new HashMap<>();
+        List<Object[]> comments = new ArrayList<>();
+        List<Object[]> commentLikes = new ArrayList<>();
+        Map<Long, Long> commentInspire = new HashMap<>();
         List<Long> commentIds = new ArrayList<>();
         long commentSeq = 0;
         for (int i = 0; i < INSPIRE_COUNT; i++) {
@@ -293,57 +290,58 @@ public class LargeDataSeeder implements ApplicationRunner {
             int rootUserIndex = rnd.nextInt(USER_COUNT);
             long rootUser = userId(rootUserIndex);
             LocalDateTime base = now().minusDays(rnd.nextInt(60)).minusMinutes(rnd.nextInt(1440));
-            int commentShard = i % 10;
-
-            comments.computeIfAbsent(commentShard, key -> new ArrayList<>()).add(new Object[]{
+            comments.add(new Object[]{
                     rootId, inspireId(i), rootUser, nickOf(rootUserIndex), AVATARS[(int) (rootUserIndex % AVATARS.length)],
-                    0L, 0L, "", "压测主评论 " + i, rnd.nextInt(80),
+                    0L, rootId, 0L, "", "压测主评论 " + i, rnd.nextInt(80),
                     Timestamp.valueOf(base), Timestamp.valueOf(base)
             });
             commentIds.add(rootId);
+            commentInspire.put(rootId, inspireId(i));
 
             for (int k = 1; k < count; k++) {
                 long replyId = COMMENT_ID + commentSeq++;
                 int replyUserIndex = rnd.nextInt(USER_COUNT);
                 LocalDateTime replyTime = base.plusMinutes(1 + rnd.nextInt(180));
-                comments.computeIfAbsent(commentShard, key -> new ArrayList<>()).add(new Object[]{
+                comments.add(new Object[]{
                         replyId, inspireId(i), userId(replyUserIndex), nickOf(replyUserIndex),
-                        AVATARS[replyUserIndex % AVATARS.length], rootId, rootUser, nickOf(rootUserIndex),
+                        AVATARS[replyUserIndex % AVATARS.length], rootId, rootId, rootUser, nickOf(rootUserIndex),
                         "压测回复 " + i + "-" + k, rnd.nextInt(20),
                         Timestamp.valueOf(replyTime), Timestamp.valueOf(replyTime)
                 });
                 commentIds.add(replyId);
+                commentInspire.put(replyId, inspireId(i));
             }
             if ((i + 1) % 2000 == 0) {
-                flushShards(comments,
-                        "INSERT INTO inspire_comment_",
-                        "(id,inspire_id,user_id,username,avatar,parent_id,reply_user_id,reply_username,"
-                                + "content,like_count,create_time,update_time,deleted) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0)");
+                flushComments(comments);
             }
         }
-        flushShards(comments,
-                "INSERT INTO inspire_comment_",
-                "(id,inspire_id,user_id,username,avatar,parent_id,reply_user_id,reply_username,"
-                        + "content,like_count,create_time,update_time,deleted) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0)");
+        flushComments(comments);
 
         int likeCount = Math.min(COMMENT_LIKE_COUNT, commentIds.size());
         for (int i = 0; i < likeCount; i++) {
             int actorIndex = Math.floorMod(i * 17, USER_COUNT);
-            int shard = actorIndex % 10;
-            commentLikes.computeIfAbsent(shard, key -> new ArrayList<>()).add(new Object[]{
+            commentLikes.add(new Object[]{
                     COMMENT_LIKE_ID + i, userId(actorIndex), commentIds.get(i),
+                    commentInspire.getOrDefault(commentIds.get(i), inspireId(0)),
                     Timestamp.valueOf(now().minusDays(rnd.nextInt(90)))
             });
             if ((i + 1) % 2000 == 0) {
-                flushShards(commentLikes,
-                        "INSERT INTO comment_like_",
-                        "(id,user_id,comment_id,create_time) VALUES(?,?,?,?)");
+                flush("INSERT INTO comment_like(id,user_id,comment_id,inspire_id,create_time) VALUES(?,?,?,?,?)", commentLikes);
             }
         }
-        flushShards(commentLikes,
-                "INSERT INTO comment_like_",
-                "(id,user_id,comment_id,create_time) VALUES(?,?,?,?)");
+        flush("INSERT INTO comment_like(id,user_id,comment_id,inspire_id,create_time) VALUES(?,?,?,?,?)", commentLikes);
         log.info("[LargeSeeder] 评论生成完成: {}，评论点赞生成完成: {}", commentSeq, likeCount);
+    }
+
+    private void flushComments(List<Object[]> comments) {
+        if (comments.isEmpty()) return;
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO inspire_comment"
+                        + "(id,inspire_id,user_id,author_nickname,avatar,parent_id,root_id,"
+                        + "reply_user_id,reply_nickname,content,like_count,create_time,update_time,deleted) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
+                comments);
+        comments.clear();
     }
 
     private void generateFollows() {
@@ -399,19 +397,19 @@ public class LargeDataSeeder implements ApplicationRunner {
                 });
             }
             conversations.add(new Object[]{
-                    conversationId, userId(a), userId(b), last, Timestamp.valueOf(cursor),
-                    lastFrom == a ? 0 : 1, lastFrom == b ? 0 : 1,
+                    conversationId, userId(a), userId(b), MESSAGE_ID + messageSeq - 1,
+                    last, Timestamp.valueOf(cursor),
                     Timestamp.valueOf(cursor.minusDays(1)), Timestamp.valueOf(cursor)
             });
             members.add(new Object[]{
                     MEMBER_ID + memberSeq++, conversationId, userId(a),
-                    lastFrom == a ? 0 : 1, Timestamp.valueOf(cursor),
-                    Timestamp.valueOf(cursor.minusDays(1)), Timestamp.valueOf(cursor)
+                    lastFrom == a ? 0 : 1, 0L, 0L, 0,
+                    Timestamp.valueOf(cursor), Timestamp.valueOf(cursor.minusDays(1)), Timestamp.valueOf(cursor)
             });
             members.add(new Object[]{
                     MEMBER_ID + memberSeq++, conversationId, userId(b),
-                    lastFrom == b ? 0 : 1, Timestamp.valueOf(cursor),
-                    Timestamp.valueOf(cursor.minusDays(1)), Timestamp.valueOf(cursor)
+                    lastFrom == b ? 0 : 1, 0L, 0L, 0,
+                    Timestamp.valueOf(cursor), Timestamp.valueOf(cursor.minusDays(1)), Timestamp.valueOf(cursor)
             });
 
             if (conversations.size() >= 500) {
@@ -427,12 +425,13 @@ public class LargeDataSeeder implements ApplicationRunner {
                                           List<Object[]> messages) {
         if (conversations.isEmpty()) return;
         jdbcTemplate.batchUpdate(
-                "INSERT INTO message_conversation(id,user1_id,user2_id,last_content,last_time,"
-                        + "unread_user1,unread_user2,create_time,update_time) VALUES(?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO message_conversation(id,user1_id,user2_id,last_message_id,last_content,last_time,"
+                        + "create_time,update_time) VALUES(?,?,?,?,?,?,?,?)",
                 conversations);
         jdbcTemplate.batchUpdate(
-                "INSERT INTO conversation_member(id,conversation_id,user_id,unread_count,last_time,create_time,update_time) "
-                        + "VALUES(?,?,?,?,?,?,?)",
+                "INSERT INTO conversation_member(id,conversation_id,user_id,unread_count,last_read_message_id,"
+                        + "deleted_before_message_id,deleted,last_time,create_time,update_time) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?,?)",
                 members);
         jdbcTemplate.batchUpdate(
                 "INSERT INTO message(id,conversation_id,from_user_id,to_user_id,content,create_time) "
@@ -502,15 +501,6 @@ public class LargeDataSeeder implements ApplicationRunner {
                         + "VALUES(?,?,?,?,?,?,?,?,?,?,?,0)",
                 batch);
         log.info("[LargeSeeder] AI 历史生成完成: {}", AI_HISTORY_COUNT);
-    }
-
-    private void flushShards(Map<Integer, List<Object[]>> batches, String sqlPrefix, String sqlSuffix) {
-        for (Map.Entry<Integer, List<Object[]>> entry : batches.entrySet()) {
-            if (!entry.getValue().isEmpty()) {
-                jdbcTemplate.batchUpdate(sqlPrefix + entry.getKey() + sqlSuffix, entry.getValue());
-                entry.getValue().clear();
-            }
-        }
     }
 
     private void flush(String sql, List<Object[]> batch) {

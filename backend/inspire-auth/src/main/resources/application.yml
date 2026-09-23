@@ -10,7 +10,7 @@ spring:
     redis:
       host: ${INSPIRE_REDIS_HOST:localhost}
       port: ${INSPIRE_REDIS_PORT:6379}
-      password: ${INSPIRE_REDIS_PASSWORD:123456}
+      password: ${INSPIRE_REDIS_PASSWORD}
       timeout: 3000ms
       lettuce:
         pool:
@@ -27,9 +27,9 @@ spring:
   mail:
     host: smtp.qq.com
     port: 587
-    username: 45257209@qq.com
+    username: ${INSPIRE_MAIL_USERNAME:}
     # 文档5.2节：QQ邮箱SMTP授权码，非邮箱密码，非数据库密码
-    password: ${INSPIRE_MAIL_PASSWORD:csqrlhvdxuewbghe}
+    password: ${INSPIRE_MAIL_PASSWORD:}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -48,7 +48,7 @@ mybatis-plus:
 inspire:
   jwt:
     # JWT密钥：通过环境变量INSPIRE_JWT_SECRET注入（文档5.1节），开发环境有默认值
-    secret: ${INSPIRE_JWT_SECRET:dGhpc0lzQURlZmF1bHRTZWNyZXRLZXlGb3JMb2NhbERldk9ubHlQbGVhc2VSZXBsYWNlSW5Qcm9k}
+    secret: ${INSPIRE_JWT_SECRET}
     # AccessToken 有效期（文档4.1.2节）：15分钟 = 900秒
     access-token-expiration: 900000
   session:

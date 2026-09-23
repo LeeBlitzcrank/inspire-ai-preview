@@ -12,7 +12,7 @@ spring:
         master: redis-sentinel-master
         nodes:
           - ${INSPIRE_REDIS_SENTINEL_HOST:localhost}:26379
-      password: ${INSPIRE_REDIS_PASSWORD:Redis@Inspire2026}
+      password: ${INSPIRE_REDIS_PASSWORD}
       timeout: 3000ms
       lettuce:
         pool:
@@ -25,11 +25,11 @@ spring:
     master:
       url: ${INSPIRE_DB_MASTER_URL:jdbc:mysql://localhost:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai}
       username: ${INSPIRE_DB_USERNAME:inspire_rw}
-      password: ${INSPIRE_DB_PASSWORD:Inspire@2026}
+      password: ${INSPIRE_DB_PASSWORD}
     slave1:
       url: ${INSPIRE_DB_SLAVE_URL:jdbc:mysql://localhost:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai}
       username: ${INSPIRE_DB_USERNAME:inspire_rw}
-      password: ${INSPIRE_DB_PASSWORD:Inspire@2026}
+      password: ${INSPIRE_DB_PASSWORD}
 
 # 路由指向生产服务（K8s 或注册中心服务名）
 routes:

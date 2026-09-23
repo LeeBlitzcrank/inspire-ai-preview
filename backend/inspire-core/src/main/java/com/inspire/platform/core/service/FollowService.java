@@ -8,6 +8,7 @@ import java.util.Map;
 public interface FollowService {
     void follow(Long myId, Long userId);
     void unfollow(Long myId, Long userId);
+    void setSpecial(Long myId, Long userId, boolean special);
     List<Map<String, Object>> getFollowing(Long myId);
     List<Map<String, Object>> getFollowers(Long myId);
     List<InspireVO> getFeed(Long myId, Long followeeId, int page, int size);

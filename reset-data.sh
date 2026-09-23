@@ -6,6 +6,10 @@
 # =============================================
 set -e
 cd "$(dirname "$0")"
+ENV_FILE="${INSPIRE_ENV_FILE:-.env}"
+
+# 仅从项目 env 文件读取该密钥，避免旧 shell 导出值覆盖新配置。
+unset INSPIRE_UNSPLASH_ACCESS_KEY
 
 echo "⚠️  即将执行：docker compose down -v"
 echo "   这会删除以下数据卷：mysql-data / es-data / minio-data / nginx-cache"
@@ -27,11 +31,11 @@ fi
 
 # 2. 删卷
 echo "==> 删除数据卷 …"
-docker compose down -v
+docker compose --env-file "$ENV_FILE" down -v
 
 # 3. 先起 MySQL 让 init.sql 建表
 echo "==> 启动 MySQL 并等待初始化（约 20 秒）…"
-docker compose up -d mysql
+docker compose --env-file "$ENV_FILE" up -d mysql
 sleep 20
 
 # 4. 起全部
@@ -39,18 +43,18 @@ echo "==> 启动全部服务 …"
 # 打开演示数据开关：清库后会重新生成用户/灵感/评论/互动，以及 MinIO 里的演示图
 export INSPIRE_DEMO_SEED=true
 export INSPIRE_DEMO_SCALE="${INSPIRE_DEMO_SCALE:-small}"
-docker compose up -d --build
+docker compose --env-file "$ENV_FILE" up -d --build
 sleep 5
 
 # 5. 重建 MinIO 存储桶
 echo "==> 初始化 MinIO 存储桶 …"
-docker exec inspire-minio mc alias set local http://localhost:9000 minioadmin minioadmin123 || true
+docker exec inspire-minio sh -c 'mc alias set local http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"' || true
 docker exec inspire-minio mc mb local/inspire-img || true
 docker exec inspire-minio mc version enable local/inspire-img || true
 bash "$(dirname "$0")/docker/minio/init-public-policy.sh"
 bash "$(dirname "$0")/docker/cloudflare/start-tunnel.sh"
 
-docker compose ps
+docker compose --env-file "$ENV_FILE" ps
 
 # 前端：重新打包 +（重新）启动 dev server
 if [[ "${SKIP_FRONTEND:-0}" != "1" ]]; then

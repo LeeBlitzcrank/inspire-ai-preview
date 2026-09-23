@@ -18,4 +18,4 @@ logging:
 redis:
   host: ${INSPIRE_REDIS_HOST:localhost}
   port: ${INSPIRE_REDIS_PORT:6379}
-  password: ${INSPIRE_REDIS_PASSWORD:123456}
+  password: ${INSPIRE_REDIS_PASSWORD}

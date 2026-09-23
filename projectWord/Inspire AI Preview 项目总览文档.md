@@ -468,7 +468,7 @@ docker compose up -d --build
 docker compose -f docker/minio/docker-compose.yml --env-file docker/minio/.env up -d
 
 # 初始化 MinIO 存储桶
-docker exec inspire-minio mc alias set local http://localhost:9000 minioadmin minioadmin123
+docker exec inspire-minio sh -c 'mc alias set local http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"'
 docker exec inspire-minio mc mb local/inspire-img
 docker exec inspire-minio mc version enable local/inspire-img
 

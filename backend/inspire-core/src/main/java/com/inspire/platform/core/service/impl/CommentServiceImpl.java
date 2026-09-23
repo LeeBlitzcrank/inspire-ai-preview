@@ -2,7 +2,6 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.CommentCreateRequest;
 import com.inspire.platform.core.dto.CommentVO;
 import com.inspire.platform.core.entity.InspireComment;
@@ -17,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -41,7 +41,6 @@ public class CommentServiceImpl implements CommentService {
         long total;
         List<InspireComment> rootRecords;
         List<InspireComment> replyRecords = List.of();
-        ShardContext.setByInspireId(inspireId);
         try {
             // 第一层只分页主评论，避免新回复因为全局热度分页而始终落在第一页之外。
             LambdaQueryWrapper<InspireComment> rootQuery = new LambdaQueryWrapper<InspireComment>()
@@ -79,7 +78,6 @@ public class CommentServiceImpl implements CommentService {
 
             total = getRootTotal(inspireId);
         } finally {
-            ShardContext.clear();
         }
 
         Page<CommentVO> voPage = new Page<>(rootPage.getCurrent(), rootPage.getSize(),
@@ -107,7 +105,6 @@ public class CommentServiceImpl implements CommentService {
         boolean hotSort = "hot".equalsIgnoreCase(sort);
         Page<InspireComment> pg;
         long replyTotal;
-        ShardContext.setByInspireId(inspireId);
         try {
             LambdaQueryWrapper<InspireComment> query = new LambdaQueryWrapper<InspireComment>()
                     .eq(InspireComment::getInspireId, inspireId)
@@ -122,7 +119,6 @@ public class CommentServiceImpl implements CommentService {
             pg = commentMapper.selectPage(new Page<>(page, size), query);
             replyTotal = getReplyTotal(inspireId, parentId);
         } finally {
-            ShardContext.clear();
         }
         List<CommentVO> records = pg.getRecords().stream().map(this::toVO).toList();
         fillLikedState(records, userId);
@@ -136,13 +132,12 @@ public class CommentServiceImpl implements CommentService {
         vo.setId(c.getId());
         vo.setInspireId(c.getInspireId());
         vo.setUserId(c.getUserId());
-        vo.setUsername(c.getUsername());
         vo.setAvatar(c.getAvatar());
-        vo.setNickname(c.getUsername());
+        vo.setNickname(c.getAuthorNickname());
         vo.setContent(c.getContent());
         vo.setParentId(c.getParentId());
         vo.setReplyUserId(c.getReplyUserId());
-        vo.setReplyUsername(c.getReplyUsername());
+        vo.setReplyUsername(c.getReplyNickname());
         vo.setLikeCount(c.getLikeCount() == null ? 0 : c.getLikeCount());
         vo.setLiked(false);
         vo.setReplyCount(0);
@@ -217,7 +212,7 @@ public class CommentServiceImpl implements CommentService {
         String placeholders = String.join(",", Collections.nCopies(records.size(), "?"));
         try {
             Set<Long> likedIds = new HashSet<>(jdbcTemplate.queryForList(
-                    "SELECT comment_id FROM comment_like_" + Math.floorMod(userId, 10)
+                    "SELECT comment_id FROM comment_like"
                             + " WHERE user_id = ? AND comment_id IN (" + placeholders + ")",
                     Long.class, args.toArray()));
             records.forEach(item -> item.setLiked(likedIds.contains(item.getId())));
@@ -229,7 +224,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public CommentVO create(Long userId, CommentCreateRequest request) {
-        String nickname = request.getUsername();
+        String nickname = null;
         String avatar = request.getAvatar();
         try {
             Map<String, Object> profile = jdbcTemplate.queryForMap(
@@ -237,7 +232,7 @@ public class CommentServiceImpl implements CommentService {
             nickname = java.util.Objects.toString(profile.get("nickname"), String.valueOf(userId));
             avatar = java.util.Objects.toString(profile.get("avatar"), "");
         } catch (Exception e) {
-            nickname = nickname != null ? nickname : String.valueOf(userId);
+            nickname = nickname != null ? nickname : "灵感用户";
             avatar = avatar != null ? avatar : "";
         }
 
@@ -245,20 +240,19 @@ public class CommentServiceImpl implements CommentService {
         c.setId(nextId());
         c.setInspireId(request.getInspireId());
         c.setUserId(userId);
-        c.setUsername(nickname);
+        c.setAuthorNickname(nickname);
         c.setAvatar(avatar);
         c.setContent(request.getContent());
         c.setParentId(request.getParentId() != null ? request.getParentId() : 0L);
+        c.setRootId(request.getParentId() != null && request.getParentId() > 0
+                ? request.getParentId() : c.getId());
         c.setReplyUserId(request.getReplyUserId() != null ? request.getReplyUserId() : 0L);
-        c.setReplyUsername(request.getReplyUsername() != null ? request.getReplyUsername() : "");
+        c.setReplyNickname(request.getReplyUsername() != null ? request.getReplyUsername() : "");
         c.setLikeCount(0);
         c.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
-        int commentShard = (int) Math.floorMod(request.getInspireId(), 10);
-        ShardContext.setByInspireId(request.getInspireId());
         try {
             commentMapper.insert(c);
         } finally {
-            ShardContext.clear();
         }
         log.info("评论创建: id={}, inspireId={}, userId={}, parentId={}",
                 c.getId(), request.getInspireId(), userId, c.getParentId());
@@ -279,8 +273,8 @@ public class CommentServiceImpl implements CommentService {
             if (request.getParentId() != null && request.getParentId() > 0L) {
                 // 回复评论 → 通知被回复者
                 String replyOwnerId = jdbcTemplate.queryForObject(
-                    "SELECT user_id FROM inspire_comment_" + commentShard + " WHERE id=?",
-                    String.class, request.getParentId());
+                    "SELECT user_id FROM inspire_comment WHERE inspire_id = ? AND id = ?",
+                    String.class, request.getInspireId(), request.getParentId());
                 if (replyOwnerId != null) {
                     notificationService.notify(Long.parseLong(replyOwnerId), "reply", userId,
                         myName, "回复了你的评论: " + request.getContent(),
@@ -299,22 +293,71 @@ public class CommentServiceImpl implements CommentService {
         } catch (Exception e) {
             log.warn("评论通知发送失败", e);
         }
+        notifyMentions(userId, request.getInspireId(), c.getId(), c.getContent());
         evictCommentCaches(request.getInspireId(), request.getParentId());
         return toVO(c);
+    }
+
+    private void notifyMentions(Long actorId, Long inspireId, Long commentId, String content) {
+        if (content == null || !content.contains("@")) return;
+        try {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("@([\\p{L}\\p{N}_-]{1,50})")
+                    .matcher(content);
+            Set<String> nicknames = new LinkedHashSet<>();
+            while (matcher.find()) {
+                nicknames.add(matcher.group(1));
+            }
+            if (nicknames.isEmpty()) return;
+            String actorName = jdbcTemplate.queryForObject(
+                    "SELECT nickname FROM user WHERE id = ?", String.class, actorId);
+            if (actorName == null || actorName.isBlank()) actorName = String.valueOf(actorId);
+            String title = jdbcTemplate.queryForObject(
+                    "SELECT title FROM inspire_main WHERE id = ?", String.class, inspireId);
+            for (String nickname : nicknames) {
+                List<Long> ids = jdbcTemplate.queryForList(
+                        "SELECT id FROM user WHERE nickname = ? AND deleted = 0",
+                        Long.class, nickname);
+                for (Long mentionedId : ids) {
+                    if (mentionedId.equals(actorId)) continue;
+                    jdbcTemplate.update(
+                            "INSERT IGNORE INTO comment_mention"
+                                    + "(id, comment_id, inspire_id, mentioned_user_id, display_name, create_time) "
+                                    + "VALUES(?,?,?,?,?,?)",
+                            nextId(), commentId, inspireId, mentionedId, nickname, LocalDateTime.now());
+                    notificationService.notify(mentionedId, "mention", actorId, actorName,
+                            "在评论中提到了你", inspireId, title);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("评论@提及通知发送失败: inspireId={}", inspireId, e);
+        }
     }
 
     @Override
     @Transactional
     public void deleteById(Long inspireId, Long commentId, Long userId) {
-        ShardContext.setByInspireId(inspireId);
         try {
+            List<Long> childIds = jdbcTemplate.queryForList(
+                    "SELECT id FROM inspire_comment WHERE inspire_id = ? AND parent_id = ? AND deleted = 0",
+                    Long.class, inspireId, commentId);
             commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
                     .eq(InspireComment::getId, commentId)
+                    .eq(InspireComment::getInspireId, inspireId)
                     .eq(InspireComment::getUserId, userId));
             commentMapper.delete(new LambdaQueryWrapper<InspireComment>()
-                    .eq(InspireComment::getParentId, commentId));
+                    .eq(InspireComment::getParentId, commentId)
+                    .eq(InspireComment::getInspireId, inspireId));
+            List<Long> mentionCommentIds = new ArrayList<>(childIds);
+            mentionCommentIds.add(commentId);
+            String placeholders = String.join(",", Collections.nCopies(mentionCommentIds.size(), "?"));
+            List<Object> mentionArgs = new ArrayList<>();
+            mentionArgs.add(inspireId);
+            mentionArgs.addAll(mentionCommentIds);
+            jdbcTemplate.update(
+                    "DELETE FROM comment_mention WHERE inspire_id = ? AND comment_id IN (" + placeholders + ")",
+                    mentionArgs.toArray());
         } finally {
-            ShardContext.clear();
         }
         log.info("评论删除: commentId={}, userId={}", commentId, userId);
     }
@@ -322,23 +365,21 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public boolean like(Long userId, Long inspireId, Long commentId) {
-        int userShard = Math.floorMod(userId, 10);
         int inserted = jdbcTemplate.update(
-                "INSERT IGNORE INTO comment_like_" + userShard
-                        + "(id, user_id, comment_id, create_time) VALUES(?,?,?,?)",
+                "INSERT IGNORE INTO comment_like"
+                        + "(id, user_id, comment_id, inspire_id, create_time) VALUES(?,?,?,?,?)",
                 com.inspire.platform.core.service.impl.InspireServiceImpl.nextId(),
-                userId, commentId, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
+                userId, commentId, inspireId, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
         if (inserted == 0) return false;
 
-        int commentShard = Math.floorMod(inspireId, 10);
         int updated = jdbcTemplate.update(
-                "UPDATE inspire_comment_" + commentShard
+                "UPDATE inspire_comment"
                         + " SET like_count = COALESCE(like_count, 0) + 1"
                         + " WHERE id = ? AND inspire_id = ? AND deleted = 0",
                 commentId, inspireId);
         if (updated == 0) {
             jdbcTemplate.update(
-                    "DELETE FROM comment_like_" + userShard + " WHERE user_id = ? AND comment_id = ?",
+                    "DELETE FROM comment_like WHERE user_id = ? AND comment_id = ?",
                     userId, commentId);
             return false;
         }
@@ -348,15 +389,13 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public boolean unlike(Long userId, Long inspireId, Long commentId) {
-        int userShard = Math.floorMod(userId, 10);
         int deleted = jdbcTemplate.update(
-                "DELETE FROM comment_like_" + userShard + " WHERE user_id = ? AND comment_id = ?",
+                "DELETE FROM comment_like WHERE user_id = ? AND comment_id = ?",
                 userId, commentId);
         if (deleted == 0) return false;
 
-        int commentShard = Math.floorMod(inspireId, 10);
         jdbcTemplate.update(
-                "UPDATE inspire_comment_" + commentShard
+                "UPDATE inspire_comment"
                         + " SET like_count = GREATEST(COALESCE(like_count, 0) - 1, 0)"
                         + " WHERE id = ? AND inspire_id = ? AND deleted = 0",
                 commentId, inspireId);

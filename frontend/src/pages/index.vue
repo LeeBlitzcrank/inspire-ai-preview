@@ -67,10 +67,9 @@
         @retry="loadFollowing">
       <AppCard v-for="u in followingList" :key="u.id" class="follow-user-card"
         padding="14px 16px" clickable @click="selectFollowee(u)">
-        <span class="follow-user-avatar">{{ u.avatar || (u.nickname ? u.nickname[0] : u.username[0]) || '👤' }}</span>
+        <span class="follow-user-avatar">{{ u.avatar || (u.nickname ? u.nickname[0] : '👤') }}</span>
         <div class="follow-user-info">
-          <div class="follow-user-name">{{ u.nickname || u.username }}</div>
-          <div class="follow-user-meta">@{{ u.username }}</div>
+          <div class="follow-user-name">{{ u.nickname || '灵感用户' }}</div>
         </div>
         <span class="follow-user-arrow" @click.stop="handleMsgFromFollow(u)" style="color:#6366f1;font-size:12px;border:1px solid #6366f1;border-radius:8px;padding:3px 8px;margin-right:6px;cursor:pointer;">💬 私信</span>
         <span class="follow-user-arrow" style="font-size:18px;">›</span>

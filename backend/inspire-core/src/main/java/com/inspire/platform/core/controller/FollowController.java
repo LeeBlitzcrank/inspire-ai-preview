@@ -1,6 +1,7 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.SpecialFollowRequest;
 import com.inspire.platform.core.service.FollowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,6 +38,16 @@ public class FollowController {
             @PathVariable Long userId) {
         followService.unfollow(myId, userId);
         return Result.success("已取消关注", null);
+    }
+
+    @Operation(summary = "设置特别关注")
+    @PutMapping("/{userId}/special")
+    public Result<Void> special(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long myId,
+            @PathVariable Long userId,
+            @RequestBody SpecialFollowRequest request) {
+        followService.setSpecial(myId, userId, Boolean.TRUE.equals(request.getSpecial()));
+        return Result.success(Boolean.TRUE.equals(request.getSpecial()) ? "已设为特别关注" : "已取消特别关注", null);
     }
 
     @Operation(summary = "我的关注列表")

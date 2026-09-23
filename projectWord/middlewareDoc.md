@@ -7,8 +7,8 @@
 - Slave2（Canal数据源+离线统计）：192.168.1.12:3306
   库名：`inspire_ai_preview`
   账号：
-- 业务读写账号：`inspire_rw` / 密码 Inspire@2026
-- Canal同步专用账号：`canal_sync` / 密码 Canal@Sync2026
+- 业务读写账号：`inspire_rw` / 密码 `${INSPIRE_DB_PASSWORD}`
+- Canal同步专用账号：`canal_sync` / 密码 `${INSPIRE_CANAL_DB_PASSWORD}`
 
 #### mybatis-plus 数据源配置 application.yml
 ```yaml
@@ -17,11 +17,11 @@ spring:
     master:
       url: jdbc:mysql://192.168.1.10:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
-      password: Inspire@2026
+      password: ${INSPIRE_DB_PASSWORD}
     slave1:
       url: jdbc:mysql://192.168.1.11:3306/inspire_ai_preview?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
       username: inspire_rw
-      password: Inspire@2026
+      password: ${INSPIRE_DB_PASSWORD}
 ```
 #### 部署要点
 1. Master开启binlog，格式 `ROW`，binlog-do-db=inspire_ai_preview
@@ -32,7 +32,7 @@ spring:
 #### 集群地址
 哨兵节点：192.168.1.20:26379,192.168.1.21:26379,192.168.1.22:26379
 集群名称：`redis-sentinel-master`
-密码：Redis@Inspire2026
+密码：`${INSPIRE_REDIS_PASSWORD}`
 #### 业务分片规划
 1. 分片1：登录JWT、分布式锁
 2. 分片2：用户画像、在线城市缓存
@@ -44,7 +44,7 @@ spring:
     sentinel:
       master: redis-sentinel-master
       nodes: 192.168.1.20:26379,192.168.1.21:26379,192.168.1.22:26379
-    password: Redis@Inspire2026
+    password: ${INSPIRE_REDIS_PASSWORD}
     timeout: 3000ms
 ```
 #### 持久化策略
@@ -75,7 +75,7 @@ rocketmq:
 
 ### 4. Elasticsearch 集群部署文档
 ES集群地址：http://192.168.1.40:9200,http://192.168.1.41:9200,http://192.168.1.42:9200
-账号密码：elastic / Es@Inspire2026
+账号密码：elastic / `${INSPIRE_ES_PASSWORD}`
 索引名：`inspire_index`
 分片3，副本1
 #### SpringBoot ES配置
@@ -84,7 +84,7 @@ spring:
   elasticsearch:
     uris: http://192.168.1.40:9200,http://192.168.1.41:9200
     username: elastic
-    password: Es@Inspire2026
+    password: ${INSPIRE_ES_PASSWORD}
 ```
 
 ### 5. Flink 集群部署文档
@@ -147,7 +147,7 @@ canal.instance.filter.black.regex = inspire_ai_preview\\.inspire_main:DELETE
 # 目标es配置
 canal.instance.es.addressList=http://192.168.1.40:9200,http://192.168.1.41:9200
 canal.instance.es.userName=elastic
-canal.instance.es.password=Es@Inspire2026
+canal.instance.es.password=${INSPIRE_ES_PASSWORD}
 canal.instance.es.index = inspire_index
 canal.instance.es.type = _doc
 

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.util.TextFilter;
 import com.inspire.platform.common.util.TitleUtil;
-import com.inspire.platform.core.config.ShardContext;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
@@ -478,6 +477,15 @@ public class InspireServiceImpl implements InspireService {
         InspireMain m = new InspireMain();
         m.setId(nextId()); m.setTitle(title);
         m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
+        if (req.getQuoteInspireId() != null) {
+            Integer quoteExists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM inspire_main WHERE id = ? AND deleted = 0 AND status = 1",
+                    Integer.class, req.getQuoteInspireId());
+            if (quoteExists == null || quoteExists == 0) {
+                throw new BusinessException("引用的灵感不存在");
+            }
+            m.setQuoteInspireId(req.getQuoteInspireId());
+        }
         // 内容审核：命中敏感词设为待审核（2），否则用请求的status
         String reason = TextFilter.check(title);
         if (reason == null) {
@@ -497,8 +505,40 @@ public class InspireServiceImpl implements InspireService {
         contentMapper.insert(c);
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_PUBLISH, java.util.Map.of("inspireId", m.getId(), "userId", userId, "title", m.getTitle(), "tag", m.getTag()));
         esSyncService.sync(m);
+        if (Integer.valueOf(1).equals(m.getStatus())) {
+            notifySeriesPublish(userId, m);
+        }
         log.info("创建灵感: id={}, userId={}, status={}", m.getId(), userId, m.getStatus());
         return m;
+    }
+
+    private void notifySeriesPublish(Long userId, InspireMain m) {
+        try {
+            String actorName = jdbcTemplate.queryForObject(
+                    "SELECT nickname FROM user WHERE id = ?", String.class, userId);
+            if (actorName == null || actorName.isBlank()) {
+                actorName = String.valueOf(userId);
+            }
+            if (m.getQuoteInspireId() != null) {
+                List<Map<String, Object>> quoted = jdbcTemplate.queryForList(
+                        "SELECT user_id, title FROM inspire_main WHERE id = ? AND deleted = 0",
+                        m.getQuoteInspireId());
+                if (!quoted.isEmpty()) {
+                    Long quotedUserId = ((Number) quoted.get(0).get("user_id")).longValue();
+                    notificationService.notify(quotedUserId, "quote", userId, actorName,
+                            "引用了你的灵感并创作了新版本", m.getId(), m.getTitle());
+                }
+            }
+            List<Long> specialFollowers = jdbcTemplate.queryForList(
+                    "SELECT follower_id FROM user_follow WHERE followee_id = ? AND special = 1",
+                    Long.class, userId);
+            for (Long followerId : specialFollowers) {
+                notificationService.notify(followerId, "special_publish", userId, actorName,
+                        "发布了新灵感", m.getId(), m.getTitle());
+            }
+        } catch (Exception e) {
+            log.warn("发布通知发送失败: userId={}, inspireId={}", userId, m.getId(), e);
+        }
     }
 
     @Override @Transactional
@@ -569,7 +609,7 @@ public class InspireServiceImpl implements InspireService {
         if (!m.getUserId().equals(userId)) {
             throw new BusinessException("只能删除自己的灵感");
         }
-        m.setDeleted(1); mainMapper.updateById(m);
+        mainMapper.deleteById(m.getId());
         esSyncService.delete(m.getId());
     }
 
@@ -585,7 +625,6 @@ public class InspireServiceImpl implements InspireService {
         if (folderId == null) {
             folderId = ensureUnclassifiedFolder(userId).getId();
         }
-        ShardContext.setByUserId(userId);
         try {
             if (collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId)) != null) {
@@ -594,7 +633,7 @@ public class InspireServiceImpl implements InspireService {
             CollectAction a = new CollectAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
             a.setFolderId(folderId);
             collectMapper.insert(a);
-        } finally { ShardContext.clear(); }
+        } finally { }
         InspireMain inspireForMsg = mainMapper.selectById(inspireId);
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("collect_count = collect_count + 1").eq(InspireMain::getId, inspireId));
@@ -642,10 +681,9 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public void uncollect(Long userId, Long inspireId) {
         checkUserExists(userId);
-        ShardContext.setByUserId(userId);
         try { collectMapper.delete(Wrappers.lambdaQuery(CollectAction.class)
                 .eq(CollectAction::getUserId, userId).eq(CollectAction::getInspireId, inspireId));
-        } finally { ShardContext.clear(); }
+        } finally { }
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("collect_count = GREATEST(collect_count - 1, 0)").eq(InspireMain::getId, inspireId));
     }
@@ -653,7 +691,6 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public void like(Long userId, Long inspireId) {
         checkUserExists(userId);
-        ShardContext.setByUserId(userId);
         try {
             if (likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
                     .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId)) != null) {
@@ -661,7 +698,7 @@ public class InspireServiceImpl implements InspireService {
             }
             LikeAction a = new LikeAction(); a.setId(nextId()); a.setUserId(userId); a.setInspireId(inspireId);
             likeMapper.insert(a);
-        } finally { ShardContext.clear(); }
+        } finally { }
         InspireMain inspireForMsg = mainMapper.selectById(inspireId);
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("like_count = like_count + 1").eq(InspireMain::getId, inspireId));
@@ -690,10 +727,9 @@ public class InspireServiceImpl implements InspireService {
     public void unlike(Long userId, Long inspireId) {
         checkUserExists(userId);
 
-        ShardContext.setByUserId(userId);
         try { likeMapper.delete(Wrappers.lambdaQuery(LikeAction.class)
                 .eq(LikeAction::getInspireId, inspireId).eq(LikeAction::getUserId, userId));
-        } finally { ShardContext.clear(); }
+        } finally { }
         mainMapper.update(null, Wrappers.lambdaUpdate(InspireMain.class)
                 .setSql("like_count = GREATEST(like_count - 1, 0)").eq(InspireMain::getId, inspireId));
     }
@@ -712,31 +748,20 @@ public class InspireServiceImpl implements InspireService {
 
     @Override
     public PageResult<InspireVO> listMyCollects(Long userId, int page, int size) {
-        List<Long> ids;
-        long total = 0;
-        ShardContext.setByUserId(userId);
-        try {
-            List<CollectAction> collects = collectMapper.selectList(Wrappers.lambdaQuery(CollectAction.class)
-                    .eq(CollectAction::getUserId, userId).orderByDesc(CollectAction::getCreateTime));
-            total = collects.size();
-            log.debug("[PAGEDBG] listMyCollects userId={} page={} size={} totalCollects={}", userId, page, size, total);
-            int start = (page - 1) * size;
-            if (start >= collects.size()) {
-                log.debug("[PAGEDBG] start={} >= collects.size={} -> empty", start, collects.size());
-                return new PageResult<>(new ArrayList<>(), total);
-            }
-            int end = Math.min(start + size, collects.size());
-            log.debug("[PAGEDBG] start={} end={} records={}", start, end, end - start);
-            collects = collects.subList(start, end);
-            if (collects.isEmpty()) {
-                return new PageResult<>(new ArrayList<>(), total);
-            }
-            ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
-        } finally { ShardContext.clear(); }
+        int safeSize = Math.max(1, Math.min(size, 50));
+        Page<CollectAction> collectPage = collectMapper.selectPage(
+                new Page<>(Math.max(1, page), safeSize),
+                Wrappers.lambdaQuery(CollectAction.class)
+                        .eq(CollectAction::getUserId, userId)
+                        .orderByDesc(CollectAction::getCreateTime));
+        List<CollectAction> collects = collectPage.getRecords();
+        if (collects.isEmpty()) {
+            return new PageResult<>(List.of(), collectPage.getTotal());
+        }
+        List<Long> ids = collects.stream().map(CollectAction::getInspireId).collect(Collectors.toList());
         List<InspireMain> mains = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
                 .in(InspireMain::getId, ids).eq(InspireMain::getDeleted, 0));
-        log.debug("[PAGEDBG] found mains={} total={}", mains.size(), total);
-        return new PageResult<>(toVOList(mains, userId), total);
+        return new PageResult<>(toVOList(mains, userId), collectPage.getTotal());
     }
 
     @Override
@@ -811,10 +836,8 @@ public class InspireServiceImpl implements InspireService {
     public List<CollectFolder> getCollectFolders(Long userId) {
         List<CollectFolder> folders = collectFolderMapper.selectList(Wrappers.lambdaQuery(CollectFolder.class)
                 .eq(CollectFolder::getUserId, userId).orderByAsc(CollectFolder::getSortOrder));
-        int shard = (int) Math.floorMod(userId, 10);
         Integer nullFolderCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM collect_" + shard
-                        + " WHERE user_id = ? AND folder_id IS NULL",
+                "SELECT COUNT(*) FROM collect WHERE user_id = ? AND folder_id IS NULL",
                 Integer.class, userId);
         if (nullFolderCount != null && nullFolderCount > 0) {
             CollectFolder uncategorized = folders.stream()
@@ -833,7 +856,7 @@ public class InspireServiceImpl implements InspireService {
                 folders.add(uncategorized);
             }
             jdbcTemplate.update(
-                    "UPDATE collect_" + shard + " SET folder_id = ? "
+                    "UPDATE collect SET folder_id = ? "
                             + "WHERE user_id = ? AND folder_id IS NULL",
                     uncategorized.getId(), userId);
         }
@@ -844,7 +867,7 @@ public class InspireServiceImpl implements InspireService {
         Map<Long, Integer> counts = new HashMap<>();
         try {
             jdbcTemplate.query(
-                    "SELECT folder_id, COUNT(*) AS c FROM collect_" + shard
+                    "SELECT folder_id, COUNT(*) AS c FROM collect"
                             + " WHERE user_id = ? AND folder_id IS NOT NULL GROUP BY folder_id",
                     rs -> { counts.put(rs.getLong("folder_id"), rs.getInt("c")); },
                     userId);
@@ -873,12 +896,7 @@ public class InspireServiceImpl implements InspireService {
             throw new BusinessException("文件夹不存在");
         }
         collectFolderMapper.deleteById(folderId);
-        // 将该文件夹下的收藏记录 folder_id 置空
-        for (int i = 0; i < 10; i++) {
-            try {
-                jdbcTemplate.update("UPDATE collect_" + i + " SET folder_id = NULL WHERE folder_id = ?", folderId);
-            } catch (Exception ignored) {}
-        }
+        jdbcTemplate.update("UPDATE collect SET folder_id = NULL WHERE folder_id = ?", folderId);
     }
 
     @Override @Transactional
@@ -894,7 +912,6 @@ public class InspireServiceImpl implements InspireService {
 
     @Override
     public PageResult<InspireVO> listCollectsByFolder(Long userId, Long folderId, int page, int size) {
-        ShardContext.setByUserId(userId);
         Page<CollectAction> collectPage;
         try {
             if (folderId != null && folderId > 0) {
@@ -908,7 +925,7 @@ public class InspireServiceImpl implements InspireService {
                         .isNull(CollectAction::getFolderId)
                         .orderByDesc(CollectAction::getCreateTime));
             }
-        } finally { ShardContext.clear(); }
+        } finally { }
 
         List<CollectAction> collects = collectPage.getRecords();
         if (collects.isEmpty()) {
@@ -938,16 +955,17 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public void moveCollectToFolder(Long userId, Long inspireId, Long folderId) {
         checkUserExists(userId);
-        ShardContext.setByUserId(userId);
         try {
             CollectAction a = collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, userId)
                     .eq(CollectAction::getInspireId, inspireId));
             if (a != null) {
-                a.setFolderId(folderId);
-                collectMapper.updateById(a);
+                collectMapper.update(null, Wrappers.lambdaUpdate(CollectAction.class)
+                        .set(CollectAction::getFolderId, folderId)
+                        .eq(CollectAction::getUserId, userId)
+                        .eq(CollectAction::getId, a.getId()));
             }
-        } finally { ShardContext.clear(); }
+        } finally { }
     }
 
 
@@ -993,7 +1011,42 @@ public class InspireServiceImpl implements InspireService {
             }
             result.add(vo);
         }
+        fillQuoteInfo(mains, result);
         return result;
+    }
+
+    private void fillQuoteInfo(List<InspireMain> mains, List<InspireVO> vos) {
+        Set<Long> quoteIds = mains.stream()
+                .map(InspireMain::getQuoteInspireId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (quoteIds.isEmpty()) return;
+        String placeholders = quoteIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        Map<Long, Map<String, Object>> quoteMap = new HashMap<>();
+        jdbcTemplate.query(
+                "SELECT m.id, m.title, m.img, m.user_id, u.nickname "
+                        + "FROM inspire_main m LEFT JOIN user u ON u.id = m.user_id "
+                        + "WHERE m.deleted = 0 AND m.id IN (" + placeholders + ")",
+                rs -> {
+                    quoteMap.put(rs.getLong("id"), Map.of(
+                            "title", Objects.toString(rs.getString("title"), ""),
+                            "img", Objects.toString(rs.getString("img"), ""),
+                            "userId", String.valueOf(rs.getLong("user_id")),
+                            "nickname", Objects.toString(rs.getString("nickname"), "")
+                    ));
+                },
+                quoteIds.toArray());
+        for (int i = 0; i < mains.size(); i++) {
+            Long quoteId = mains.get(i).getQuoteInspireId();
+            if (quoteId == null) continue;
+            Map<String, Object> source = quoteMap.get(quoteId);
+            if (source == null) continue;
+            InspireVO vo = vos.get(i);
+            vo.setQuoteTitle((String) source.get("title"));
+            vo.setQuoteImg((String) source.get("img"));
+            vo.setQuoteUserId((String) source.get("userId"));
+            vo.setQuoteNickname((String) source.get("nickname"));
+        }
     }
 
     /** 批量查 nickname */
@@ -1021,12 +1074,11 @@ public class InspireServiceImpl implements InspireService {
         if (inspireIds.isEmpty()) {
             return new UserRelationState(Collections.emptySet(), Collections.emptySet());
         }
-        int shard = Math.floorMod(userId, 10);
         String placeholders = inspireIds.stream().map(id -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT 'collect' AS kind, inspire_id FROM collect_" + shard
+        String sql = "SELECT 'collect' AS kind, inspire_id FROM collect"
                 + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")"
                 + " UNION ALL "
-                + "SELECT 'like' AS kind, inspire_id FROM user_like_" + shard
+                + "SELECT 'like' AS kind, inspire_id FROM user_like"
                 + " WHERE user_id = ? AND inspire_id IN (" + placeholders + ")";
         List<Object> params = new ArrayList<>();
         params.add(userId);
@@ -1067,27 +1119,22 @@ public class InspireServiceImpl implements InspireService {
 
         InspireVO vo = singleToVO(m, nickname, content);
         vo.setAvatar(avatar);
+        fillQuoteInfo(List.of(m), List.of(vo));
         if (loginUserId == null) {
             return vo;
         }
 
-        ShardContext.setByUserId(loginUserId);
         try {
             vo.setCollected(collectMapper.selectOne(Wrappers.lambdaQuery(CollectAction.class)
                     .eq(CollectAction::getUserId, loginUserId)
                     .eq(CollectAction::getInspireId, m.getId())) != null);
-        } finally {
-            ShardContext.clear();
-        }
+        } finally { }
 
-        ShardContext.setByUserId(loginUserId);
         try {
             vo.setLiked(likeMapper.selectOne(Wrappers.lambdaQuery(LikeAction.class)
                     .eq(LikeAction::getUserId, loginUserId)
                     .eq(LikeAction::getInspireId, m.getId())) != null);
-        } finally {
-            ShardContext.clear();
-        }
+        } finally { }
 
         if (!loginUserId.equals(m.getUserId())) {
             try {
@@ -1117,6 +1164,7 @@ public class InspireServiceImpl implements InspireService {
         vo.setSubCategoryId(m.getSubCategoryId());
         if (m.getSeriesId() != null) vo.setSeriesId(String.valueOf(m.getSeriesId()));
         vo.setSeriesOrder(m.getSeriesOrder());
+        if (m.getQuoteInspireId() != null) vo.setQuoteInspireId(String.valueOf(m.getQuoteInspireId()));
         vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
         vo.setShareCount(m.getShareCount());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());

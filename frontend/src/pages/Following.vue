@@ -24,10 +24,12 @@
       >
         <div class="uav" @click="goUser(u)">{{ avatarOf(u) }}</div>
         <div class="txt" @click="goUser(u)">
-          <div class="un">{{ u.nickname || u.username }}</div>
-          <div class="ua">@{{ u.username }}</div>
+          <div class="un">{{ u.nickname || '灵感用户' }}</div>
         </div>
         <div class="uops">
+          <button :class="{ special: u.special }" @click.stop="toggleSpecial(u)">
+            {{ u.special ? '已特别' : '特别' }}
+          </button>
           <button @click.stop="toMessage(u)">私信</button>
           <button class="unfollow" @click.stop="doUnfollow(u)">取消关注</button>
         </div>
@@ -37,12 +39,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { getFollowing, unfollowUser } from '@/api/inspire.js'
-import { startConversation } from '@/api/message.js'
+import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessageBox} from 'element-plus'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {getFollowing, setSpecialFollow, unfollowUser} from '@/api/inspire.js'
+import {startConversation} from '@/api/message.js'
 
 const router = useRouter()
 const list = ref([])
@@ -57,7 +59,7 @@ const listState = computed(() => {
 const isImg = (a) => typeof a === 'string' && (a.startsWith('http') || a.startsWith('/') || a.startsWith('data:'))
 const avatarOf = (u) => {
   if (u.avatar && !isImg(u.avatar)) return Array.from(String(u.avatar))[0]
-  return Array.from(String(u.nickname || u.username || '灵'))[0]
+  return Array.from(String(u.nickname || '灵'))[0]
 }
 
 const load = async () => {
@@ -88,7 +90,7 @@ const toMessage = async (u) => {
 
 const doUnfollow = async (u) => {
   try {
-    await ElMessageBox.confirm(`确定不再关注「${u.nickname || u.username}」？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(`确定不再关注「${u.nickname || '灵感用户'}」？`, '提示', { type: 'warning' })
   } catch (e) { return }
   try {
     const res = await unfollowUser(u.id)
@@ -100,6 +102,17 @@ const doUnfollow = async (u) => {
     }
   } catch (e) {
     ElMessage.error('操作失败')
+  }
+}
+
+const toggleSpecial = async (u) => {
+  try {
+    const res = await setSpecialFollow(u.id, !u.special)
+    if (res.code !== 200) throw new Error(res.msg || '操作失败')
+    u.special = !u.special
+    ElMessage.success(u.special ? '已设为特别关注' : '已取消特别关注')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '操作失败')
   }
 }
 
@@ -124,4 +137,5 @@ onMounted(load)
 .uops button { font-size: 11.5px; padding: 6px 11px; border-radius: 999px;
   border: 1px solid #e3ecea; background: #fff; color: #0f766e; cursor: pointer; font-family: inherit; }
 .uops button.unfollow { color: #9aa3b2; }
+.uops button.special { color:#b26a00; border-color:#f0d9c0; background:#fff8ec; }
 </style>
