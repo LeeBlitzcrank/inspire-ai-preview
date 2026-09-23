@@ -44,6 +44,22 @@ test('登录、发布、上传、评论主链路', async ({ page, request }) => 
     expect(uploadJson.code).toBe(200)
     expect(uploadJson.data.url).toContain('/uploads/')
 
+    await expect(page.locator('.thumb:not(.add)')).toHaveCount(1)
+    await page.locator('.thumb:not(.add) .del').click()
+    await expect(page.locator('.thumb:not(.add)')).toHaveCount(0)
+
+    const reuploadResponsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/file/upload')
+      && response.request().method() === 'POST'
+    )
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'smoke.png',
+      mimeType: 'image/png',
+      buffer: PNG_1X1
+    })
+    const reuploadJson = await (await reuploadResponsePromise).json()
+    expect(reuploadJson.code).toBe(200)
+
     const createResponsePromise = page.waitForResponse(response => {
       const url = new URL(response.url())
       return url.pathname === '/api/inspire'

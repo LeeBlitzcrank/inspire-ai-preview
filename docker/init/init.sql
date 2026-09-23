@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   `tag` VARCHAR(30) NOT NULL COMMENT '分类',
   `category_id` BIGINT DEFAULT NULL COMMENT '一级分类ID',
   `sub_category_id` BIGINT DEFAULT NULL COMMENT '二级分类ID',
+  `series_id` BIGINT DEFAULT NULL COMMENT '系列ID',
+  `series_order` INT DEFAULT 0 COMMENT '系列内顺序',
   `user_id` BIGINT NOT NULL COMMENT '发布人ID',
   `status` TINYINT DEFAULT 0 COMMENT '0草稿 1已发布',
   `view_count` BIGINT DEFAULT 0,
@@ -27,9 +29,24 @@ CREATE TABLE IF NOT EXISTS `inspire_main` (
   KEY `idx_status_time` (`status`,`create_time`),
   KEY `idx_category_status_time` (`category_id`,`sub_category_id`,`status`,`deleted`,`create_time`),
   KEY `idx_user_status_time` (`user_id`,`status`,`deleted`,`create_time`),
+  KEY `idx_series_order` (`series_id`,`series_order`),
   KEY `idx_status_deleted_time` (`status`,`deleted`,`create_time`),
   KEY `idx_status_deleted_heat` (`status`,`deleted`,`heat`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感主表';
+
+CREATE TABLE IF NOT EXISTS `inspire_series` (
+  `id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `name` VARCHAR(50) NOT NULL,
+  `description` VARCHAR(300) DEFAULT '',
+  `cover` VARCHAR(255) DEFAULT '',
+  `status` TINYINT DEFAULT 1,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_series_user` (`user_id`,`deleted`,`update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='灵感系列/合集';
 CREATE TABLE IF NOT EXISTS `inspire_content` (
   `inspire_id` BIGINT NOT NULL,
   `content` TEXT NOT NULL COMMENT '灵感正文',

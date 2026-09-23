@@ -13,18 +13,23 @@
 </template>
 
 <script setup>
-import { errorDialogState as state, closeErrorDialog as close } from '@/utils/errorDialog.js'
+import {closeErrorDialog as close, errorDialogState as state} from '@/utils/errorDialog.js'
 </script>
 
 <style scoped>
 .app-error-mask {
   position: fixed;
-  inset: 0;
+  left: var(--device-ui-left, 0px);
+  top: var(--device-ui-top, 0px);
+  width: var(--device-ui-width, 100vw);
+  height: var(--device-ui-height, 100vh);
+  border-radius: var(--device-ui-radius, 0);
   z-index: 12000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
+  overflow: hidden;
   background: rgba(17, 24, 39, .42);
   backdrop-filter: blur(3px);
 }

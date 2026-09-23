@@ -40,7 +40,7 @@
       <div v-if="!loading && !tree.length" class="empty">还没有分类，先新增一个吧</div>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑分类' : '新增分类'" width="360px">
+    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑分类' : '新增分类'" width="360px" append-to-body>
       <div v-if="parentName" class="parent-tip">所属一级分类：{{ parentName }}</div>
       <el-input v-model="form.name" placeholder="分类名称" />
       <el-input v-if="!form.parentId" v-model="form.icon" placeholder="图标（emoji，可留空）" style="margin-top:10px" />
@@ -58,11 +58,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { adminCategoryList, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from '@/api/inspire.js'
-import { clearGetCache } from '@/utils/request.js'
+import {onMounted, ref} from 'vue'
+import {ElMessageBox} from 'element-plus'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {adminCategoryList, adminCreateCategory, adminDeleteCategory, adminUpdateCategory} from '@/api/inspire.js'
+import {clearGetCache} from '@/utils/request.js'
 
 const tree = ref([])
 const loading = ref(false)

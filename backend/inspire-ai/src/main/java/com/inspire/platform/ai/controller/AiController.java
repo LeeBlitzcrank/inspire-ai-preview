@@ -22,6 +22,20 @@ public class AiController {
         return Result.success(aiService.explore(request));
     }
 
+    @Operation(summary = "AI改写选中正文")
+    @PostMapping("/rewrite")
+    public Result<AiRewriteResponse> rewrite(@Valid @RequestBody AiRewriteRequest request,
+                                             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(aiService.rewrite(request));
+    }
+
+    @Operation(summary = "AI生成标题候选")
+    @PostMapping("/titles")
+    public Result<AiTitleResponse> titles(@Valid @RequestBody AiTitleRequest request,
+                                          @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(aiService.titles(request));
+    }
+
     @Operation(summary = "AI生成灵感（旧版兼容）")
     @PostMapping("/generate")
     public Result<AiGenerateResponse> generate(

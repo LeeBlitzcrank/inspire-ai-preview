@@ -60,6 +60,24 @@ function updateClock() {
   currentTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
+function updateOverlayBounds() {
+  const root = document.documentElement
+  if (!props.enabled || !viewportRef.value) {
+    root.style.setProperty('--device-ui-left', '0px')
+    root.style.setProperty('--device-ui-top', '0px')
+    root.style.setProperty('--device-ui-width', `${window.innerWidth}px`)
+    root.style.setProperty('--device-ui-height', `${window.visualViewport?.height || window.innerHeight}px`)
+    root.style.setProperty('--device-ui-radius', '0px')
+    return
+  }
+  const rect = viewportRef.value.getBoundingClientRect()
+  root.style.setProperty('--device-ui-left', `${rect.left}px`)
+  root.style.setProperty('--device-ui-top', `${rect.top}px`)
+  root.style.setProperty('--device-ui-width', `${rect.width}px`)
+  root.style.setProperty('--device-ui-height', `${rect.height}px`)
+  root.style.setProperty('--device-ui-radius', '0 0 35px 35px')
+}
+
 function fitLayout() {
   const stage = stageRef.value
   const frame = frameRef.value
@@ -71,6 +89,7 @@ function fitLayout() {
     stage.style.width = ''
     stage.style.height = ''
     frame.style.transform = ''
+    updateOverlayBounds()
     return
   }
 
@@ -91,6 +110,7 @@ function fitLayout() {
   const left = (width - LOGICAL_WIDTH * scale) / 2
   const top = (height - LOGICAL_HEIGHT * scale) / 2
   canvas.style.transform = `translate(${left}px, ${top}px) scale(${scale})`
+  updateOverlayBounds()
 }
 
 onMounted(async () => {

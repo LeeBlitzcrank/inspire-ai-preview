@@ -6,4 +6,6 @@ public interface AiService {
     void select(AiSelectRequest request, Long userId);
     void publish(AiPublishRequest request, Long userId);
     AiExploreResponse explore(AiExploreRequest request);
+    AiRewriteResponse rewrite(AiRewriteRequest request);
+    AiTitleResponse titles(AiTitleRequest request);
 }

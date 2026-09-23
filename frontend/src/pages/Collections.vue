@@ -96,7 +96,7 @@
     </AppState>
     <!-- 新建收藏夹：与预览一致（带字段标题 + 图标输入 + 胶囊按钮） -->
     <el-dialog v-model="showCreate" title="新建收藏夹" width="320px" id="c-dlg-create"
-               class="mint-dialog" :show-close="false" append-to-body>
+               append-to-body>
       <div class="fld">
         <label>名称</label>
         <input class="tin" id="c-new-name" v-model="newFolderName" placeholder="给收藏夹起个名字" maxlength="20">
@@ -111,7 +111,7 @@
       </div>
     </el-dialog>
     <el-dialog v-model="showRename" title="重命名收藏夹" width="320px" id="c-dlg-rename"
-               class="mint-dialog" :show-close="false" append-to-body>
+               append-to-body>
       <div class="fld">
         <label>名称</label>
         <input class="tin" id="c-rename-name" v-model="renameName" placeholder="新名称" maxlength="20">
@@ -121,9 +121,9 @@
         <button class="dlg-main" @click="handleRename">确定</button>
       </div>
     </el-dialog>
-      <!-- 移动到文件夹弹窗 -->
+    <!-- 移动到文件夹弹窗 -->
     <el-dialog v-model="showMoveDialog" title="移动到文件夹" width="320px"
-               class="mint-dialog" :show-close="false" append-to-body>
+               append-to-body>
       <div class="opt-list" id="c-move-list">
         <div v-for="f in namedFolders" :key="f.id" class="folder-option"
              id="c-move-option"
@@ -142,13 +142,21 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import InspireCard from '@/components/InspireCard.vue'
-import { thumbOf } from '@/utils/media.js'
-import { getCollectFolders, createCollectFolder, deleteCollectFolder, renameCollectFolder, getCollectListByFolder, collectInspire, moveCollectToFolder } from '@/api/inspire.js'
+import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessageBox} from 'element-plus'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {thumbOf} from '@/utils/media.js'
+import {
+  collectInspire,
+  createCollectFolder,
+  deleteCollectFolder,
+  getCollectFolders,
+  getCollectListByFolder,
+  moveCollectToFolder,
+  renameCollectFolder
+} from '@/api/inspire.js'
+
 const router = useRouter()
 const folders = ref([])
 const activeFolder = ref(null)
@@ -407,35 +415,4 @@ const confirmMove = async () => {
 .folder-option.selected { border:2px solid #0f766e; background:#f2faf8; }
 .folder-option .oi { font-size:17px; }
 .folder-option .on { color:#1d1d1f; }
-</style>
-
-<!--
-  弹窗外壳样式：el-dialog 默认 append-to-body（teleport 到 body），
-  scoped 样式选不到它，所以这一段不加 scoped，用 .mint-dialog 限定作用范围。
-  目的是让弹窗和预览一致：16px 圆角、无右上角关闭按钮、标题 15px、内边距 16px。
--->
-<style>
-.mint-dialog {
-  border-radius: 16px !important;
-  padding: 16px !important;
-  overflow: hidden;
-}
-.mint-dialog .el-dialog__header {
-  margin: 0 0 12px;
-  padding: 0;
-  border: none;
-}
-.mint-dialog .el-dialog__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1d1d1f;
-  line-height: 1.4;
-}
-.mint-dialog .el-dialog__body {
-  padding: 0;
-  overflow: visible;
-}
-.mint-dialog .el-dialog__headerbtn {
-  display: none;
-}
 </style>

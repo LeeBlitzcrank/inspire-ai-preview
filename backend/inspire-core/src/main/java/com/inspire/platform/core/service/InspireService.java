@@ -13,6 +13,18 @@ public interface InspireService {
 
     /** 公开详情 */
     InspireVO getDetail(Long id, Long loginUserId);
+    SeriesVO getSeries(Long id, Long loginUserId);
+
+    /** 当前用户的系列管理 */
+    List<SeriesVO> listMySeries(Long userId);
+    SeriesVO getMySeries(Long userId, Long seriesId);
+    SeriesVO createSeries(Long userId, SeriesSaveRequest request);
+    SeriesVO updateSeries(Long userId, Long seriesId, SeriesSaveRequest request);
+    void deleteSeries(Long userId, Long seriesId);
+    SeriesVO addSeriesArticle(Long userId, Long seriesId, Long inspireId);
+    SeriesVO removeSeriesArticle(Long userId, Long seriesId, Long inspireId);
+    SeriesVO reorderSeriesArticles(Long userId, Long seriesId, List<Long> articleIds);
+    PageResult<InspireVO> listSeriesCandidates(Long userId, Long seriesId, String keyword, int page, int size);
 
     /** 我的发布（分页） */
     PageResult<InspireVO> listMyPublished(Long userId, int page, int size, String cursor);

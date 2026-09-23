@@ -337,6 +337,4 @@ watch(
 .collect-actions .ghost { background: var(--ui-primary-soft); color: var(--ui-text-2); }
 .collect-actions .primary { background: var(--ui-primary); color: #fff; }
 .collect-actions button:disabled { opacity: .5; cursor: default; }
-
-:deep(.el-dialog__body) { padding: 21px; }
 </style>

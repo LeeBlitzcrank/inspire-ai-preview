@@ -1,12 +1,12 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import {createRouter, createWebHashHistory} from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import { pinia } from '@/stores'
-import { useAuthStore } from '@/stores/auth'
+import {pinia} from '@/stores'
+import {useAuthStore} from '@/stores/auth'
+import Index from '@/pages/index.vue'
 
 // 路由级进度条：切换页面时给一个即时反馈（配合路由懒加载）
 NProgress.configure({ showSpinner: false, trickleSpeed: 120, minimum: 0.12 })
-import Index from '@/pages/index.vue'
 const Search = () => import('@/pages/Search.vue')
 const InspireDetail = () => import('@/pages/InspireDetail.vue')
 const Personal = () => import('@/pages/Personal.vue')
@@ -35,6 +35,8 @@ const routes = [
   { path: '/', name: 'Index', component: Index },
   { path: '/search', name: 'Search', component: Search },
   { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail },
+  { path: '/series/manage', name: 'SeriesManage', component: () => import('@/pages/SeriesManage.vue'), meta: { needLogin: true } },
+  { path: '/series/:id', name: 'Series', component: () => import('@/pages/Series.vue') },
   { path: '/personal', name: 'Personal', component: Personal, meta: { needLogin: true } },
   { path: '/following', name: 'Following', component: Following, meta: { needLogin: true } },
   { path: '/notifications', name: 'Notifications', component: Notifications, meta: { needLogin: true } },

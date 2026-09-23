@@ -4,14 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): 性能压测问题与优化">
+    <list default="true" id="925e87b8-bb11-479b-9daa-0044c9700703" name="更改" comment="feat(create): Playwright 冒烟测试与 Web Vitals">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/controller/AiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/controller/AiController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/AiService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/AiService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/impl/AiServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-ai/src/main/java/com/inspire/platform/ai/service/impl/AiServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/controller/InspireController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/dto/InspireVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/dto/InspireVO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/entity/InspireMain.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/entity/InspireMain.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/seed/DemoDataSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/InspireService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/InspireService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/InspireServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/inspire-core/src/main/java/com/inspire/platform/core/service/impl/InspireServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/init/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docker/init/init.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/dist/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/dist/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/inspire.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/inspire.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Create.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Create.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/InspireDetail.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/router/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tests/e2e/smoke.spec.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tests/e2e/smoke.spec.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectWord/temp" beforeDir="false" afterPath="$PROJECT_DIR$/projectWord/temp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -183,15 +193,7 @@
       <workItem from="1789621127157" duration="13622000" />
       <workItem from="1789635710406" duration="20832000" />
       <workItem from="1789909706268" duration="17014000" />
-      <workItem from="1789976086790" duration="66363000" />
-    </task>
-    <task id="LOCAL-00031" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
-      <option name="closed" value="true" />
-      <created>1783399762948</created>
-      <option name="number" value="00031" />
-      <option name="presentableId" value="LOCAL-00031" />
-      <option name="project" value="LOCAL" />
-      <updated>1783399762948</updated>
+      <workItem from="1789976086790" duration="68449000" />
     </task>
     <task id="LOCAL-00032" summary="init GitHub Pages 部署 &amp; 生产环境穿透配置">
       <option name="closed" value="true" />
@@ -577,7 +579,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790171401709</updated>
     </task>
-    <option name="localTasksCounter" value="80" />
+    <task id="LOCAL-00080" summary="feat(create): Playwright 冒烟测试与 Web Vitals">
+      <option name="closed" value="true" />
+      <created>1790171992018</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1790171992018</updated>
+    </task>
+    <option name="localTasksCounter" value="81" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -612,7 +622,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_NEW_TODO" value="false" />
-    <MESSAGE value="init 关注系统&amp;关注流服务" />
     <MESSAGE value="init 消息通知系统" />
     <MESSAGE value="init 扩展分享裂变&amp;分享后续数据分析功能" />
     <MESSAGE value="init 多图上传、版本历史、编辑/草稿模式" />
@@ -637,7 +646,8 @@
     <MESSAGE value="feat(create): 私信、搜索、灵感详情页改版" />
     <MESSAGE value="feat(create): 标题限制、AI 探索、图片与视频上传、统一收藏、海报分享、评论区回复" />
     <MESSAGE value="feat(create): 性能压测问题与优化" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(create): 性能压测问题与优化" />
+    <MESSAGE value="feat(create): Playwright 冒烟测试与 Web Vitals" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(create): Playwright 冒烟测试与 Web Vitals" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="NON_MODAL_COMMIT_POSTPONE_SLOW_CHECKS" value="false" />
   </component>

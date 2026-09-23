@@ -22,7 +22,7 @@
     <div class="pagination"><el-pagination background layout="prev,pager,next" :total="total" :page-size="size" @current-change="page=$event;load()" /></div>
 
     <!-- 用户详情对话框 -->
-    <el-dialog v-model="detailVisible" title="用户详情" width="90%" max-width="400px">
+    <el-dialog v-model="detailVisible" title="用户详情" width="90%" max-width="400px" append-to-body>
       <div v-if="detailUser" class="detail-wrap">
         <div class="detail-avatar">{{ detailUser.avatar || (detailUser.nickname ? detailUser.nickname[0] : '\U0001f464') }}</div>
         <div class="detail-row"><span class="dl">用户ID</span><span>{{ detailUser.id }}</span></div>
@@ -38,8 +38,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { adminSearchUser, adminUserDetail } from '@/api/inspire.js'
+import {onMounted, ref} from 'vue'
+import {adminSearchUser, adminUserDetail} from '@/api/inspire.js'
+
 const list = ref([]); const total = ref(0); const loading = ref(false)
 const keyword = ref(''); const page = ref(1); const size = ref(20)
 const load = async () => {

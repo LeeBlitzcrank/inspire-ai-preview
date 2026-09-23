@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>系列合集预览</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef3f2;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#1c2926}
+    .shell{width:390px;height:844px;margin:22px auto;position:relative;background:#fff;border:12px solid #111;border-radius:45px;overflow:hidden;box-shadow:0 24px 80px rgba(20,45,40,.22)}
+    .screen{height:100%;overflow:auto}.top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,.94);border-bottom:1px solid #edf1f0}
+    .top b{font-size:16px}.series-pill{margin-left:auto;background:#e9f6f2;color:#0f766e;border-radius:999px;padding:5px 9px;font-size:11px}
+    .cover{margin:15px;border-radius:20px;overflow:hidden;height:260px;background:#d9e9e5}.cover img{width:100%;height:100%;object-fit:cover}
+    .content{padding:0 18px 120px}.kicker{color:#0f766e;font-size:12px;font-weight:700}.title{font-size:25px;line-height:1.35;margin:8px 0 12px}.meta{color:#8a9693;font-size:12px}
+    .body{font-size:14px;line-height:1.85;color:#40504c;margin-top:16px}.body p{margin:0 0 12px}
+    .progress{display:flex;gap:5px;margin:16px 0}.progress span{flex:1;height:4px;border-radius:9px;background:#dce8e5}.progress span.on{background:#0f766e}
+    .nav{position:absolute;bottom:0;left:0;right:0;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px 18px;background:rgba(255,255,255,.96);border-top:1px solid #edf1f0}
+    .nav button{height:42px;border-radius:12px;border:1px solid #b8ddd6;background:#f4fbf9;color:#0f766e;font-weight:700;cursor:pointer}.nav button:disabled{opacity:.35;cursor:not-allowed}
+    .series-list{margin:22px 0 0;padding:15px;border-radius:16px;background:#f7fbfa;border:1px solid #e1efec}.series-list h3{margin:0 0 10px;font-size:14px}.series-list button{width:100%;display:flex;gap:10px;align-items:center;border:0;background:transparent;text-align:left;padding:8px 0;color:#52635f;cursor:pointer}.series-list button.active{color:#0f766e;font-weight:700}.series-list i{width:24px;height:24px;border-radius:8px;background:#e2f2ee;display:grid;place-items:center;font-style:normal;font-size:11px}
+    .comments{margin-top:24px;padding-top:18px;border-top:1px solid #e5efed}.comment-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.comment-title b{font-size:15px}.comment-title span{font-size:10px;color:#899793}
+    .comment{padding:12px 0;border-bottom:1px solid #edf2f1}.comment-head{display:flex;align-items:center;gap:8px}.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#e7f4f1;font-size:14px}.comment-head b{font-size:13px}.comment-head time{margin-left:auto;color:#9aa7a3;font-size:10px}.comment p{margin:8px 0;color:#40504c;font-size:13.5px;line-height:1.7}.comment-tools{display:flex;gap:14px;color:#899793;font-size:11px}.reply{margin:10px 0 0 38px;padding:9px 10px;border-radius:10px;background:#f5faf8;font-size:12.5px;color:#58706b}.reply b{color:#0f766e}.comment-input{display:flex;gap:8px;margin-top:14px}.comment-input input{flex:1;min-width:0;border:1px solid #d8e7e4;border-radius:999px;padding:10px 13px;outline:none;font:inherit;font-size:12.5px}.comment-input button{border:0;border-radius:999px;background:#0f766e;color:#fff;padding:0 15px;font-weight:700}.comment-more{width:100%;margin-top:12px;border:0;background:transparent;color:#71908a;font-size:11px}
+    .toast{position:absolute;left:50%;bottom:82px;transform:translateX(-50%);background:rgba(21,44,40,.88);color:#fff;padding:8px 13px;border-radius:9px;font-size:12px;opacity:0;transition:.2s}.toast.show{opacity:1}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="screen">
+      <header class="top"><span>‹</span><b>灵感手账</b><span class="series-pill" id="pill">露营笔记 · 1/5</span></header>
+      <div class="cover"><img id="cover" src="https://img.20sherry.com/upload/demo/10_w800.webp" alt=""></div>
+      <article class="content">
+        <div class="kicker">系列 · 我的露营笔记</div>
+        <h1 class="title" id="title">第一次露营，我把装备减到最少</h1>
+        <div class="meta" id="meta">第 1 篇 · 8 分钟阅读</div>
+        <div class="progress" id="progress"></div>
+        <div class="body" id="body"></div>
+        <section class="series-list">
+          <h3>本系列共 5 篇</h3>
+          <div id="list"></div>
+        </section>
+        <section class="comments">
+          <div class="comment-title"><b>评论 3</b><span>默认按热度</span></div>
+          <div class="comment">
+            <div class="comment-head"><span class="avatar">🐰</span><b>温暖小兔</b><time>刚刚</time></div>
+            <p>这个系列写得很完整，按顺序看下来像跟着你露营了一次。</p>
+            <div class="comment-tools"><span>♡ 12</span><span>回复</span></div>
+            <div class="reply"><b>@文艺胶片</b> 谢谢，下一篇会继续补装备取舍。</div>
+          </div>
+          <div class="comment">
+            <div class="comment-head"><span class="avatar">📷</span><b>文艺胶片</b><time>12分钟前</time></div>
+            <p>第二篇选营地的部分特别实用，已经收藏。</p>
+            <div class="comment-tools"><span>♡ 8</span><span>回复</span></div>
+          </div>
+          <div class="comment">
+            <div class="comment-head"><span class="avatar">🧁</span><b>清爽奶茶</b><time>1小时前</time></div>
+            <p>想继续看一人食那篇，上下篇切换很方便。</p>
+            <div class="comment-tools"><span>♡ 5</span><span>回复</span></div>
+          </div>
+          <div class="comment-input"><input placeholder="说点什么，回车发送"><button>发送</button></div>
+          <button class="comment-more">点击加载下一批 · 当前显示 3/12</button>
+        </section>
+      </article>
+      <nav class="nav"><button id="prev" onclick="go(-1)">← 上一篇</button><button id="next" onclick="go(1)">下一篇 →</button></nav>
+      <div class="toast" id="toast"></div>
+    </div>
+  </main>
+  <script>
+    const posts=[
+      ['第一次露营，我把装备减到最少','第 1 篇 · 8 分钟阅读','周末第一次真正住进山里，我才发现很多装备其实只是心理安慰。最后真正高频使用的，只有天幕、桌椅、照明和一口小锅。','https://img.20sherry.com/upload/demo/10_w800.webp'],
+      ['营地怎么选，决定了一晚的睡眠','第 2 篇 · 6 分钟阅读','先看排水，再看风向，最后才是风景。平坦、干燥、离卫生间不远的位置，比网红机位重要得多。','https://img.20sherry.com/upload/demo/14_w800.webp'],
+      ['一人食露营，也能吃得很好','第 3 篇 · 5 分钟阅读','提前在家处理食材，到场只负责加热和摆盘。少洗锅、少带调料，是提升露营幸福感的关键。','https://img.20sherry.com/upload/demo/18_w800.webp'],
+      ['收营不是结束，是下一次的开始','第 4 篇 · 4 分钟阅读','当天擦干、分类、补耗材，下一次出发会轻松很多。我还会记录这次没用上的东西，下次直接不带。','https://img.20sherry.com/upload/demo/20_w800.webp'],
+      ['我的露营清单，终于稳定了','第 5 篇 · 7 分钟阅读','经过五次调整，清单从四十多项减到十八项。真正稳定的不是装备数量，而是自己知道什么才需要。','https://img.20sherry.com/upload/demo/24_w800.webp']
+    ];let current=0;
+    function render(){const p=posts[current];document.getElementById('cover').src=p[3];document.getElementById('title').textContent=p[0];document.getElementById('meta').textContent=p[1];document.getElementById('pill').textContent=`露营笔记 · ${current+1}/5`;document.getElementById('body').innerHTML=`<p>${p[2]}</p><p>这一篇主要记录真实使用后的取舍，不追求装备堆叠，而是让每一次出发都更轻、更从容。</p>`;document.getElementById('progress').innerHTML=posts.map((_,i)=>`<span class="${i<=current?'on':''}"></span>`).join('');document.getElementById('list').innerHTML=posts.map((x,i)=>`<button class="${i===current?'active':''}" onclick="jump(${i})"><i>${i+1}</i><span>${x[0]}</span></button>`).join('');document.getElementById('prev').disabled=current===0;document.getElementById('next').disabled=current===posts.length-1}
+    function go(n){if((current===0&&n<0)||(current===posts.length-1&&n>0))return;current+=n;render();toast(n>0?'已进入下一篇':'已返回上一篇')}
+    function jump(i){current=i;render();toast('已切换文章')}
+    function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),900)}
+    render()
+  </script>
+</body>
+</html>

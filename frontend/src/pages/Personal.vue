@@ -38,6 +38,14 @@
       </div>
     </div>
 
+    <button class="series-manage-entry" type="button" @click="$router.push('/series/manage')">
+      <span class="series-manage-icon">📚</span>
+      <span class="series-manage-copy">
+        <b>我的系列</b>
+      </span>
+      <span class="series-manage-arrow">›</span>
+    </button>
+
     <!-- 选项卡 -->
     <div class="tabs" id="p-tabs">
       <button :class="{ on: activeTab === 'published' }" @click="switchTab('published')">
@@ -211,7 +219,7 @@
     <button class="logout" id="p-logout" @click="handleLogout">退出登录</button>
 
     <!-- 编辑资料对话框 -->
-    <el-dialog v-model="showProfileDialog" title="编辑资料" width="90%">
+    <el-dialog v-model="showProfileDialog" title="编辑资料" width="90%" append-to-body>
       <div class="dialog-form">
         <div class="form-row">
           <label>头像</label>
@@ -243,7 +251,7 @@
     </el-dialog>
 
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="showPwdDialog" title="修改密码" width="90%">
+    <el-dialog v-model="showPwdDialog" title="修改密码" width="90%" append-to-body>
       <div class="dialog-form">
         <div class="form-row">
           <label>旧密码</label>
@@ -913,6 +921,18 @@ const handleLogout = () => {
 .stat .n { font-size:17px; font-weight:700; color:var(--c-primary); }
 .stat .l { margin-top:3px; font-size:11px; color:#6b8b85; }
 
+/* ---------- 我的系列入口 ---------- */
+.series-manage-entry { width:100%; display:flex; align-items:center; gap:11px; margin:0 0 12px;
+  padding:11px 13px; border:1px solid var(--c-primary-line); border-radius:15px; background:#fff;
+  color:#28504a; font-family:inherit; text-align:left; cursor:pointer; transition:.15s; }
+.series-manage-entry:hover { border-color:var(--c-primary-hover); background:#fbfefd; }
+.series-manage-entry:active { transform:scale(.99); }
+.series-manage-icon { width:36px; height:36px; flex:0 0 auto; display:grid; place-items:center;
+  border-radius:11px; background:#eef7f5; font-size:18px; }
+.series-manage-copy { min-width:0; }
+.series-manage-copy b { display:block; font-size:13.5px; color:#28504a; }
+.series-manage-arrow { margin-left:auto; color:#9cb0ac; font-size:22px; }
+
 /* ---------- 快捷操作 ---------- */
 .quick { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
 .quick .q { display:flex; align-items:center; gap:10px; padding:12px; background:#fff;
@@ -1024,30 +1044,6 @@ const handleLogout = () => {
 .logout:hover { background:#fff8f5; }
 
 /* ---------- 弹窗表单 ---------- */
-/* 弹窗外观对齐设计稿：薄荷绿主按钮、圆角、自定义关闭按钮 */
-:deep(.el-dialog) { border-radius:18px; overflow:hidden; max-width:380px; }
-:deep(.el-dialog__header) { padding:16px 18px 10px; margin:0; }
-:deep(.el-dialog__title) { font-size:15.5px; font-weight:700; color:var(--c-text); }
-:deep(.el-dialog__headerbtn) { top:14px; right:12px; width:28px; height:28px;
-  border-radius:50%; background:#f3f6f5; }
-:deep(.el-dialog__headerbtn:hover) { background:#e9f3f1; }
-:deep(.el-dialog__headerbtn .el-dialog__close) { color:#6b8b85; font-size:16px; }
-:deep(.el-dialog__body) { padding:0 18px 6px; max-height:60vh; overflow:auto; }
-:deep(.el-dialog__footer) { display:flex; gap:10px; padding:8px 18px 18px; }
-:deep(.el-dialog__footer .el-button) { flex:1; height:40px; margin:0; border-radius:11px; font-size:14px; }
-:deep(.el-dialog__footer .el-button--primary) { background:var(--c-primary); border-color:var(--c-primary);
-  color:#fff; font-weight:600; }
-:deep(.el-dialog__footer .el-button--primary:hover),
-:deep(.el-dialog__footer .el-button--primary:focus) { background:#0d6a62; border-color:#0d6a62; }
-:deep(.el-dialog__footer .el-button:not(.el-button--primary)) { background:#f4f7f6;
-  border-color:var(--c-primary-line); color:#5f807a; }
-
-/* 输入框也对齐设计稿：浅底、10px 圆角、聚焦薄荷描边 */
-:deep(.el-dialog .el-input__wrapper),
-:deep(.el-dialog .el-textarea__inner) { border-radius:10px; background:#fbfefd;
-  box-shadow:0 0 0 1px var(--c-primary-line) inset; }
-:deep(.el-dialog .el-input__wrapper.is-focus) { box-shadow:0 0 0 1px var(--c-primary-hover) inset; }
-
 .dialog-form { padding:4px 0; }
 .form-row { margin-bottom:16px; }
 .form-row label { display:block; margin-bottom:6px; font-size:13px; color:var(--c-text-2); }

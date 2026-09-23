@@ -58,6 +58,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final LikeMapper likeMapper;
     private final InspireCommentMapper commentMapper;
     private final CollectFolderMapper folderMapper;
+    private final InspireSeriesMapper seriesMapper;
     private final MessageConversationMapper conversationMapper;
     private final MessageMapper messageMapper;
     private final MinioClient minioClient;
@@ -81,6 +82,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final long MEMBER_ID = ID_BASE + 910_000L;
     private static final long MSG_ID = ID_BASE + 950_000L;
     private static final long NOTIFY_ID = ID_BASE + 990_000L;
+    private static final long SERIES_ID = ID_BASE + 1_100_000L;
 
     /** 评论填充：单条灵感目标评论量 200~300（用于详情页分页演示） */
     private static final int RICH_COMMENT_MIN = 200;
@@ -103,7 +105,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private String demoAdminPassword;
 
     private long inspireSeq = 0, folderSeq = 0, collectSeq = 0, likeSeq = 0;
-    private long commentSeq = 0, convSeq = 0, msgSeq = 0, memberSeq = 0, notifySeq = 0, followSeq = 0;
+    private long commentSeq = 0, convSeq = 0, msgSeq = 0, memberSeq = 0, notifySeq = 0, followSeq = 0, seriesSeq = 0;
 
     /** 用户名 / 昵称 / 头像 / 城市 / 灵感条数 */
     private static final String[][] NEW_USERS = {
@@ -308,6 +310,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         // 先补详情页评论，保证后面任何一步异常都不会影响详情页演示数据
         ensureRichComments(allUsers);
+        ensureSeries(allUsers);
         ensureFollows(allUsers);
         ensureConversations(allUsers);
         generateNotifications();
@@ -811,6 +814,92 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     // ==================== 关注 / 私信 / 通知 ====================
+
+    /**
+     * 为种子用户生成系列/合集。幂等：用户已有系列时跳过。
+     * 每 5 篇组成一个系列，并把关联字段回写到 inspire_main。
+     */
+    private void ensureSeries(List<Long> users) {
+        Long maxSeriesId = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(id), ?) FROM inspire_series WHERE id >= ?",
+                Long.class, SERIES_ID - 1, SERIES_ID);
+        seriesSeq = maxSeriesId == null ? 0 : maxSeriesSeq(maxSeriesId);
+        for (Long userId : users) {
+            Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM inspire_series WHERE user_id = ? AND id >= ? AND deleted = 0",
+                    Integer.class, userId, SERIES_ID);
+            if (exists != null && exists > 0) continue;
+
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "SELECT id, title, tag, img FROM inspire_main "
+                            + "WHERE user_id = ? AND status = 1 AND deleted = 0 "
+                            + "AND title NOT LIKE '冒烟测试%' "
+                            + "ORDER BY create_time DESC LIMIT 15",
+                    userId);
+            int group = 1;
+            for (int start = 0; start + 4 < rows.size(); start += 5) {
+                List<Map<String, Object>> groupRows = rows.subList(start, start + 5);
+                String tag = String.valueOf(groupRows.get(0).getOrDefault("tag", "生活"));
+                long seriesId = SERIES_ID + (seriesSeq++);
+                InspireSeries series = new InspireSeries();
+                series.setId(seriesId);
+                series.setUserId(userId);
+                series.setName(tag + "系列 " + group);
+                series.setDescription("围绕「" + tag + "」的连续记录，共 " + groupRows.size() + " 篇。");
+                series.setCover(String.valueOf(groupRows.get(0).getOrDefault("img", "")));
+                series.setStatus(1);
+                series.setCreateTime(now().minusDays(40L - group));
+                series.setUpdateTime(now());
+                series.setDeleted(0);
+                seriesMapper.insert(series);
+                for (int i = 0; i < groupRows.size(); i++) {
+                    long inspireId = ((Number) groupRows.get(i).get("id")).longValue();
+                    jdbcTemplate.update(
+                            "UPDATE inspire_main SET series_id = ?, series_order = ? WHERE id = ?",
+                            seriesId, i + 1, inspireId);
+                }
+                group++;
+            }
+
+            // 确保当前重点详情页使用的灵感一定属于一个系列
+            for (long featuredId : FEATURED_COMMENT_INSPIRES) {
+                Integer current = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM inspire_main WHERE id = ? AND user_id = ? AND series_id IS NULL",
+                        Integer.class, featuredId, userId);
+                if (current == null || current == 0) continue;
+                List<Map<String, Object>> siblings = jdbcTemplate.queryForList(
+                        "SELECT id, title, tag, img FROM inspire_main "
+                                + "WHERE user_id = ? AND status = 1 AND deleted = 0 "
+                                + "AND title NOT LIKE '冒烟测试%' "
+                                + "ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, heat DESC LIMIT 5",
+                        userId, featuredId);
+                if (siblings.size() < 2) continue;
+                String tag = String.valueOf(siblings.get(0).getOrDefault("tag", "灵感"));
+                long seriesId = SERIES_ID + (seriesSeq++);
+                InspireSeries series = new InspireSeries();
+                series.setId(seriesId);
+                series.setUserId(userId);
+                series.setName(tag + "深度手记");
+                series.setDescription("重点灵感系列，适合连续阅读。");
+                series.setCover(String.valueOf(siblings.get(0).getOrDefault("img", "")));
+                series.setStatus(1);
+                series.setCreateTime(now());
+                series.setUpdateTime(now());
+                series.setDeleted(0);
+                seriesMapper.insert(series);
+                for (int i = 0; i < siblings.size(); i++) {
+                    long inspireId = ((Number) siblings.get(i).get("id")).longValue();
+                    jdbcTemplate.update(
+                            "UPDATE inspire_main SET series_id = ?, series_order = ? WHERE id = ?",
+                            seriesId, i + 1, inspireId);
+                }
+            }
+        }
+    }
+
+    private long maxSeriesSeq(long maxSeriesId) {
+        return Math.max(0, maxSeriesId - SERIES_ID + 1);
+    }
 
     private void ensureFollows(List<Long> users) {
         for (Long a : users) {

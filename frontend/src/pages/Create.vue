@@ -3,7 +3,26 @@
     <div class="topbar">
       <span class="ico" @click="editId ? goBack() : $router.push('/')">{{ editId ? '←' : '🍎' }}</span>
       <span class="page-title">{{ editId ? '编辑灵感' : '录入新灵感' }}</span>
-      <span class="ico" @click="$router.push('/personal')">👤</span>
+      <div class="topbar-right">
+        <span v-if="!editId" class="ico draft-ico" title="本地草稿" @click="draftPanelOpen = !draftPanelOpen">📝</span>
+        <span class="ico" @click="$router.push('/personal')">👤</span>
+      </div>
+    </div>
+    <div v-if="draftPanelOpen && !editId" class="local-draft-panel">
+      <div class="local-draft-head">
+        <b>本地草稿</b>
+        <span>{{ localDrafts.length }} 份 · 自动保存</span>
+        <button type="button" @click="newLocalDraft">新建</button>
+      </div>
+      <div v-if="localDrafts.length" class="local-draft-list">
+        <div v-for="item in localDrafts" :key="item.id" class="local-draft-item"
+             :class="{ active: item.id === localDraftId }" @click="openLocalDraft(item)">
+          <b>{{ item.title || '未命名草稿' }}</b>
+          <small>{{ formatDraftTime(item.updatedAt) }}</small>
+          <button type="button" @click.stop="removeLocalDraft(item.id)">删除</button>
+        </div>
+      </div>
+      <div v-else class="local-draft-empty">还没有本地草稿</div>
     </div>
     <div class="form-body">
 
@@ -100,14 +119,19 @@
 
       <!-- ============ 灵感标题 ============ -->
       <div class="card">
-        <label class="label">灵感标题</label>
-        <input
-          v-model="form.title"
-          class="title-input"
-          maxlength="16"
-          placeholder="输入简短标题…"
-        />
+        <div class="title-head">
+          <label class="label">灵感标题</label>
+          <button type="button" class="ai-mini" :disabled="titleGenerating" @click="generateTitles">
+            {{ titleGenerating ? '生成中…' : 'AI 生成标题' }}
+          </button>
+        </div>
+        <input v-model="form.title" class="title-input" maxlength="16" placeholder="输入简短标题…" />
         <div class="title-count">{{ titleLength }}/16</div>
+        <div v-if="titleSuggestions.length" class="title-suggestions">
+          <button v-for="(item, idx) in titleSuggestions" :key="idx" type="button" @click="applyTitle(item)">
+            {{ item }}
+          </button>
+        </div>
       </div>
 
       <!-- ============ 所属分类 ============ -->
@@ -134,10 +158,21 @@
             <button type="button" class="tb-btn" title="清除格式" @mousedown.prevent @click="clearFormat">⌫</button>
             <span class="tb-divider"></span>
             <button type="button" class="tb-btn auto" title="按段落、编号、清单自动排版" @mousedown.prevent @click="autoFormatContent">自动排版</button>
+            <button type="button" class="tb-btn ai-rewrite-btn" title="改写选中的正文"
+                    @mousedown.prevent="captureEditorSelection" @click="rewriteOpen = !rewriteOpen">AI 改写</button>
+          </div>
+          <div v-if="rewriteOpen" class="rewrite-bar">
+            <span>改写选中内容：</span>
+            <button v-for="style in REWRITE_STYLES" :key="style" type="button"
+                    :disabled="rewriting" @click="rewriteSelection(style)">
+              {{ rewriting ? '处理中…' : style }}
+            </button>
           </div>
           <div ref="descRef" class="editable" contenteditable="true"
                data-placeholder="详细描述你的创意；可用上方按钮加粗、设标题，或点左下角语音输入…"
-               @input="onDescInput"></div>
+               @input="onDescInput"
+               @mouseup="captureEditorSelection"
+               @keyup="captureEditorSelection"></div>
           <div class="editor-foot">
             <button type="button" class="mic" :class="{ rec: voiceActive }" title="语音输入" @click="toggleVoice">
               <span class="ico">🎤</span>
@@ -152,21 +187,31 @@
       <div class="card">
         <div class="img-head">
           <span class="label" style="margin:0">图片（可多张）</span>
-          <button type="button" class="ai-img-btn" @click="toggleSuggest">🤖 AI 配图</button>
+          <div class="img-head-actions">
+            <button type="button" class="ai-img-btn" :disabled="!form.images.length" @click="gridPreviewOpen = true">九宫格预览</button>
+            <button type="button" class="ai-img-btn" @click="toggleSuggest">🤖 AI 配图</button>
+          </div>
         </div>
         <div class="image-grid">
           <div
             v-for="(img, idx) in form.images"
             :key="img + '#' + idx"
             class="thumb"
-            :class="{ picked: selectedImage === img }"
+            :class="{ picked: selectedImage === img, cover: coverImage === img }"
+            draggable="true"
             @click="selectedImage = img"
+            @dragstart="dragImageIndex = idx"
+            @dragover.prevent
+            @drop="dropImage(idx)"
           >
             <video v-if="isVideoUrl(img)" :src="img" muted playsinline preload="metadata"></video>
             <img v-else loading="lazy" decoding="async" :src="thumbOf(img, 400)" alt="" />
             <span v-if="isVideoUrl(img)" class="video-badge">▶</span>
+            <span v-if="coverImage === img" class="cover-badge">封面</span>
             <div v-if="imageProgress[img] !== undefined" class="thumb-mask">{{ imageProgress[img] }}%</div>
-            <span class="del" @click.stop="removeImage(idx)">✕</span>
+            <button v-if="!isVideoUrl(img)" type="button" class="cover-btn" @click.stop="setCover(img)">设为封面</button>
+            <button type="button" class="del" aria-label="删除图片"
+                    @pointerdown.stop @click.stop.prevent="removeImage(idx)">×</button>
           </div>
           <div class="thumb add" @click="triggerUpload">
             <input ref="fileInput" type="file" accept="image/*,video/*" multiple hidden @change="handleFile" />
@@ -177,6 +222,27 @@
               <el-progress type="circle" :percentage="uploadPercent" :width="44" />
               <span>上传中 {{ uploadingCount }} 张</span>
             </template>
+          </div>
+        </div>
+
+        <div v-if="gridPreviewOpen" class="overlay grid-preview-overlay" @click.self="gridPreviewOpen = false">
+          <div class="grid-preview-panel">
+            <div class="grid-preview-head">
+              <div>
+                <h3>九宫格预览</h3>
+                <p>按当前顺序展示，封面图优先显示。</p>
+              </div>
+              <button type="button" @click="gridPreviewOpen = false">×</button>
+            </div>
+            <div class="grid-preview">
+              <div v-for="idx in 9" :key="idx" class="grid-cell">
+                <template v-if="gridImages[idx - 1]">
+                  <video v-if="isVideoUrl(gridImages[idx - 1])" :src="gridImages[idx - 1]" muted playsinline></video>
+                  <img v-else :src="thumbOf(gridImages[idx - 1], 400)" alt="">
+                  <span v-if="coverImage === gridImages[idx - 1]" class="grid-cover">封面</span>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -274,7 +340,7 @@
     </div>
 
     <!-- 视频裁剪：按秒指定开始时间与保留时长 -->
-    <el-dialog v-model="trimDialogVisible" title="裁剪视频" width="320px">
+    <el-dialog v-model="trimDialogVisible" title="裁剪视频" width="320px" append-to-body>
       <div class="trim-tip">
         {{ trimTarget?.name || '视频' }}<template v-if="trimTarget?.duration"> · 总时长 {{ trimTarget.duration }} 秒</template>
       </div>
@@ -289,10 +355,12 @@
 </template>
 
 <script setup>
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {
+  aiRewrite,
+  aiTitles,
   compressVideo,
   createInspire,
   deleteAiHistory,
@@ -333,7 +401,86 @@ const loadTags = async () => {
   }
 }
 const loading = ref(false)
-const form = ref({ title: '', tag: '', content: '', images: [], publishCity: '' })
+const form = ref({ title: '', tag: '', content: '', images: [], img: '', publishCity: '' })
+const LOCAL_DRAFT_KEY = 'inspire:local-drafts:v1'
+const localDrafts = ref([])
+const localDraftId = ref('')
+const draftPanelOpen = ref(false)
+let draftSaveTimer = null
+let draftHydrating = true
+
+const loadLocalDrafts = () => {
+  try {
+    localDrafts.value = JSON.parse(localStorage.getItem(LOCAL_DRAFT_KEY) || '[]')
+  } catch {
+    localDrafts.value = []
+  }
+}
+
+const persistLocalDrafts = () => {
+  localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(localDrafts.value.slice(0, 30)))
+}
+
+const draftHasContent = () =>
+  Boolean(form.value.title.trim() || form.value.content.trim() || form.value.images.length || form.value.tag)
+
+const saveLocalDraftNow = () => {
+  if (editId.value || draftHydrating || !draftHasContent()) return
+  if (!localDraftId.value) localDraftId.value = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const item = {
+    id: localDraftId.value,
+    title: form.value.title,
+    tag: form.value.tag,
+    content: form.value.content,
+    images: form.value.images.filter(url => !String(url).startsWith('blob:')),
+    img: coverImage.value,
+    publishCity: form.value.publishCity,
+    updatedAt: Date.now()
+  }
+  localDrafts.value = [item, ...localDrafts.value.filter(d => d.id !== item.id)]
+  persistLocalDrafts()
+}
+
+const scheduleLocalDraft = () => {
+  clearTimeout(draftSaveTimer)
+  draftSaveTimer = setTimeout(saveLocalDraftNow, 800)
+}
+
+const openLocalDraft = (item) => {
+  draftHydrating = true
+  localDraftId.value = item.id
+  form.value = {
+    title: clampTitle(item.title || ''),
+    tag: item.tag || '',
+    content: item.content || '',
+    images: Array.isArray(item.images) ? item.images : [],
+    img: item.img || '',
+    publishCity: item.publishCity || ''
+  }
+  coverImage.value = item.img || form.value.images[0] || ''
+  setContent(form.value.content)
+  draftPanelOpen.value = false
+  draftHydrating = false
+}
+
+const newLocalDraft = () => {
+  form.value = { title: '', tag: '', content: '', images: [], img: '', publishCity: '' }
+  coverImage.value = ''
+  localDraftId.value = ''
+  setContent('')
+  draftPanelOpen.value = false
+}
+
+const removeLocalDraft = (id) => {
+  localDrafts.value = localDrafts.value.filter(item => item.id !== id)
+  if (localDraftId.value === id) localDraftId.value = ''
+  persistLocalDrafts()
+}
+
+const formatDraftTime = (ts) => {
+  const d = new Date(ts || 0)
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 // —— 富文本详情（contenteditable）：以 HTML 字符串存储，提交与回显均走 innerHTML ——
 const descRef = ref(null)
@@ -415,6 +562,66 @@ const historyOpen = ref(false)
 const currentHistoryId = ref('')
 const TITLE_MAX_LENGTH = 16
 const titleLength = computed(() => Array.from(form.value.title || '').length)
+const titleSuggestions = ref([])
+const titleGenerating = ref(false)
+const rewriteOpen = ref(false)
+const rewriting = ref(false)
+const savedEditorRange = ref(null)
+const REWRITE_STYLES = ['简洁', '温柔', '文艺', '干货', '活泼']
+
+const applyTitle = (title) => {
+  form.value.title = clampTitle(title)
+  titleSuggestions.value = []
+}
+
+const generateTitles = async () => {
+  const content = getEditorPlainText()
+  if (!content.trim()) return ElMessage.warning('请先写一些正文内容')
+  titleGenerating.value = true
+  try {
+    const res = await aiTitles({ content })
+    titleSuggestions.value = (res.data?.titles || []).map(clampTitle).filter(Boolean)
+    if (!titleSuggestions.value.length) ElMessage.warning('没有生成可用标题')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || 'AI 标题生成失败')
+  } finally {
+    titleGenerating.value = false
+  }
+}
+
+const captureEditorSelection = () => {
+  const selection = window.getSelection()
+  if (!selection || !selection.rangeCount || !descRef.value) return
+  const range = selection.getRangeAt(0)
+  if (descRef.value.contains(range.commonAncestorContainer)) {
+    savedEditorRange.value = range.cloneRange()
+  }
+}
+
+const rewriteSelection = async (style) => {
+  const range = savedEditorRange.value
+  const text = range?.toString().trim()
+  if (!text) return ElMessage.warning('请先选中要改写的正文')
+  rewriting.value = true
+  try {
+    const res = await aiRewrite({ text, style })
+    const nextText = res.data?.text
+    if (!nextText) throw new Error('AI 未返回内容')
+    range.deleteContents()
+    range.insertNode(document.createTextNode(nextText))
+    range.collapse(false)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+    onDescInput()
+    rewriteOpen.value = false
+    ElMessage.success(`已改写为「${style}」风格`)
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || 'AI 改写失败')
+  } finally {
+    rewriting.value = false
+  }
+}
 
 // —— AI 探索 · 词云（把当前层的选项渲染成流动的书法词） ——
 const pickedWordId = ref(null)
@@ -707,6 +914,7 @@ const toggleVoice = () => {
 
 onUnmounted(() => {
   if (recognition) { recognition.abort(); recognition = null }
+  clearTimeout(draftSaveTimer)
 })
 
 // 文件上传（支持一次选多张，逐张并发上传）
@@ -733,6 +941,30 @@ const IMAGE_FILTERS = [
 ]
 const selectedImage = ref('')
 const filtering = ref(false)
+const coverImage = ref('')
+const gridPreviewOpen = ref(false)
+const dragImageIndex = ref(-1)
+const gridImages = computed(() => {
+  if (!form.value.images.length) return []
+  const cover = coverImage.value && form.value.images.includes(coverImage.value)
+    ? coverImage.value
+    : form.value.images[0]
+  return [cover, ...form.value.images.filter(img => img !== cover)].slice(0, 9)
+})
+const setCover = (url) => {
+  coverImage.value = url
+  ElMessage.success('已设为封面')
+}
+const dropImage = (targetIndex) => {
+  const from = dragImageIndex.value
+  dragImageIndex.value = -1
+  if (from < 0 || from === targetIndex) return
+  const list = [...form.value.images]
+  const [moved] = list.splice(from, 1)
+  list.splice(targetIndex, 0, moved)
+  form.value.images = list
+}
+watch([form, coverImage], scheduleLocalDraft, { deep: true })
 // 记录「当前图 -> 原图」，保证每次滤镜都是从原图重新烘焙，不会叠加
 const imageOrigin = ref({})
 const originOf = (url) => imageOrigin.value[url] || url
@@ -858,6 +1090,7 @@ const performVideoUpload = async (task) => {
     const idx = form.value.images.indexOf(task.localUrl)
     if (res.code === 200 && res.data?.url) {
       if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
+      if (!coverImage.value) coverImage.value = res.data.url
       videoMeta.value[res.data.url] = {
         name: res.data.name || task.name,
         sizeText: task.sizeText,
@@ -998,6 +1231,7 @@ const uploadOne = async (raw) => {
     const idx = form.value.images.indexOf(localUrl)
     if (res.code === 200 && res.data?.url) {
       if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
+      if (!coverImage.value) coverImage.value = res.data.url
       // 记录原图，滤镜始终从这张开始烘焙
       imageOrigin.value[res.data.url] = res.data.url
     } else {
@@ -1045,11 +1279,16 @@ const removeImage = (idx) => {
     delete imageProgress.value[task.localUrl]
     videoUploadTasks.value = videoUploadTasks.value.filter(item => item !== task)
   }
-  form.value.images.splice(idx, 1)
+  form.value.images = form.value.images.filter((_, index) => index !== idx)
+  if (selectedImage.value === url) selectedImage.value = form.value.images[0] || ''
+  if (coverImage.value === url || !form.value.images.includes(coverImage.value)) {
+    coverImage.value = form.value.images[0] || ''
+  }
 }
 
 // 编辑模式：预填表单
 onMounted(async () => {
+  loadLocalDrafts()
   loadCloudWords()
   loadTags()
   loadAiHistory()
@@ -1067,6 +1306,7 @@ onMounted(async () => {
         } else if (res.data.img) {
           form.value.images = [res.data.img]
         }
+        coverImage.value = res.data.img || form.value.images[0] || ''
       }
     } catch (e) { console.error(e) }
   } else {
@@ -1078,6 +1318,7 @@ onMounted(async () => {
       }
     } catch (e) {}
   }
+  draftHydrating = false
 })
 
 const goBack = () => { router.back() }
@@ -1092,7 +1333,9 @@ const submit = async (status) => {
   if (!contentLen.value) return ElMessage.warning('请填写灵感详情')
   loading.value = true
   try {
-    let payload = { ...form.value, status: status !== undefined ? status : 1 }; payload.images = JSON.stringify(payload.images)
+    let payload = { ...form.value, status: status !== undefined ? status : 1 }
+    payload.img = coverImage.value || payload.images[0] || ''
+    payload.images = JSON.stringify(payload.images)
     let res
     if (editId.value) {
       res = await updateInspire(editId.value, payload)
@@ -1100,6 +1343,7 @@ const submit = async (status) => {
       res = await createInspire(payload)
     }
     ElMessage.success(res.msg || (editId.value ? '修改成功' : '发布成功'))
+    if (localDraftId.value) removeLocalDraft(localDraftId.value)
     router.push('/')
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
@@ -1183,6 +1427,7 @@ const useSuggestedImages = async () => {
     results.forEach(data => {
       if (data && data.code === 200 && data.data?.url) {
         form.value.images.push(data.data.url)
+        if (!coverImage.value) coverImage.value = data.data.url
         ok++
       }
     })
@@ -1212,6 +1457,30 @@ const useSuggestedImages = async () => {
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 14px; }
 .topbar .page-title { font-size:17px; font-weight:600; }
 .topbar .ico { width:38px; height:38px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 1px 6px rgba(0,0,0,.05); cursor:pointer; }
+.topbar-right { display:flex; gap:8px; align-items:center; }
+.draft-ico { position:relative; }
+.local-draft-panel {
+  position:relative; z-index:20; margin:-4px 0 12px; padding:12px;
+  border:1px solid #d9ebe8; border-radius:14px; background:#fff;
+  box-shadow:0 10px 28px rgba(32,71,66,.1);
+}
+.local-draft-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.local-draft-head b { font-size:14px; color:#294a46; }
+.local-draft-head span { flex:1; color:#8a9b98; font-size:11px; }
+.local-draft-head button {
+  border:1px solid #9dccc5; border-radius:999px; background:#effaf8;
+  color:#0f766e; padding:4px 10px; font-size:11px; cursor:pointer;
+}
+.local-draft-list { display:flex; flex-direction:column; gap:7px; }
+.local-draft-item {
+  display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #e2efed;
+  border-radius:10px; background:#f9fdfc; cursor:pointer;
+}
+.local-draft-item.active { border-color:#75b8ae; background:#effaf8; }
+.local-draft-item b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; color:#315f5a; }
+.local-draft-item small { color:#93a39f; font-size:10.5px; }
+.local-draft-item button { border:0; background:transparent; color:#b6675d; font-size:10.5px; cursor:pointer; }
+.local-draft-empty { padding:14px; text-align:center; color:#96a5a2; font-size:12px; }
 
 /* ---------- 通用卡片 ---------- */
 .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.04); margin-bottom:14px; }
@@ -1263,6 +1532,18 @@ const useSuggestedImages = async () => {
 .title-input { width:100%; border:none; outline:none; font-size:19px; font-weight:600; color:#1d1d1f; background:transparent; padding:4px 0; }
 .title-input::placeholder { color:#c0c4cc; font-weight:400; }
 .title-count { margin-top:4px; text-align:right; color:#a0a8b5; font-size:11px; }
+.title-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.ai-mini {
+  border:1px solid #b9d8d3; border-radius:999px; background:#effaf8; color:#0f766e;
+  padding:5px 11px; font-size:11px; font-weight:700; cursor:pointer;
+}
+.ai-mini:disabled { opacity:.6; cursor:wait; }
+.title-suggestions { display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+.title-suggestions button {
+  border:1px solid #d9ebe8; border-radius:10px; background:#f8fdfc; color:#315f5a;
+  padding:8px 11px; text-align:left; font:inherit; font-size:12.5px; cursor:pointer;
+}
+.title-suggestions button:hover { border-color:#79b9af; background:#effaf8; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; }
 .chip { padding:6px 14px; border-radius:999px; font-size:13px; color:#6b7280; background:#f5f7fa; cursor:pointer; border:1px solid transparent; transition:.15s; }
 .chip.on { color:#409eff; background:#ecf5ff; border-color:#b3d8ff; }
@@ -1282,6 +1563,16 @@ const useSuggestedImages = async () => {
 .tb-divider { width:1px; height:18px; background:#ebeef5; margin:0 4px; flex:0 0 auto; }
 .editable { min-height:150px; padding:14px 16px; outline:none; font-size:15.5px; line-height:1.75; color:#1d1d1f; }
 .editable:empty:before { content:attr(data-placeholder); color:#c0c4cc; }
+.rewrite-bar {
+  display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:8px 12px;
+  border-bottom:1px solid #ebeef5; background:#f7fbfa; color:#56706c; font-size:11.5px;
+}
+.rewrite-bar button {
+  border:1px solid #b9d8d3; border-radius:999px; background:#fff; color:#0f766e;
+  padding:4px 10px; font-size:11px; cursor:pointer;
+}
+.rewrite-bar button:disabled { opacity:.55; cursor:wait; }
+.ai-rewrite-btn { color:#0f766e !important; border-color:#b9d8d3 !important; background:#effaf8 !important; }
 .editable h1 { font-size:22px; font-weight:700; margin:8px 0; }
 .editable h2 { font-size:18px; font-weight:700; margin:8px 0; }
 .editable blockquote { margin:8px 0; padding:6px 12px; border-left:3px solid #409eff; background:#f7fbff; color:#4b5563; border-radius:0 8px 8px 0; }
@@ -1297,10 +1588,12 @@ const useSuggestedImages = async () => {
 .count { font-size:12px; color:#a8abb2; }
 
 /* ---------- 图片 + AI 配图 ---------- */
-.img-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.img-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.img-head-actions { display:flex; gap:8px; align-items:center; }
 .ai-img-btn { display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px; border-radius:999px; border:1px solid #b3d8ff; background:#ecf5ff; color:#409eff; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
 .image-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.thumb { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#f5f7fa; display:flex; align-items:center; justify-content:center; }
+.thumb { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#f5f7fa; display:flex; align-items:center; justify-content:center; cursor:grab; }
+.thumb.cover { outline:2px solid #0f766e; outline-offset:2px; }
 .thumb img { width:100%; height:100%; object-fit:cover; }
 .thumb video { width:100%; height:100%; object-fit:cover; background:#000; }
 .video-badge {
@@ -1308,6 +1601,35 @@ const useSuggestedImages = async () => {
   width:22px; height:22px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.55); color:#fff; font-size:11px;
+}
+.cover-badge {
+  position:absolute; left:5px; top:5px; padding:2px 6px; border-radius:999px;
+  background:rgba(15,118,110,.92); color:#fff; font-size:9px; font-weight:700;
+}
+.cover-btn {
+  position:absolute; left:4px; bottom:4px; border:0; border-radius:6px;
+  padding:3px 6px; background:rgba(0,0,0,.56); color:#fff; font-size:9px; cursor:pointer;
+}
+.overlay {
+  position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(22,34,31,.42); backdrop-filter:blur(3px);
+}
+.grid-preview-overlay { align-items:center !important; }
+.grid-preview-panel {
+  width:min(100%, 340px); max-width:100%; max-height:calc(100% - 8px); overflow:auto;
+  border-radius:18px; padding:18px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.2);
+  box-sizing:border-box;
+}
+.grid-preview-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.grid-preview-head h3 { margin:0; font-size:17px; }
+.grid-preview-head p { margin:4px 0 0; color:#8a9591; font-size:12px; }
+.grid-preview-head button { border:0; background:transparent; font-size:24px; cursor:pointer; color:#7b8581; }
+.grid-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+.grid-cell { position:relative; aspect-ratio:1; overflow:hidden; border-radius:8px; background:#eef2f0; }
+.grid-cell img, .grid-cell video { width:100%; height:100%; object-fit:cover; display:block; }
+.grid-cover {
+  position:absolute; left:5px; top:5px; padding:2px 6px; border-radius:999px;
+  background:rgba(15,118,110,.92); color:#fff; font-size:9px;
 }
 .video-tools { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
 .video-upload-list { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
@@ -1353,7 +1675,11 @@ const useSuggestedImages = async () => {
 .video-tool-meta { color:#8a94a6; font-size:12px; }
 .video-tool-row .ghost { padding:5px 12px; font-size:12px; }
 .trim-tip { margin-bottom:10px; font-size:13px; color:#6b7280; }
-.thumb .del { position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.thumb .del {
+  position:absolute; top:5px; right:5px; z-index:8; width:24px; height:24px; padding:0;
+  border:0; border-radius:50%; background:rgba(0,0,0,.62); color:#fff; font-size:16px;
+  line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
 .thumb.add { border:1.5px dashed #d3dce6; color:#a8abb2; flex-direction:column; gap:4px; cursor:pointer; font-size:12px; }
 .thumb.add .plus { font-size:24px; line-height:1; }
 .thumb.add :deep(.el-progress__text) { font-size:11px !important; }

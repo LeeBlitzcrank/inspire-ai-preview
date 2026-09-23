@@ -12,6 +12,20 @@ export const doLogout = () => request.post('/auth/logout')
 // ===== 灵感核心 =====
 export const getInspireList = (params) => cachedGet('/inspire/public/list', params, 60 * 1000)
 export const getInspireDetail = (id) => request.get(`/inspire/public/${id}`)
+export const getSeriesDetail = (id) => request.get(`/inspire/public/series/${id}`)
+export const getMySeries = () => request.get('/inspire/my/series')
+export const getMySeriesDetail = (id) => request.get(`/inspire/my/series/${id}`)
+export const createSeries = (data) => request.post('/inspire/series', data)
+export const updateSeries = (id, data) => request.put(`/inspire/series/${id}`, data)
+export const deleteSeries = (id) => request.delete(`/inspire/series/${id}`)
+export const addSeriesArticle = (seriesId, inspireId) =>
+  request.post(`/inspire/series/${seriesId}/articles`, { inspireId })
+export const removeSeriesArticle = (seriesId, inspireId) =>
+  request.delete(`/inspire/series/${seriesId}/articles/${inspireId}`)
+export const reorderSeriesArticles = (seriesId, articleIds) =>
+  request.put(`/inspire/series/${seriesId}/order`, { articleIds })
+export const getSeriesCandidates = (seriesId, params = {}) =>
+  request.get('/inspire/my/series/candidates', { params: { seriesId, ...params } })
 // 注意：这两个接口必须带上 page/size，否则后端会用它自己的默认分页（只返回 5 条），
 // 导致「我的发布」只显示几条、且因为没有更多而直接显示「已经到底啦」。
 export const getMyInspires = (page = 1, size = 20, cursor = '') =>
@@ -63,6 +77,8 @@ export const uploadFile = (formData, onUploadProgress) => request.post('/file/up
 })
 
 export const exploreInspiration = (data) => request.post('/ai/explore', data)
+export const aiRewrite = (data) => request.post('/ai/rewrite', data)
+export const aiTitles = (data) => request.post('/ai/titles', data)
 export const saveAiHistory = (data) => request.post('/inspire/ai/history', data)
 export const getAiHistory = (limit = 20) => request.get('/inspire/ai/history', { params: { limit } })
 export const markAiHistorySelected = (id, data) => request.put(`/inspire/ai/history/${id}/select`, data)

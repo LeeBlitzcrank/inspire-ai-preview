@@ -74,6 +74,57 @@ public class AiServiceImpl implements AiService {
         log.info("发布灵感: userId={}, title={}", userId, request.getTitle());
     }
 
+    @Override
+    public AiRewriteResponse rewrite(AiRewriteRequest request) {
+        String text = request.getText().trim();
+        String style = request.getStyle().trim();
+        String cacheKey = "rewrite:" + style + ":" + Integer.toHexString(text.hashCode());
+        String system = "你是中文内容编辑。只返回JSON：{\"text\":\"改写后的内容\"}，不要markdown、解释或额外字段。";
+        String prompt = "将下面的正文改写成「" + style + "」风格，保留原意、事实和段落数量，只优化表达：\n" + text;
+        try {
+            String json = callToolModel(system, prompt, 1600, cacheKey);
+            Map<String, Object> data = objectMapper.readValue(cleanJson(json),
+                    new TypeReference<Map<String, Object>>() {});
+            String rewritten = Objects.toString(data.get("text"), "").trim();
+            return new AiRewriteResponse(rewritten.isBlank() ? text : rewritten);
+        } catch (Exception e) {
+            log.warn("AI改写失败，返回原文: {}", e.getMessage());
+            return new AiRewriteResponse(text);
+        }
+    }
+
+    @Override
+    public AiTitleResponse titles(AiTitleRequest request) {
+        String content = request.getContent().trim();
+        String cacheKey = "titles:" + Integer.toHexString(content.hashCode());
+        String system = "你是中文标题编辑。只返回JSON：{\"titles\":[\"标题1\",\"标题2\",\"标题3\",\"标题4\",\"标题5\"]}，"
+                + "不要markdown、解释或额外字段。";
+        String prompt = "根据下面的灵感正文，生成5个不同角度、具体有吸引力的标题，每个标题6到16个中文字符：\n"
+                + content.substring(0, Math.min(content.length(), 2000));
+        try {
+            String json = callToolModel(system, prompt, 500, cacheKey);
+            Map<String, Object> data = objectMapper.readValue(cleanJson(json),
+                    new TypeReference<Map<String, Object>>() {});
+            Object raw = data.get("titles");
+            List<String> titles = new ArrayList<>();
+            if (raw instanceof List<?> list) {
+                for (Object item : list) {
+                    String title = TitleUtil.truncate(Objects.toString(item, "").trim());
+                    if (!title.isBlank() && !titles.contains(title)) titles.add(title);
+                    if (titles.size() == 5) break;
+                }
+            }
+            if (titles.isEmpty()) {
+                String plain = content.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+                titles.add(TitleUtil.truncate(plain.isBlank() ? "我的灵感记录" : plain));
+            }
+            return new AiTitleResponse(titles);
+        } catch (Exception e) {
+            log.warn("AI生成标题失败: {}", e.getMessage());
+            return new AiTitleResponse(List.of("我的灵感记录"));
+        }
+    }
+
     // ==================== 探索接口（核心）====================
 
     @Override
@@ -255,5 +306,40 @@ public class AiServiceImpl implements AiService {
                "每组格式 {\"style\":\"风格名\",\"title\":\"标题\",\"text\":\"正文\"}，" +
                "style 用「温柔治愈/干货清单/故事叙事/活泼种草」这类中文风格名，各组标题与正文必须明显不同，" +
                "每组的 text 同样满足 300~500 字的要求；content.title 与 content.text 取第一组的内容。";
+    }
+
+    private String callToolModel(String system, String prompt, int maxTokens, String cacheKey) {
+        String redisKey = CACHE_PREFIX + "tool:" + cacheKey;
+        if (jedisPool != null) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                String cached = jedis.get(redisKey);
+                if (cached != null && !cached.isBlank()) return cached;
+            }
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", model);
+        body.put("messages", Arrays.asList(
+                Map.of("role", "system", "content", system),
+                Map.of("role", "user", "content", prompt)));
+        body.put("temperature", 0.7);
+        body.put("max_tokens", maxTokens);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        ResponseEntity<Map> resp = restTemplate.exchange(apiUrl, HttpMethod.POST, entity, Map.class);
+        String content = (String) ((Map) ((List<Map>) resp.getBody().get("choices")).get(0).get("message")).get("content");
+        if (jedisPool != null && content != null && !content.isBlank()) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                jedis.setex(redisKey, CACHE_TTL, content);
+            }
+        }
+        return content == null ? "" : content;
+    }
+
+    private String cleanJson(String json) {
+        return json == null ? "{}" : json.replaceAll("```json\\s*|```\\s*", "").trim();
     }
 }

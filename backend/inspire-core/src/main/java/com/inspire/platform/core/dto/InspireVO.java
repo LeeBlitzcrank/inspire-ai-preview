@@ -1,8 +1,10 @@
 package com.inspire.platform.core.dto;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data @Schema(description = "灵感展现层（列表/详情）")
@@ -12,6 +14,14 @@ public class InspireVO {
     @Schema(description = "标题") private String title;
     @Schema(description = "封面图") private String img;
     @Schema(description = "多图列表") private java.util.List<String> images;
+    @Schema(description = "系列ID") private String seriesId;
+    @Schema(description = "系列名称") private String seriesName;
+    @Schema(description = "系列内顺序") private Integer seriesOrder;
+    @Schema(description = "系列文章总数") private Integer seriesTotal;
+    @Schema(description = "上一篇ID") private String prevSeriesId;
+    @Schema(description = "上一篇标题") private String prevSeriesTitle;
+    @Schema(description = "下一篇ID") private String nextSeriesId;
+    @Schema(description = "下一篇标题") private String nextSeriesTitle;
     @Schema(description = "分类") private String tag;
     @JsonSerialize(using = ToStringSerializer.class)
     @Schema(description = "一级分类ID") private Long categoryId;

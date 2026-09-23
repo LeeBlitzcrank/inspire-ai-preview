@@ -26,7 +26,7 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑词条' : '新增词条'" width="340px">
+    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑词条' : '新增词条'" width="340px" append-to-body>
       <el-input v-model="form.word" placeholder="词条内容，例如：旅行" />
       <el-input v-model.number="form.weight" placeholder="权重（1-5，越大字号越大）" style="margin-top:10px" />
       <el-input v-model.number="form.sortOrder" placeholder="排序（数字越小越靠前）" style="margin-top:10px" />
@@ -43,11 +43,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { adminWordCloudList, adminCreateWord, adminUpdateWord, adminDeleteWord } from '@/api/inspire.js'
-import { clearGetCache } from '@/utils/request.js'
+import {onMounted, ref} from 'vue'
+import {ElMessageBox} from 'element-plus'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {adminCreateWord, adminDeleteWord, adminUpdateWord, adminWordCloudList} from '@/api/inspire.js'
+import {clearGetCache} from '@/utils/request.js'
 
 const list = ref([])
 const loading = ref(false)

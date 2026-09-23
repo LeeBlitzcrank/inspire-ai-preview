@@ -78,6 +78,86 @@ public class InspireController {
         return Result.success(inspireService.getDetail(id, loginUserId));
     }
 
+    @Operation(summary = "系列详情", description = "返回系列信息与全部文章")
+    @GetMapping("/public/series/{id}")
+    public Result<SeriesVO> series(@PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long loginUserId) {
+        return Result.success(inspireService.getSeries(id, loginUserId));
+    }
+
+    @Operation(summary = "我的系列列表", description = "返回当前用户的系列摘要，不展开全部文章")
+    @GetMapping("/my/series")
+    public Result<List<SeriesVO>> mySeries(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(inspireService.listMySeries(userId));
+    }
+
+    @Operation(summary = "系列管理详情", description = "仅返回当前用户自己的系列与全部文章")
+    @GetMapping("/my/series/{id}")
+    public Result<SeriesVO> mySeriesDetail(@PathVariable Long id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(inspireService.getMySeries(userId, id));
+    }
+
+    @Operation(summary = "可加入系列的灵感", description = "当前用户尚未归入任何系列的已发布灵感")
+    @GetMapping("/my/series/candidates")
+    public Result<PageResult<InspireVO>> seriesCandidates(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @RequestParam Long seriesId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.success(inspireService.listSeriesCandidates(userId, seriesId, keyword, page, size));
+    }
+
+    @Operation(summary = "创建系列")
+    @PostMapping("/series")
+    public Result<SeriesVO> createSeries(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SeriesSaveRequest request) {
+        return Result.success("系列创建成功", inspireService.createSeries(userId, request));
+    }
+
+    @Operation(summary = "修改系列信息")
+    @PutMapping("/series/{id}")
+    public Result<SeriesVO> updateSeries(@PathVariable Long id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SeriesSaveRequest request) {
+        return Result.success("系列修改成功", inspireService.updateSeries(userId, id, request));
+    }
+
+    @Operation(summary = "删除系列")
+    @DeleteMapping("/series/{id}")
+    public Result<Void> deleteSeries(@PathVariable Long id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        inspireService.deleteSeries(userId, id);
+        return Result.success("系列删除成功", null);
+    }
+
+    @Operation(summary = "添加系列文章")
+    @PostMapping("/series/{id}/articles")
+    public Result<SeriesVO> addSeriesArticle(@PathVariable Long id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SeriesArticleRequest request) {
+        return Result.success("已加入系列", inspireService.addSeriesArticle(userId, id, request.getInspireId()));
+    }
+
+    @Operation(summary = "移除系列文章")
+    @DeleteMapping("/series/{id}/articles/{inspireId}")
+    public Result<SeriesVO> removeSeriesArticle(@PathVariable Long id,
+            @PathVariable Long inspireId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return Result.success("已移出系列", inspireService.removeSeriesArticle(userId, id, inspireId));
+    }
+
+    @Operation(summary = "调整系列文章顺序")
+    @PutMapping("/series/{id}/order")
+    public Result<SeriesVO> reorderSeriesArticles(@PathVariable Long id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SeriesOrderRequest request) {
+        return Result.success("顺序已更新", inspireService.reorderSeriesArticles(userId, id, request.getArticleIds()));
+    }
+
     @Operation(summary = "我的发布", description = "当前用户已公开发布的灵感列表")
     @GetMapping("/my")
     public Result<PageResult<InspireVO>> myPublished(

@@ -19,6 +19,7 @@ import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,12 +37,19 @@ public class InspireServiceImpl implements InspireService {
     private final InspireContentMapper contentMapper;
     private final CollectMapper collectMapper;
     private final CollectFolderMapper collectFolderMapper;
+    private final InspireSeriesMapper seriesMapper;
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
     private final NotificationService notificationService;
     private final MqProducer mqProducer;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+
+    @Value("${inspire.series.max-per-user:50}")
+    private int maxSeriesPerUser;
+
+    @Value("${inspire.series.max-articles:100}")
+    private int maxArticlesPerSeries;
 
     private record UserRelationState(Set<Long> collectedIds, Set<Long> likedIds) {
     }
@@ -76,7 +84,321 @@ public class InspireServiceImpl implements InspireService {
         jdbcTemplate.update("UPDATE inspire_main SET view_count = view_count + 1 WHERE id = ?", id);
         m.setViewCount(m.getViewCount() + 1);
         InspireContent c = contentMapper.selectById(id);
-        return toDetailVO(m, loginUserId, c != null ? c.getContent() : "");
+        InspireVO vo = toDetailVO(m, loginUserId, c != null ? c.getContent() : "");
+        fillSeriesContext(vo, m);
+        return vo;
+    }
+
+    @Override
+    public SeriesVO getSeries(Long id, Long loginUserId) {
+        InspireSeries series = seriesMapper.selectById(id);
+        if (series == null || Integer.valueOf(1).equals(series.getDeleted())
+                || !Integer.valueOf(1).equals(series.getStatus())) {
+            throw new BusinessException("系列不存在");
+        }
+        return buildSeriesVO(series, loadSeriesArticles(id), loginUserId);
+    }
+
+    @Override
+    public List<SeriesVO> listMySeries(Long userId) {
+        checkUserExists(userId);
+        List<InspireSeries> seriesList = seriesMapper.selectList(Wrappers.lambdaQuery(InspireSeries.class)
+                .eq(InspireSeries::getUserId, userId)
+                .eq(InspireSeries::getStatus, 1)
+                .eq(InspireSeries::getDeleted, 0)
+                .orderByDesc(InspireSeries::getUpdateTime)
+                .orderByDesc(InspireSeries::getId));
+        if (seriesList.isEmpty()) return Collections.emptyList();
+
+        List<Long> seriesIds = seriesList.stream().map(InspireSeries::getId).collect(Collectors.toList());
+        String placeholders = seriesIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+        params.addAll(seriesIds);
+        Map<Long, Integer> counts = new HashMap<>();
+        List<Map<String, Object>> countRows = jdbcTemplate.queryForList(
+                "SELECT series_id, COUNT(*) AS total FROM inspire_main "
+                        + "WHERE user_id = ? AND deleted = 0 AND status = 1 AND series_id IN (" + placeholders + ") "
+                        + "GROUP BY series_id",
+                params.toArray());
+        for (Map<String, Object> row : countRows) {
+            counts.put(((Number) row.get("series_id")).longValue(),
+                    ((Number) row.get("total")).intValue());
+        }
+
+        List<SeriesVO> result = new ArrayList<>(seriesList.size());
+        for (InspireSeries series : seriesList) {
+            SeriesVO vo = buildSeriesVO(series, Collections.emptyList(), userId);
+            vo.setTotal(counts.getOrDefault(series.getId(), 0));
+            result.add(vo);
+        }
+        return result;
+    }
+
+    @Override
+    public SeriesVO getMySeries(Long userId, Long seriesId) {
+        InspireSeries series = requireOwnedSeries(userId, seriesId);
+        return buildSeriesVO(series, loadSeriesArticles(seriesId), userId);
+    }
+
+    @Override
+    @Transactional
+    public SeriesVO createSeries(Long userId, SeriesSaveRequest request) {
+        checkUserExists(userId);
+        Long count = seriesMapper.selectCount(Wrappers.lambdaQuery(InspireSeries.class)
+                .eq(InspireSeries::getUserId, userId)
+                .eq(InspireSeries::getDeleted, 0));
+        if (count != null && count >= maxSeriesPerUser) {
+            throw new BusinessException("最多只能创建 " + maxSeriesPerUser + " 个系列");
+        }
+        InspireSeries series = new InspireSeries();
+        series.setId(nextId());
+        series.setUserId(userId);
+        series.setName(normalizeSeriesName(request.getName()));
+        series.setDescription(normalizeSeriesDescription(request.getDescription()));
+        series.setCover("");
+        series.setStatus(1);
+        series.setCreateTime(LocalDateTime.now());
+        series.setUpdateTime(LocalDateTime.now());
+        series.setDeleted(0);
+        seriesMapper.insert(series);
+        return buildSeriesVO(series, Collections.emptyList(), userId);
+    }
+
+    @Override
+    @Transactional
+    public SeriesVO updateSeries(Long userId, Long seriesId, SeriesSaveRequest request) {
+        InspireSeries series = requireOwnedSeries(userId, seriesId);
+        series.setName(normalizeSeriesName(request.getName()));
+        series.setDescription(normalizeSeriesDescription(request.getDescription()));
+        series.setUpdateTime(LocalDateTime.now());
+        seriesMapper.updateById(series);
+        return buildSeriesVO(series, loadSeriesArticles(seriesId), userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSeries(Long userId, Long seriesId) {
+        requireOwnedSeries(userId, seriesId);
+        jdbcTemplate.update(
+                "UPDATE inspire_main SET series_id = NULL, series_order = 0 WHERE series_id = ? AND user_id = ?",
+                seriesId, userId);
+        seriesMapper.deleteById(seriesId);
+    }
+
+    @Override
+    @Transactional
+    public SeriesVO addSeriesArticle(Long userId, Long seriesId, Long inspireId) {
+        requireOwnedSeries(userId, seriesId);
+        InspireMain article = mainMapper.selectById(inspireId);
+        if (article == null || Integer.valueOf(1).equals(article.getDeleted())
+                || !Integer.valueOf(1).equals(article.getStatus())
+                || !userId.equals(article.getUserId())) {
+            throw new BusinessException("只能添加自己的已发布灵感");
+        }
+        if (article.getSeriesId() != null) {
+            if (seriesId.equals(article.getSeriesId())) {
+                return getMySeries(userId, seriesId);
+            }
+            throw new BusinessException("该灵感已经在其他系列中");
+        }
+        Long count = mainMapper.selectCount(Wrappers.lambdaQuery(InspireMain.class)
+                .eq(InspireMain::getSeriesId, seriesId)
+                .eq(InspireMain::getUserId, userId)
+                .eq(InspireMain::getDeleted, 0)
+                .eq(InspireMain::getStatus, 1));
+        if (count != null && count >= maxArticlesPerSeries) {
+            throw new BusinessException("单个系列最多包含 " + maxArticlesPerSeries + " 篇灵感");
+        }
+        Integer nextOrder = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(series_order), 0) + 1 FROM inspire_main "
+                        + "WHERE series_id = ? AND user_id = ? AND deleted = 0 AND status = 1",
+                Integer.class, seriesId, userId);
+        jdbcTemplate.update(
+                "UPDATE inspire_main SET series_id = ?, series_order = ? WHERE id = ? AND user_id = ?",
+                seriesId, nextOrder == null ? 1 : nextOrder, inspireId, userId);
+        refreshSeriesCover(seriesId, userId);
+        touchSeries(seriesId);
+        return getMySeries(userId, seriesId);
+    }
+
+    @Override
+    @Transactional
+    public SeriesVO removeSeriesArticle(Long userId, Long seriesId, Long inspireId) {
+        requireOwnedSeries(userId, seriesId);
+        Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inspire_main WHERE id = ? AND series_id = ? AND user_id = ?",
+                Integer.class, inspireId, seriesId, userId);
+        if (exists == null || exists == 0) {
+            throw new BusinessException("该灵感不在当前系列中");
+        }
+        jdbcTemplate.update(
+                "UPDATE inspire_main SET series_id = NULL, series_order = 0 WHERE id = ? AND user_id = ?",
+                inspireId, userId);
+        List<Long> remainingIds = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                        .eq(InspireMain::getSeriesId, seriesId)
+                        .eq(InspireMain::getUserId, userId)
+                        .eq(InspireMain::getDeleted, 0)
+                        .eq(InspireMain::getStatus, 1)
+                        .orderByAsc(InspireMain::getSeriesOrder)
+                        .orderByAsc(InspireMain::getId))
+                .stream().map(InspireMain::getId).collect(Collectors.toList());
+        applySeriesOrder(seriesId, userId, remainingIds);
+        refreshSeriesCover(seriesId, userId);
+        touchSeries(seriesId);
+        return getMySeries(userId, seriesId);
+    }
+
+    @Override
+    @Transactional
+    public SeriesVO reorderSeriesArticles(Long userId, Long seriesId, List<Long> articleIds) {
+        requireOwnedSeries(userId, seriesId);
+        if (articleIds == null || articleIds.isEmpty()) {
+            throw new BusinessException("系列文章不能为空");
+        }
+        if (articleIds.size() > maxArticlesPerSeries) {
+            throw new BusinessException("单个系列最多包含 " + maxArticlesPerSeries + " 篇灵感");
+        }
+        if (new HashSet<>(articleIds).size() != articleIds.size()) {
+            throw new BusinessException("系列文章顺序中存在重复项");
+        }
+        List<Long> currentIds = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                        .select(InspireMain::getId)
+                        .eq(InspireMain::getSeriesId, seriesId)
+                        .eq(InspireMain::getUserId, userId)
+                        .eq(InspireMain::getDeleted, 0)
+                        .eq(InspireMain::getStatus, 1))
+                .stream().map(InspireMain::getId).collect(Collectors.toList());
+        if (currentIds.size() != articleIds.size() || !new HashSet<>(currentIds).equals(new HashSet<>(articleIds))) {
+            throw new BusinessException("系列文章已发生变化，请刷新后重试");
+        }
+        applySeriesOrder(seriesId, userId, articleIds);
+        refreshSeriesCover(seriesId, userId);
+        touchSeries(seriesId);
+        return getMySeries(userId, seriesId);
+    }
+
+    @Override
+    public PageResult<InspireVO> listSeriesCandidates(Long userId, Long seriesId, String keyword, int page, int size) {
+        requireOwnedSeries(userId, seriesId);
+        int safeSize = Math.max(1, Math.min(size, 50));
+        LambdaQueryWrapper<InspireMain> wrapper = Wrappers.lambdaQuery(InspireMain.class)
+                .eq(InspireMain::getUserId, userId)
+                .eq(InspireMain::getStatus, 1)
+                .eq(InspireMain::getDeleted, 0)
+                .isNull(InspireMain::getSeriesId)
+                .orderByDesc(InspireMain::getCreateTime)
+                .orderByDesc(InspireMain::getId);
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.like(InspireMain::getTitle, keyword.trim());
+        }
+        Page<InspireMain> result = mainMapper.selectPage(new Page<>(Math.max(1, page), safeSize), wrapper);
+        return new PageResult<>(toVOList(result.getRecords(), userId), result.getTotal());
+    }
+
+    private void fillSeriesContext(InspireVO vo, InspireMain main) {
+        if (main.getSeriesId() == null) return;
+        InspireSeries series = seriesMapper.selectById(main.getSeriesId());
+        if (series == null) return;
+        List<InspireMain> articles = mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                .eq(InspireMain::getSeriesId, main.getSeriesId())
+                .eq(InspireMain::getDeleted, 0)
+                .eq(InspireMain::getStatus, 1)
+                .orderByAsc(InspireMain::getSeriesOrder));
+        vo.setSeriesId(String.valueOf(series.getId()));
+        vo.setSeriesName(series.getName());
+        vo.setSeriesOrder(main.getSeriesOrder());
+        vo.setSeriesTotal(articles.size());
+        for (int i = 0; i < articles.size(); i++) {
+            if (!articles.get(i).getId().equals(main.getId())) continue;
+            if (i > 0) {
+                vo.setPrevSeriesId(String.valueOf(articles.get(i - 1).getId()));
+                vo.setPrevSeriesTitle(articles.get(i - 1).getTitle());
+            }
+            if (i + 1 < articles.size()) {
+                vo.setNextSeriesId(String.valueOf(articles.get(i + 1).getId()));
+                vo.setNextSeriesTitle(articles.get(i + 1).getTitle());
+            }
+            break;
+        }
+    }
+
+    private InspireSeries requireOwnedSeries(Long userId, Long seriesId) {
+        checkUserExists(userId);
+        InspireSeries series = seriesMapper.selectById(seriesId);
+        if (series == null || Integer.valueOf(1).equals(series.getDeleted())
+                || !Integer.valueOf(1).equals(series.getStatus())
+                || !userId.equals(series.getUserId())) {
+            throw new BusinessException("系列不存在或无权管理");
+        }
+        return series;
+    }
+
+    private List<InspireMain> loadSeriesArticles(Long seriesId) {
+        return mainMapper.selectList(Wrappers.lambdaQuery(InspireMain.class)
+                .eq(InspireMain::getSeriesId, seriesId)
+                .eq(InspireMain::getDeleted, 0)
+                .eq(InspireMain::getStatus, 1)
+                .orderByAsc(InspireMain::getSeriesOrder)
+                .orderByAsc(InspireMain::getId));
+    }
+
+    private SeriesVO buildSeriesVO(InspireSeries series, List<InspireMain> articles, Long loginUserId) {
+        SeriesVO vo = new SeriesVO();
+        vo.setId(series.getId());
+        vo.setUserId(series.getUserId());
+        vo.setName(series.getName());
+        vo.setDescription(series.getDescription());
+        vo.setCover(series.getCover());
+        vo.setUpdateTime(series.getUpdateTime());
+        vo.setTotal(articles.size());
+        vo.setArticles(toVOList(articles, loginUserId));
+        return vo;
+    }
+
+    private void applySeriesOrder(Long seriesId, Long userId, List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) return;
+        StringBuilder sql = new StringBuilder("UPDATE inspire_main SET series_order = CASE id");
+        List<Object> params = new ArrayList<>();
+        for (int i = 0; i < articleIds.size(); i++) {
+            sql.append(" WHEN ? THEN ?");
+            params.add(articleIds.get(i));
+            params.add(i + 1);
+        }
+        String placeholders = articleIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        sql.append(" END WHERE series_id = ? AND user_id = ? AND id IN (").append(placeholders).append(")");
+        params.add(seriesId);
+        params.add(userId);
+        params.addAll(articleIds);
+        jdbcTemplate.update(sql.toString(), params.toArray());
+    }
+
+    private void refreshSeriesCover(Long seriesId, Long userId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT img FROM inspire_main WHERE series_id = ? AND user_id = ? "
+                        + "AND deleted = 0 AND status = 1 ORDER BY series_order, id LIMIT 1",
+                seriesId, userId);
+        String cover = rows.isEmpty() ? "" : Objects.toString(rows.get(0).get("img"), "");
+        jdbcTemplate.update("UPDATE inspire_series SET cover = ?, update_time = ? WHERE id = ?",
+                cover, LocalDateTime.now(), seriesId);
+    }
+
+    private void touchSeries(Long seriesId) {
+        jdbcTemplate.update("UPDATE inspire_series SET update_time = ? WHERE id = ?",
+                LocalDateTime.now(), seriesId);
+    }
+
+    private String normalizeSeriesName(String name) {
+        String value = name == null ? "" : name.trim();
+        if (value.isEmpty()) {
+            throw new BusinessException("请输入系列名称");
+        }
+        return value.length() > 50 ? value.substring(0, 50) : value;
+    }
+
+    private String normalizeSeriesDescription(String description) {
+        String value = description == null ? "" : description.trim();
+        return value.length() > 300 ? value.substring(0, 300) : value;
     }
 
     @Override
@@ -793,6 +1115,8 @@ public class InspireServiceImpl implements InspireService {
         vo.setTag(m.getTag());
         vo.setCategoryId(m.getCategoryId());
         vo.setSubCategoryId(m.getSubCategoryId());
+        if (m.getSeriesId() != null) vo.setSeriesId(String.valueOf(m.getSeriesId()));
+        vo.setSeriesOrder(m.getSeriesOrder());
         vo.setViewCount(m.getViewCount()); vo.setHeat(m.getHeat());
         vo.setShareCount(m.getShareCount());
         vo.setLikeCount(m.getLikeCount()); vo.setCollectCount(m.getCollectCount());

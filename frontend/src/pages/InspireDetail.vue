@@ -58,6 +58,12 @@
         <span v-for="tag in tagList" :key="tag" class="tag">#{{ tag }}</span>
       </div>
 
+      <button v-if="detail.seriesId" class="series-entry" type="button" @click="router.push(`/series/${detail.seriesId}`)">
+        <span class="series-entry-label">系列 · {{ detail.seriesName }}</span>
+        <b>{{ detail.seriesOrder }}/{{ detail.seriesTotal }}</b>
+        <span>查看系列 ›</span>
+      </button>
+
       <div class="author-card">
         <div class="author-avatar">
           <img
@@ -76,6 +82,15 @@
           {{ isFollowing ? '已关注' : '关注' }}
         </button>
         <button v-else-if="!isOwnInspire" class="follow-button" type="button" @click="requireLogin">关注</button>
+      </div>
+
+      <div v-if="detail.seriesId && (detail.prevSeriesId || detail.nextSeriesId)" class="series-nav">
+        <button v-if="detail.prevSeriesId" type="button" @click="router.push(`/detail/${detail.prevSeriesId}`)">
+          <small>上一篇</small><b>{{ detail.prevSeriesTitle }}</b>
+        </button>
+        <button v-if="detail.nextSeriesId" type="button" @click="router.push(`/detail/${detail.nextSeriesId}`)">
+          <small>下一篇</small><b>{{ detail.nextSeriesTitle }}</b>
+        </button>
       </div>
 
       <button v-if="!isLogin" class="comment-gate" type="button" @click="requireLogin">
@@ -1598,6 +1613,18 @@ h1 {
 .lead :deep(a) { color: #c56025; }
 
 .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.series-entry {
+  width:100%; margin-top:16px; padding:12px 14px; display:flex; align-items:center; gap:10px;
+  border:1px solid #cfe6e1; border-radius:14px; background:#f2faf8; color:#0f766e;
+  text-align:left; font:inherit; cursor:pointer;
+}
+.series-entry-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:700; }
+.series-entry b { font-size:12px; }
+.series-entry > span:last-child { color:#6d8e88; font-size:11px; }
+.series-nav { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; }
+.series-nav button { min-width:0; padding:12px; border:1px solid #dcebe8; border-radius:13px; background:#f8fcfb; text-align:left; cursor:pointer; }
+.series-nav small { display:block; color:#8a9b98; font-size:10px; margin-bottom:4px; }
+.series-nav b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#315f5a; font-size:12px; }
 
 .tag {
   display: inline-flex;
