@@ -211,9 +211,16 @@ public class FileController {
             List<String> cmd = new java.util.ArrayList<>();
             cmd.add("ffmpeg");
             cmd.addAll(args);
-            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            p.getInputStream().readAllBytes();
-            return p.waitFor() == 0;
+            Process p = new ProcessBuilder(cmd)
+                    .redirectErrorStream(true)
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .start();
+            if (!p.waitFor(45, java.util.concurrent.TimeUnit.SECONDS)) {
+                p.destroyForcibly();
+                log.warn("ffmpeg 处理超时，已跳过封面生成");
+                return false;
+            }
+            return p.exitValue() == 0;
         } catch (Exception e) {
             log.warn("ffmpeg 调用失败（可能未安装）: {}", e.getMessage());
             return false;
@@ -225,8 +232,11 @@ public class FileController {
             Process p = new ProcessBuilder("ffprobe", "-v", "error", "-show_entries", "format=duration",
                     "-of", "default=noprint_wrappers=1:nokey=1", video.getAbsolutePath())
                     .redirectErrorStream(true).start();
+            if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                p.destroyForcibly();
+                return 0L;
+            }
             String out = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
             if (out.isEmpty()) return 0L;
             return Math.round(Double.parseDouble(out));
         } catch (Exception e) {

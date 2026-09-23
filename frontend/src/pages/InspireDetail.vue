@@ -736,10 +736,10 @@ const expandReplies = (commentItem) => {
 }
 
 const loadMoreReplies = (commentItem) => {
-  if (commentItem._repliesLoading) return
+  if (commentItem._repliesLoading) return Promise.resolve()
   commentItem._repliesLoading = true
   const nextPage = commentItem._replyPage || 1
-  getCommentReplies(detail.value.id, commentItem.id, {
+  return getCommentReplies(detail.value.id, commentItem.id, {
     page: nextPage,
     size: 20,
     sort: commentSort.value
@@ -854,25 +854,36 @@ const submitComment = async () => {
   }
 }
 
-const submitReply = async (root) => {
+const submitReply = async (rootItem) => {
   if (!replyText.value.trim() || submittingComment.value) return
   submittingComment.value = true
   try {
     const res = await createComment(detail.value.id, {
       content: replyText.value.trim(),
-      parentId: root.id,
-      replyUserId: replyToUser.value?.userId || root.userId,
-      replyUsername: replyToUser.value?.username || root.nickname || root.username
+      parentId: rootItem.id,
+      replyUserId: replyToUser.value?.userId || rootItem.userId,
+      replyUsername: replyToUser.value?.username || rootItem.nickname || rootItem.username
     })
     if (res.code === 200) {
       ElMessage.success('回复成功')
       cancelReply()
-      const merged = mergeCreatedComment(res.data)
-      if (merged?.record) {
-        await focusCreatedComment(merged.record, merged.root)
-      } else {
-        await loadComments(true)
+      const created = res.data
+      await loadComments(true)
+      let root = comments.value.find(item => String(item.id) === String(rootItem.id))
+      if (!root) {
+        root = comments.value.find(item =>
+          item.replies?.some(reply => String(reply.id) === String(created?.id))
+        )
       }
+      if (root) {
+        root._repliesExpanded = true
+        root._visibleReplyCount = Math.min(root.replies?.length || 0, Number(root.replyCount || 0))
+        if (created?.id && !root.replies?.some(reply => String(reply.id) === String(created.id))) {
+          await loadMoreReplies(root)
+          root = comments.value.find(item => String(item.id) === String(root.id)) || root
+        }
+      }
+      await focusCreatedComment(created, root)
     } else {
       ElMessage.error(res.msg || '回复失败')
     }

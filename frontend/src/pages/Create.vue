@@ -186,7 +186,10 @@
               <span class="video-upload-name">🎬 {{ task.name }}</span>
               <span class="video-upload-size">{{ task.sizeText }}</span>
               <span class="video-upload-state">
-                {{ task.status === 'done' ? '上传完成' : task.status === 'failed' ? '上传失败' : `${task.progress}%` }}
+                {{ task.status === 'done' ? '上传完成'
+                  : task.status === 'processing' ? '服务器处理中...'
+                  : task.status === 'failed' ? '上传失败'
+                  : `${task.progress}%` }}
               </span>
             </div>
             <div class="video-upload-bar">
@@ -847,8 +850,9 @@ const performVideoUpload = async (task) => {
     fd.append('file', task.raw, task.raw.name)
     const res = await uploadFile(fd, (evt) => {
       const total = evt.total || evt.loaded || 1
-      const percent = Math.min(99, Math.round(evt.loaded * 100 / total))
+      const percent = Math.min(100, Math.round(evt.loaded * 100 / total))
       task.progress = percent
+      if (percent >= 100) task.status = 'processing'
       imageProgress.value[task.localUrl] = percent
     })
     const idx = form.value.images.indexOf(task.localUrl)
@@ -882,6 +886,7 @@ const performVideoUpload = async (task) => {
 
 const retryVideoUpload = (task) => {
   task.progress = 0
+  task.status = 'uploading'
   imageProgress.value[task.localUrl] = 0
   return performVideoUpload(task)
 }
