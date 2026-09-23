@@ -17,4 +17,7 @@ public interface NotificationService {
 
     /** 标记已读 */
     void markRead(Long userId, Long notificationId);
+
+    /** 目标内容删除后失效关联通知 */
+    void invalidateTarget(String targetType, Long targetId);
 }

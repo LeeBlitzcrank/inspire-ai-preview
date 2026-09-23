@@ -1,11 +1,11 @@
 package com.inspire.platform.admin.controller;
 
+import com.inspire.platform.admin.dto.DashboardVO;
 import com.inspire.platform.admin.dto.LoginRequest;
 import com.inspire.platform.admin.dto.LoginResponse;
 import com.inspire.platform.admin.service.AdminAuthService;
 import com.inspire.platform.admin.service.AdminDashboardService;
 import com.inspire.platform.common.result.Result;
-import com.inspire.platform.admin.dto.DashboardVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,7 +24,8 @@ public class AdminAuthController {
     @Operation(summary = "管理员登录", description = "使用管理员账号密码登录，返回JWT令牌")
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
-        return Result.success(adminAuthService.login(req.getUsername(), req.getPassword()));
+        return Result.success(adminAuthService.login(
+                req.getUsername(), req.getPassword(), req.getMfaCode()));
     }
 
     @Operation(summary = "监控大屏", description = "获取平台实时统计数据")

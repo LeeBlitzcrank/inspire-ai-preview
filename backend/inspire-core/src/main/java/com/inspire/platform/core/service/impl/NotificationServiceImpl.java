@@ -41,10 +41,14 @@ public class NotificationServiceImpl implements NotificationService {
     public List<Map<String, Object>> list(Long userId, int page, int size) {
         int offset = (page - 1) * size;
         return jdbcTemplate.query(
-            "SELECT id, type, target_type, actor_id, actor_name, content, target_id, target_title, "
-                    + "event_key, is_read, read_time, create_time " +
-            "FROM user_notification WHERE user_id = ? AND deleted = 0 " +
-            "ORDER BY create_time DESC LIMIT ? OFFSET ?",
+            "SELECT n.id, n.type, n.target_type, n.actor_id, n.actor_name, n.content, "
+                    + "n.target_id, n.target_title, n.event_key, n.is_read, n.read_time, n.create_time, "
+                    + "CASE WHEN n.target_type = 'inspire' "
+                    + "THEN (i.id IS NOT NULL AND i.deleted = 0 AND i.status = 1) ELSE 1 END AS target_available "
+                    + "FROM user_notification n "
+                    + "LEFT JOIN inspire_main i ON n.target_type = 'inspire' AND i.id = n.target_id "
+                    + "WHERE n.user_id = ? AND n.deleted = 0 "
+                    + "ORDER BY n.create_time DESC LIMIT ? OFFSET ?",
             (rs, n) -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id", String.valueOf(rs.getLong("id")));
@@ -55,6 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
                 m.put("content", rs.getString("content"));
                 m.put("targetId", String.valueOf(rs.getLong("target_id")));
                 m.put("targetTitle", rs.getString("target_title"));
+                m.put("targetAvailable", rs.getBoolean("target_available"));
                 m.put("eventKey", rs.getString("event_key"));
                 m.put("isRead", rs.getInt("is_read"));
                 m.put("readTime", rs.getObject("read_time", java.time.LocalDateTime.class));
@@ -84,6 +89,20 @@ public class NotificationServiceImpl implements NotificationService {
             jdbcTemplate.update(
                 "UPDATE user_notification SET is_read = 1, read_time = NOW() WHERE user_id = ? AND deleted = 0",
                 userId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void invalidateTarget(String targetType, Long targetId) {
+        if (targetType == null || targetId == null) return;
+        int updated = jdbcTemplate.update(
+                "UPDATE user_notification SET deleted = 1 "
+                        + "WHERE target_type = ? AND target_id = ? AND deleted = 0",
+                targetType, targetId);
+        if (updated > 0) {
+            log.info("通知目标已失效: targetType={}, targetId={}, count={}",
+                    targetType, targetId, updated);
         }
     }
 

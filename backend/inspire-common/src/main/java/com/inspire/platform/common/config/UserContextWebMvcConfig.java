@@ -1,6 +1,7 @@
 package com.inspire.platform.common.config;
 
 import com.inspire.platform.common.interceptor.UserContextInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -21,9 +22,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @ConditionalOnWebApplication
 public class UserContextWebMvcConfig implements WebMvcConfigurer {
 
+    @Value("${inspire.internal-auth.secret:}")
+    private String internalAuthSecret;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new UserContextInterceptor())
+        registry.addInterceptor(new UserContextInterceptor(internalAuthSecret))
                 .addPathPatterns("/**")
                 .order(1);  // 在业务拦截器之前执行，确保 UserContext 优先注入
     }

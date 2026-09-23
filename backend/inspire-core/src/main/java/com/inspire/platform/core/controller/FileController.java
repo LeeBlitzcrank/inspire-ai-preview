@@ -5,28 +5,22 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import javax.net.ssl.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URI;
-import java.net.URL;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
+import java.nio.file.Files;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 @Tag(name = "文件上传", description = "图片/视频上传")
 @RestController
@@ -45,30 +39,11 @@ public class FileController {
     @Value("${inspire.upload.dir:/tmp/inspire-uploads}")
     private String uploadDir;
 
-    /** 创建信任所有证书的 SSL 上下文（用于开发环境外部 HTTPS 图片下载） */
-    private static SSLSocketFactory trustAllSslFactory;
+    @Value("${inspire.upload.remote-allowed-hosts:images.unsplash.com,plus.unsplash.com,picsum.photos,fastly.picsum.photos,img.20sherry.com}")
+    private String remoteAllowedHosts;
 
-    private static synchronized SSLSocketFactory getTrustAllSslFactory() {
-        if (trustAllSslFactory != null) {
-            return trustAllSslFactory;
-        }
-        try {
-            TrustManager[] trustAll = new TrustManager[]{ new X509TrustManager() {
-                @Override
-                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                @Override
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                @Override
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-            }};
-            SSLContext ctx = SSLContext.getInstance("TLS");
-            ctx.init(null, trustAll, new SecureRandom());
-            trustAllSslFactory = ctx.getSocketFactory();
-        } catch (Exception e) {
-            log.warn("创建信任所有证书的 SSL 上下文失败", e);
-        }
-        return trustAllSslFactory;
-    }
+    private static final long MAX_REMOTE_IMAGE_SIZE = 10 * 1024 * 1024L;
+    private static final long MAX_PROXY_IMAGE_SIZE = 12 * 1024 * 1024L;
 
     @Operation(summary = "上传文件", description = "支持 jpg/png/gif/webp，最大 10MB")
     @PostMapping("/upload")
@@ -244,11 +219,6 @@ public class FileController {
         }
     }
 
-    /** 允许被代理的图源白名单（防止被当成任意 URL 的开放代理） */
-    private static final Set<String> PROXY_ALLOWED_HOSTS = Set.of(
-            "picsum.photos", "fastly.picsum.photos", "images.unsplash.com",
-            "img.20sherry.com", "api.20sherry.com", "localhost", "127.0.0.1");
-
     /**
      * 海报封面代理：把站外图片用本站域名转发出去。
      *
@@ -260,63 +230,48 @@ public class FileController {
     @GetMapping("/poster-cover")
     public ResponseEntity<byte[]> posterCover(@RequestParam("url") String urlStr) {
         try {
-            URL url = new URI(urlStr).toURL();
-            String host = url.getHost() == null ? "" : url.getHost().toLowerCase();
-            if (!PROXY_ALLOWED_HOSTS.contains(host)) {
-                log.warn("海报封面代理拒绝非白名单图源: {}", host);
+            URI uri = new URI(urlStr);
+            if (!isAllowedRemoteUri(uri)) {
+                log.warn("海报封面代理拒绝非白名单图源: {}", uri.getHost());
                 return ResponseEntity.status(403).build();
             }
-            String protocol = url.getProtocol();
-            if (!"https".equalsIgnoreCase(protocol) && !"http".equalsIgnoreCase(protocol)) {
-                return ResponseEntity.badRequest().build();
-            }
 
-            Exception lastException = null;
-            for (int attempt = 0; attempt < 2; attempt++) {
-                HttpURLConnection conn = null;
-                try {
-                    conn = (HttpURLConnection) url.openConnection();
-                    if ("https".equalsIgnoreCase(protocol)) {
-                        SSLSocketFactory ssf = getTrustAllSslFactory();
-                        if (ssf != null && conn instanceof HttpsURLConnection httpsConn) {
-                            httpsConn.setSSLSocketFactory(ssf);
-                            httpsConn.setHostnameVerifier((h, session) -> true);
-                        }
-                    }
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                    conn.setConnectTimeout(8000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    if (conn.getResponseCode() != 200) {
-                        lastException = new IOException("upstream status " + conn.getResponseCode());
-                        continue;
-                    }
-                    String contentType = conn.getContentType();
-                    byte[] bytes;
-                    try (InputStream in = conn.getInputStream()) {
-                        bytes = in.readAllBytes();
-                    }
-                    if (bytes.length == 0 || bytes.length > 12 * 1024 * 1024) {
-                        return ResponseEntity.status(413).build();
-                    }
-                    if (contentType == null || !contentType.startsWith("image/")) {
-                        contentType = "image/jpeg";
-                    }
-                    return ResponseEntity.ok()
-                            .header("Access-Control-Allow-Origin", "*")
-                            .header("Cache-Control", "public, max-age=86400")
-                            .contentType(MediaType.parseMediaType(contentType))
-                            .body(bytes);
-                } catch (Exception e) {
-                    lastException = e;
-                } finally {
-                    if (conn != null) conn.disconnect();
+            HttpURLConnection conn = openRemoteConnection(uri, 8000, 15000);
+            try {
+                int status = conn.getResponseCode();
+                if (status != HttpURLConnection.HTTP_OK) {
+                    log.warn("海报封面代理上游返回 {}: {}", status, uri);
+                    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
                 }
+                long contentLength = conn.getContentLengthLong();
+                if (contentLength > MAX_PROXY_IMAGE_SIZE) {
+                    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).build();
+                }
+                String contentType = conn.getContentType();
+                if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+                    return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
+                }
+                byte[] bytes;
+                try (InputStream in = conn.getInputStream()) {
+                    bytes = readLimited(in, MAX_PROXY_IMAGE_SIZE);
+                }
+                if (bytes.length == 0) {
+                    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+                }
+                return ResponseEntity.ok()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Cache-Control", "public, max-age=86400")
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .body(bytes);
+            } finally {
+                conn.disconnect();
             }
-            throw lastException == null ? new IOException("image fetch failed") : lastException;
+        } catch (IllegalArgumentException | IOException e) {
+            log.warn("海报封面代理失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
         } catch (Exception e) {
             log.warn("海报封面代理失败: {}", e.getMessage());
-            return ResponseEntity.status(502).build();
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
         }
     }
 
@@ -327,54 +282,66 @@ public class FileController {
         if (urlStr == null || urlStr.isBlank()) {
             return Result.error("url 参数为空");
         }
-        String ext = ".jpg";
-        if (urlStr.contains(".")) {
-            String rawExt = urlStr.substring(urlStr.lastIndexOf("."));
-            if (rawExt.contains("?")) {
-                rawExt = rawExt.substring(0, rawExt.indexOf("?"));
-            }
-            if (rawExt.matches("\\.(png|jpg|jpeg|gif|webp|bmp)")) {
-                ext = rawExt;
-            }
-        }
-        String filename = UUID.randomUUID().toString().replace("-", "") + ext;
         try {
+            URI uri = new URI(urlStr);
+            if (!isAllowedRemoteUri(uri)) {
+                return Result.error("不允许的图片来源");
+            }
+
+            String ext = ".jpg";
+            String path = uri.getPath() == null ? "" : uri.getPath();
+            if (path.contains(".")) {
+                String rawExt = path.substring(path.lastIndexOf(".")).toLowerCase();
+                if (rawExt.matches("\\.(png|jpg|jpeg|gif|webp|bmp)")) {
+                    ext = rawExt;
+                }
+            }
+            String filename = UUID.randomUUID().toString().replace("-", "") + ext;
             File dir = new File(uploadDir);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
 
-            URL url = new URI(urlStr).toURL();
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-            // 如果是 HTTPS 且外部证书不受信任，使用信任所有证书的 SSLSocketFactory
-            if ("https".equalsIgnoreCase(url.getProtocol())) {
-                SSLSocketFactory ssf = getTrustAllSslFactory();
-                if (ssf != null && conn instanceof HttpsURLConnection) {
-                    HttpsURLConnection hconn = (HttpsURLConnection) conn;
-                    hconn.setSSLSocketFactory(ssf);
-                    hconn.setHostnameVerifier((hostname, session) -> true);
+            HttpURLConnection conn = openRemoteConnection(uri, 10000, 30000);
+            byte[] sourceBytes;
+            try {
+                int status = conn.getResponseCode();
+                if (status != HttpURLConnection.HTTP_OK) {
+                    return Result.error("下载图片失败，HTTP " + status);
                 }
+                long contentLength = conn.getContentLengthLong();
+                if (contentLength > MAX_REMOTE_IMAGE_SIZE) {
+                    return Result.error("远程图片不能超过 10MB");
+                }
+                String contentType = conn.getContentType();
+                if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+                    return Result.error("远程地址不是图片");
+                }
+                try (InputStream in = conn.getInputStream()) {
+                    sourceBytes = readLimited(in, MAX_REMOTE_IMAGE_SIZE);
+                }
+            } finally {
+                conn.disconnect();
             }
+            if (sourceBytes.length == 0) {
+                return Result.error("远程图片内容为空");
+            }
+            if (".webp".equalsIgnoreCase(ext) && !isWebp(sourceBytes)) {
+                return Result.error("WebP 图片内容校验失败");
+            }
+            File target = new File(dir, filename);
+            Files.write(target.toPath(), sourceBytes);
 
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(30000);
-            conn.connect();
-            if (conn.getResponseCode() != 200) {
-                return Result.error("下载图片失败，HTTP " + conn.getResponseCode());
-            }
-            try (InputStream in = conn.getInputStream()) {
-                File target = new File(dir, filename);
-                java.nio.file.Files.copy(in, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
-            conn.disconnect();
             String urlPath = "/uploads/" + filename;
             String thumbUrl = urlPath;
             // WebP 保持自身地址；Java ImageIO 不能稳定解码 WebP。
             if (!".webp".equalsIgnoreCase(ext)) {
                 try {
-                    BufferedImage original = ImageIO.read(new File(dir, filename));
+                    BufferedImage original = ImageIO.read(target);
+                    if (original == null) {
+                        target.delete();
+                        return Result.error("图片解析失败");
+                    }
                     int tw = 400;
                     int th = (int)(tw * (double)original.getHeight() / original.getWidth());
                     BufferedImage thumb = new BufferedImage(tw, Math.max(th, 1), BufferedImage.TYPE_INT_RGB);
@@ -391,5 +358,87 @@ public class FileController {
             log.error("从URL上传图片失败: {}", e.getMessage(), e);
             return Result.error("从URL上传失败: " + e.getMessage());
         }
+    }
+
+    private HttpURLConnection openRemoteConnection(URI uri, int connectTimeout, int readTimeout)
+            throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+        conn.setInstanceFollowRedirects(false);
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+        conn.setConnectTimeout(connectTimeout);
+        conn.setReadTimeout(readTimeout);
+        return conn;
+    }
+
+    private boolean isAllowedRemoteUri(URI uri) {
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+            return false;
+        }
+        int port = uri.getPort();
+        if (port != -1 && port != 80 && port != 443) {
+            return false;
+        }
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+        if (!getAllowedRemoteHosts().contains(host)) {
+            return false;
+        }
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(host);
+            if (addresses.length == 0) {
+                return false;
+            }
+            for (InetAddress address : addresses) {
+                if (isPrivateAddress(address)) {
+                    log.warn("远程图片地址解析到私网 IP: host={}, ip={}", host, address.getHostAddress());
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("远程图片域名解析失败: {}", host);
+            return false;
+        }
+    }
+
+    private Set<String> getAllowedRemoteHosts() {
+        return Arrays.stream(remoteAllowedHosts.split(","))
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(host -> !host.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private boolean isPrivateAddress(InetAddress address) {
+        if (address.isAnyLocalAddress()
+                || address.isLoopbackAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
+                || address.isMulticastAddress()) {
+            return true;
+        }
+        byte[] bytes = address.getAddress();
+        return bytes.length == 16 && (bytes[0] & 0xFE) == 0xFC;
+    }
+
+    private byte[] readLimited(InputStream in, long maxBytes) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        long total = 0;
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+            total += read;
+            if (total > maxBytes) {
+                throw new IOException("远程内容过大");
+            }
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
+    }
+
+    private boolean isWebp(byte[] bytes) {
+        return bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
     }
 }

@@ -10,6 +10,7 @@ import com.inspire.platform.auth.mapper.LoginLogMapper;
 import com.inspire.platform.auth.mapper.PasswordResetMapper;
 import com.inspire.platform.auth.mapper.UserMapper;
 import com.inspire.platform.auth.service.AuthService;
+import com.inspire.platform.auth.service.LoginRiskService;
 import com.inspire.platform.auth.service.email.EmailService;
 import com.inspire.platform.auth.util.RedisSessionUtil;
 import com.inspire.platform.common.exception.BusinessException;
@@ -42,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
     private final RedisSessionUtil redisSessionUtil;
+    private final LoginRiskService loginRiskService;
     private final MqProducer mqProducer;
     private final HttpServletRequest request;
 
@@ -57,6 +59,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthServiceImpl(LoginLogMapper loginLogMapper, UserMapper userMapper,
                            PasswordResetMapper passwordResetMapper, EmailService emailService,
                            JwtUtil jwtUtil, RedisSessionUtil redisSessionUtil,
+                           LoginRiskService loginRiskService,
                            MqProducer mqProducer, HttpServletRequest request) {
         this.loginLogMapper = loginLogMapper;
         this.userMapper = userMapper;
@@ -64,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
         this.emailService = emailService;
         this.jwtUtil = jwtUtil;
         this.redisSessionUtil = redisSessionUtil;
+        this.loginRiskService = loginRiskService;
         this.mqProducer = mqProducer;
         this.request = request;
     }
@@ -140,11 +144,21 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest request) {
+        String username = request.getUsername().trim();
+        if (loginRiskService.isLocked(username)) {
+            saveLoginLog(null, username, 0, "账号临时锁定", "password");
+            throw new BusinessException(429, "登录失败次数过多，账号已临时锁定 30 分钟");
+        }
+        if (loginRiskService.requiresCaptcha(username)) {
+            loginRiskService.verifyCaptcha(request.getCaptchaId(), request.getCaptchaCode());
+        }
+
         // ① 查询用户 & 校验
         User user = findByUsername(request.getUsername());
         if (user == null) {
             log.warn("登录失败: 账号不存在 username={}", request.getUsername());
             saveLoginLog(null, request.getUsername(), 0, "账号或密码错误", "password");
+            loginRiskService.recordFailure(username);
             throw new BusinessException("账号或密码错误");
         }
 
@@ -159,6 +173,7 @@ public class AuthServiceImpl implements AuthService {
         if (!PASSWORD_ENCODER.matches(request.getPassword(), user.getPassword())) {
             log.warn("登录失败: 密码错误 userId={}", user.getId());
             saveLoginLog(user.getId(), request.getUsername(), 0, "密码错误", "password");
+            loginRiskService.recordFailure(username);
             throw new BusinessException("账号或密码错误");
         }
 
@@ -167,6 +182,7 @@ public class AuthServiceImpl implements AuthService {
 
         // ⑤ 记录登录成功日志
         saveLoginLog(user.getId(), user.getUsername(), 1, "", "password");
+        loginRiskService.clearFailures(username);
 
         // ⑥ 发送MQ消息
         mqProducer.send(MqTopicConstants.TOPIC_USER_BEHAVIOR,

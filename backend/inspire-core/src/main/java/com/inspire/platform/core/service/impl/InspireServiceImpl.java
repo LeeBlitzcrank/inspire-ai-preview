@@ -610,6 +610,7 @@ public class InspireServiceImpl implements InspireService {
             throw new BusinessException("只能删除自己的灵感");
         }
         mainMapper.deleteById(m.getId());
+        notificationService.invalidateTarget("inspire", m.getId());
         esSyncService.delete(m.getId());
     }
 

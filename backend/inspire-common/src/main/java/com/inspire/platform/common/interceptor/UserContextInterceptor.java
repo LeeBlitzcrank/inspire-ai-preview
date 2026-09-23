@@ -1,11 +1,14 @@
 package com.inspire.platform.common.interceptor;
 
 import com.inspire.platform.common.model.UserContext;
+import com.inspire.platform.common.util.InternalAuthUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
+
+import java.io.IOException;
 
 /**
  * 用户上下文拦截器
@@ -26,18 +29,53 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Slf4j
 public class UserContextInterceptor implements HandlerInterceptor {
 
+    private final String internalAuthSecret;
+
+    public UserContextInterceptor(String internalAuthSecret) {
+        this.internalAuthSecret = internalAuthSecret;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
-        // 从请求头读取网关透传的用户信息
-        String userIdStr = request.getHeader("X-User-Id");
-        String role = request.getHeader("X-User-Role");
+        String userIdStr = request.getHeader(InternalAuthUtil.USER_ID_HEADER);
+        String role = request.getHeader(InternalAuthUtil.USER_ROLE_HEADER);
+        String timestamp = request.getHeader(InternalAuthUtil.TIMESTAMP_HEADER);
+        String signature = request.getHeader(InternalAuthUtil.SIGNATURE_HEADER);
 
-        if (!StringUtils.hasText(userIdStr)) {
+        boolean hasIdentity = StringUtils.hasText(userIdStr)
+                || StringUtils.hasText(role)
+                || StringUtils.hasText(timestamp)
+                || StringUtils.hasText(signature);
+
+        if (!hasIdentity) {
             // 无用户信息：可能是白名单接口或MQ消费端，跳过注入
             log.trace("用户上下文: 无用户信息, path={}", request.getRequestURI());
             return true;
+        }
+
+        if (!StringUtils.hasText(userIdStr)
+                || !StringUtils.hasText(timestamp)
+                || !StringUtils.hasText(signature)) {
+            writeUnauthorized(response);
+            return false;
+        }
+
+        String query = request.getQueryString();
+        boolean trusted = InternalAuthUtil.verify(
+                internalAuthSecret,
+                userIdStr,
+                role,
+                timestamp,
+                signature,
+                request.getMethod(),
+                request.getRequestURI(),
+                query);
+        if (!trusted) {
+            log.warn("用户上下文: 内部身份签名无效, path={}", request.getRequestURI());
+            writeUnauthorized(response);
+            return false;
         }
 
         try {
@@ -51,6 +89,17 @@ public class UserContextInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    private void writeUnauthorized(HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json");
+        try {
+            response.getWriter().write("{\"code\":401001,\"msg\":\"内部身份校验失败\",\"data\":null}");
+        } catch (IOException ignored) {
+            // 响应已断开时无需额外处理
+        }
     }
 
     @Override

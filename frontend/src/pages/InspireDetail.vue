@@ -1963,11 +1963,11 @@ h1 {
 .reply:first-child { padding-top: 0; border-top: 0; }
 .reply-to {
   display: inline;
-  padding: 1px 5px;
-  border-radius: 6px;
-  color: #b6531d;
-  background: #ffe7d2;
-  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  color: #4f7d73;
+  background: transparent;
+  font-weight: 600;
 }
 
 .reply-actions {

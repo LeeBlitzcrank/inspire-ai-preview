@@ -9,11 +9,11 @@
 import request from '@/utils/request.js'
 import axios from 'axios'
 import {
+  clearAllTokens,
   getAccessToken,
   getRefreshToken,
   hasSession,
   saveTokens,
-  clearAllTokens,
   syncLoginFlag
 } from '@/utils/tokenStorage.js'
 
@@ -65,6 +65,10 @@ export function login(data) {
     }
     return res
 })
+}
+
+export function getLoginCaptcha() {
+  return request.get('/auth/captcha')
 }
 
 /**

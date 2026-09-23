@@ -17,7 +17,7 @@
     >
     <div class="noti-list">
       <div v-for="item in list" :key="item.id" class="noti-item"
-        :class="{ 'noti-unread': !item.isRead, 'noti-strong': item.type === 'special_publish' }"
+        :class="{ 'noti-unread': !item.isRead, 'noti-strong': item.type === 'special_publish', 'noti-invalid': item.targetAvailable === false }"
         @click="handleClick(item)">
         <div class="noti-dot" v-if="!item.isRead"></div>
         <div class="noti-icon-wrap">
@@ -28,7 +28,8 @@
             <strong>{{ item.actorName }}</strong>
             <span>{{ item.content }}</span>
           </div>
-          <div v-if="item.targetTitle" class="noti-target">《{{ item.targetTitle }}》</div>
+          <div v-if="item.targetAvailable === false" class="noti-target noti-target--invalid">内容已删除</div>
+          <div v-else-if="item.targetTitle" class="noti-target">《{{ item.targetTitle }}》</div>
           <div class="noti-time">{{ formatTime(item.createTime) }}</div>
         </div>
       </div>
@@ -116,7 +117,7 @@ const handleClick = async (item) => {
     item.isRead = 1
   }
   // 跳转到灵感详情
-  if (item.targetId && item.targetId !== 'null' && item.targetId !== '0') {
+  if (item.targetAvailable !== false && item.targetId && item.targetId !== 'null' && item.targetId !== '0') {
     router.push({ name: 'InspireDetail', params: { id: String(item.targetId) } })
   }
 }
@@ -146,6 +147,7 @@ onMounted(() => loadMore())
 .noti-list { display:flex; flex-direction:column; gap:1px; background:#f0f3f9; border-radius:16px; overflow:hidden; }
 .noti-item { display:flex; align-items:flex-start; gap:10px; padding:14px 16px; background:#fff; cursor:pointer; transition:0.2s; position:relative; }
 .noti-item:hover { background:#f5f8ff; }
+.noti-invalid { cursor: default; opacity: .72; }
 .noti-unread { background:#f0f6ff; }
 .noti-strong { background:#fff8ec; }
 .noti-dot { position:absolute; left:6px; top:18px; width:6px; height:6px; border-radius:50%; background:#409eff; }
@@ -155,6 +157,7 @@ onMounted(() => loadMore())
 .noti-text { font-size:14px; color:#1d1d1f; line-height:1.5; }
 .noti-text strong { font-weight:600; margin-right:4px; }
 .noti-target { font-size:13px; color:#409eff; margin-top:4px; }
+.noti-target--invalid { color:#a8abb2; }
 .noti-time { font-size:12px; color:#c0c4cc; margin-top:4px; }
 .noti-load-more { text-align:center; padding:16px; color:#409eff; font-size:14px; cursor:pointer; }
 .noti-no-more { text-align:center; padding:16px; color:#c0c4cc; font-size:13px; }

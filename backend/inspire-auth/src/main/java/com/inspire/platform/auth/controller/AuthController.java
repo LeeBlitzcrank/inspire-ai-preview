@@ -3,6 +3,7 @@ package com.inspire.platform.auth.controller;
 import com.inspire.platform.auth.dto.*;
 import com.inspire.platform.auth.entity.User;
 import com.inspire.platform.auth.service.AuthService;
+import com.inspire.platform.auth.service.LoginRiskService;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,9 +27,20 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthService authService;
+    private final LoginRiskService loginRiskService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, LoginRiskService loginRiskService) {
         this.authService = authService;
+        this.loginRiskService = loginRiskService;
+    }
+
+    @Operation(summary = "登录图形验证码")
+    @GetMapping("/captcha")
+    public Result<Map<String, String>> captcha() {
+        LoginRiskService.CaptchaResult captcha = loginRiskService.createCaptcha();
+        return Result.success(Map.of(
+                "captchaId", captcha.captchaId(),
+                "image", captcha.image()));
     }
 
     @Operation(summary = "用户注册", description = "注册新账号，自动登录并返回双Token（accessToken + refreshToken）")

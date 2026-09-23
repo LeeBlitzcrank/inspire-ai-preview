@@ -1,6 +1,7 @@
 package com.inspire.platform.core.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,6 +26,10 @@ public class Message {
     private String extraJson;
     private Integer isRead;
     private LocalDateTime recalledAt;
+    @JsonIgnore
+    private Long recalledBy;
+    @JsonIgnore
+    private String originalMessageHash;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

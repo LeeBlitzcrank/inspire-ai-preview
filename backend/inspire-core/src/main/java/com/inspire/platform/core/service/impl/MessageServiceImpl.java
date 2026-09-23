@@ -1,6 +1,7 @@
 package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.core.entity.ConversationMember;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
@@ -14,8 +15,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -252,12 +256,30 @@ public class MessageServiceImpl implements MessageService {
             return;
         }
         LocalDateTime now = LocalDateTime.now(ZONE);
+        if (message.getCreateTime() == null || message.getCreateTime().isBefore(now.minusMinutes(2))) {
+            throw new BusinessException("消息发送超过 2 分钟，不能撤回");
+        }
+        String originalHash = hashOriginalMessage(message);
         jdbcTemplate.update(
-                "UPDATE message SET content = '', extra_json = NULL, recalled_at = ?, update_time = ? WHERE id = ?",
-                now, now, messageId);
+                "UPDATE message SET content = '', extra_json = NULL, recalled_at = ?, "
+                        + "recalled_by = ?, original_message_hash = ?, update_time = ? WHERE id = ?",
+                now, userId, originalHash, now, messageId);
         jdbcTemplate.update(
                 "UPDATE message_conversation SET last_content = ?, update_time = ? WHERE id = ?",
                 "消息已撤回", now, message.getConversationId());
+    }
+
+    private String hashOriginalMessage(Message message) {
+        try {
+            String raw = String.valueOf(message.getType()) + "\n"
+                    + String.valueOf(message.getContent()) + "\n"
+                    + String.valueOf(message.getExtraJson());
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256")
+                            .digest(raw.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new BusinessException("消息撤回失败，请稍后重试");
+        }
     }
 
     private void ensureConversationMembers(MessageConversation conv, LocalDateTime now) {

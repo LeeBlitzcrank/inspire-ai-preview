@@ -7,6 +7,8 @@ import com.inspire.platform.core.mapper.*;
 import com.inspire.platform.core.service.ImageVariantService;
 import com.inspire.platform.core.service.es.EsSyncService;
 import com.inspire.platform.core.service.impl.InspireServiceImpl;
+import io.minio.BucketExistsArgs;
+import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
@@ -289,6 +291,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         // 先把演示图生成进 MinIO，后面的灵感直接引用（不依赖外部图源）
         ensureDemoImages();
+        repairMissingDemoImages(allUsers);
         loadCategoryChoices();
 
         Map<Long, List<Long>> userFolders = new HashMap<>();
@@ -881,6 +884,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      */
     private void ensureDemoImages() {
         if (!demoImageUrls.isEmpty()) return;
+        ensureDemoBucket();
         for (int i = 0; i < DEMO_IMAGE_COUNT; i++) {
             String key = DEMO_IMAGE_PREFIX + i + ".jpg";
             try {
@@ -901,6 +905,43 @@ public class DemoDataSeeder implements ApplicationRunner {
             }
         }
         log.info("[DemoSeeder] 演示图就绪 {} 张（已存入 MinIO）", demoImageUrls.size());
+    }
+
+    private void ensureDemoBucket() {
+        try {
+            if (!minioClient.bucketExists(BucketExistsArgs.builder()
+                    .bucket(minioConfig.getBucket())
+                    .build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder()
+                        .bucket(minioConfig.getBucket())
+                        .build());
+                log.info("[DemoSeeder] 已创建 MinIO 存储桶: {}", minioConfig.getBucket());
+            }
+        } catch (Exception e) {
+            log.warn("[DemoSeeder] 创建 MinIO 存储桶失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 修复早期在 MinIO 桶创建前生成的演示数据：图片对象已存在，但数据库引用为空。
+     */
+    private void repairMissingDemoImages(List<Long> users) {
+        if (demoImageUrls.isEmpty() || users.isEmpty()) return;
+        String placeholders = String.join(",", Collections.nCopies(users.size(), "?"));
+        List<Long> ids = jdbcTemplate.queryForList(
+                "SELECT id FROM inspire_main WHERE user_id IN (" + placeholders + ") "
+                        + "AND deleted = 0 AND (img IS NULL OR img = '' OR images IS NULL OR images = '')",
+                Long.class, users.toArray());
+        for (Long id : ids) {
+            String img = demoImage(id);
+            String images = "[\"" + img + "\",\"" + demoImage(id + 7) + "\"]";
+            jdbcTemplate.update(
+                    "UPDATE inspire_main SET img = ?, images = ? WHERE id = ?",
+                    img, images, id);
+        }
+        if (!ids.isEmpty()) {
+            log.info("[DemoSeeder] 已修复 {} 条演示灵感的空图片引用", ids.size());
+        }
     }
 
     private boolean demoImageExists(String key) {

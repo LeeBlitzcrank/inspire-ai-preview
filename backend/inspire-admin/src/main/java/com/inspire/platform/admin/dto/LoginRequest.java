@@ -8,4 +8,6 @@ public class LoginRequest {
     @NotBlank private String username;
     @Schema(description = "密码", example = "112233")
     @NotBlank private String password;
+    @Schema(description = "TOTP 动态验证码")
+    private String mfaCode;
 }

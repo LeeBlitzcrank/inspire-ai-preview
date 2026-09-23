@@ -3,10 +3,10 @@ package com.inspire.platform.gateway.filter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.common.util.InternalAuthUtil;
+import com.inspire.platform.common.util.JwtUtil;
 import com.inspire.platform.gateway.model.ErrorCode;
 import com.inspire.platform.gateway.service.TokenBlacklistService;
-import com.inspire.platform.common.constant.RedisKeyConstant;
-import com.inspire.platform.common.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -55,6 +55,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService blacklistService;
     private final ObjectMapper objectMapper;
+    private final String internalAuthSecret;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     /** 白名单路径：无需登录即可访问 */
@@ -64,10 +65,15 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             JwtUtil jwtUtil,
             TokenBlacklistService blacklistService,
             ObjectMapper objectMapper,
+            @Value("${inspire.internal-auth.secret}") String internalAuthSecret,
             @Value("${inspire.jwt.white-list}") String whiteListStr) {
         this.jwtUtil = jwtUtil;
         this.blacklistService = blacklistService;
         this.objectMapper = objectMapper;
+        if (!StringUtils.hasText(internalAuthSecret)) {
+            throw new IllegalStateException("INSPIRE_INTERNAL_AUTH_SECRET 未配置");
+        }
+        this.internalAuthSecret = internalAuthSecret;
         this.whiteList = Arrays.asList(whiteListStr.split(","));
     }
 
@@ -82,18 +88,21 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         // 白名单接口直接放行，跳过鉴权
         // ==================================================================
         if (isWhiteList(path)) {
+            String userId = null;
+            String role = null;
             try {
                 String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
                 if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
                     Claims claims = jwtUtil.parseToken(authHeader.substring(7));
                     if (claims != null) {
-                        request = request.mutate()
-                                .header("X-User-Id", claims.getSubject())
-                                .build();
+                        userId = claims.getSubject();
+                        role = claims.get("role", String.class);
                     }
                 }
             } catch (Exception e) {
+                log.debug("[鉴权] 白名单可选令牌无效: {}", path);
             }
+            request = withInternalIdentity(request, userId, role);
             log.debug("[鉴权] 白名单放行: {}", path);
             return chain.filter(exchange.mutate().request(request).build());
         }
@@ -148,10 +157,8 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                         String userId = claims.getSubject();
                         String role = claims.get("role", String.class);
 
-                        ServerHttpRequest mutatedRequest = finalRequest.mutate()
-                                .header("X-User-Id", userId)
-                                .header("X-User-Role", role != null ? role : "")
-                                .build();
+                        ServerHttpRequest mutatedRequest = withInternalIdentity(
+                                finalRequest, userId, role);
 
                         log.debug("[鉴权] 通过: userId={}, role={}, path={}", userId, role, path);
 
@@ -194,6 +201,44 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             }
         }
         return false;
+    }
+
+    private ServerHttpRequest withInternalIdentity(ServerHttpRequest request,
+                                                   String userId,
+                                                   String role) {
+        String normalizedRole = role == null ? "" : role;
+        String path = request.getURI().getRawPath();
+        String query = request.getURI().getRawQuery();
+
+        return request.mutate().headers(headers -> {
+            headers.remove(InternalAuthUtil.USER_ID_HEADER);
+            headers.remove(InternalAuthUtil.USER_ROLE_HEADER);
+            headers.remove(InternalAuthUtil.TIMESTAMP_HEADER);
+            headers.remove(InternalAuthUtil.SIGNATURE_HEADER);
+
+            if (!StringUtils.hasText(userId)) {
+                return;
+            }
+
+            long timestamp = System.currentTimeMillis();
+            String signature = InternalAuthUtil.sign(
+                    internalAuthSecret,
+                    userId,
+                    normalizedRole,
+                    timestamp,
+                    request.getMethod().name(),
+                    downstreamPath(path),
+                    query);
+            headers.set(InternalAuthUtil.USER_ID_HEADER, userId);
+            headers.set(InternalAuthUtil.USER_ROLE_HEADER, normalizedRole);
+            headers.set(InternalAuthUtil.TIMESTAMP_HEADER, String.valueOf(timestamp));
+            headers.set(InternalAuthUtil.SIGNATURE_HEADER, signature);
+        }).build();
+    }
+
+    private String downstreamPath(String path) {
+        int nextSlash = path == null ? -1 : path.indexOf('/', 1);
+        return nextSlash < 0 ? "/" : path.substring(nextSlash);
     }
 
     /**

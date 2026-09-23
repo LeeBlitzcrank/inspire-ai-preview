@@ -44,6 +44,21 @@
           <el-input v-model="form.password" placeholder="请输入密码" show-password></el-input>
         </div>
 
+        <div v-if="captchaRequired" class="input-group">
+          <label>验证码</label>
+          <div class="captcha-row">
+            <el-input
+              v-model="form.captchaCode"
+              placeholder="请输入验证码"
+              maxlength="4"
+              @keyup.enter="handleLogin"
+            ></el-input>
+            <button class="captcha-image" type="button" title="点击刷新验证码" @click="loadCaptcha">
+              <img v-if="captchaImage" :src="captchaImage" alt="验证码">
+            </button>
+          </div>
+        </div>
+
         <div class="tip-row">
           <el-checkbox v-model="remember">记住账号</el-checkbox>
           <span class="forget-pwd" @click="goForgot">忘记密码</span>
@@ -66,7 +81,7 @@
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
-import {login} from '@/api/auth.js'
+import {getLoginCaptcha, login} from '@/api/auth.js'
 import {setRememberMe} from '@/utils/tokenStorage.js'
 import {useAuthStore} from '@/stores/auth'
 
@@ -77,11 +92,27 @@ const goForgot = () => router.push('/forgot-password')
 
 const loading = ref(false)
 const remember = ref(false)
-const form = ref({ account: '', password: '' })
+const captchaRequired = ref(false)
+const captchaImage = ref('')
+const form = ref({ account: '', password: '', captchaId: '', captchaCode: '' })
+
+const loadCaptcha = async () => {
+  try {
+    const res = await getLoginCaptcha()
+    if (res?.code === 200) {
+      form.value.captchaId = res.data?.captchaId || ''
+      form.value.captchaCode = ''
+      captchaImage.value = res.data?.image || ''
+    }
+  } catch (e) {
+    captchaImage.value = ''
+  }
+}
 
 const handleLogin = async () => {
   if (!form.value.account.trim()) return ElMessage.warning('请输入账号')
   if (!form.value.password.trim()) return ElMessage.warning('请输入密码')
+  if (captchaRequired.value && !form.value.captchaCode.trim()) return ElMessage.warning('请输入验证码')
 
   loading.value = true
   try {
@@ -90,7 +121,9 @@ const handleLogin = async () => {
 
     const res = await login({
       username: form.value.account,
-      password: form.value.password
+      password: form.value.password,
+      captchaId: captchaRequired.value ? form.value.captchaId : undefined,
+      captchaCode: captchaRequired.value ? form.value.captchaCode : undefined
     })
 
     const data = res?.data || {}
@@ -115,10 +148,19 @@ const handleLogin = async () => {
       await router.replace(redirect || '/')
     } else {
       ElMessage.error(res?.msg || '登录失败')
+      if (!String(res?.msg || '').includes('锁定')) {
+        captchaRequired.value = true
+        await loadCaptcha()
+      }
     }
   } catch (e) {
     // 错误已由 request.js 拦截器处理
     console.error('[登录异常]', e)
+    const msg = e?.response?.data?.msg || ''
+    if (!msg.includes('锁定')) {
+      captchaRequired.value = true
+      await loadCaptcha()
+    }
   } finally {
     loading.value = false
   }
@@ -290,6 +332,27 @@ const parseJwtUserId = (token) => {
   font-weight: 600;
   color: #374151;
   margin-bottom: 6px;
+}
+.captcha-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 10px;
+  align-items: center;
+}
+.captcha-image {
+  width: 132px;
+  height: 46px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: #f4faf8;
+  cursor: pointer;
+}
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 ::v-deep .el-input__wrapper {
   border-radius: 14px;
