@@ -1,26 +1,29 @@
 package com.inspire.platform.mq.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
-
 @Slf4j
 @Component
 public class MqProducer {
 
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
     private final String nameServer;
     private Object producer;
     private boolean available = false;
 
     public MqProducer(ObjectMapper objectMapper,
+                      MeterRegistry meterRegistry,
                       @Value("${rocketmq.name-server:}") String nameServer) {
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
         this.nameServer = nameServer;
     }
 
@@ -46,18 +49,27 @@ public class MqProducer {
 
     public void send(String topic, Object data) {
         if (!available) {
+            meterRegistry.counter("inspire.mq.send.skipped", "topic", topic).increment();
             log.info("【MQ消息】topic={}, data={}", topic, safeJson(data));
             return;
         }
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             Class<?> msgClz = Class.forName("org.apache.rocketmq.common.message.Message");
             Object msg = msgClz.getConstructor(String.class, byte[].class)
                     .newInstance(topic, safeJson(data).getBytes("UTF-8"));
             producer.getClass().getMethod("send", msgClz).invoke(producer, msg);
+            meterRegistry.counter("inspire.mq.send.total", "topic", topic, "result", "success").increment();
             log.debug("MQ发送成功: topic={}", topic);
         } catch (Exception e) {
+            meterRegistry.counter("inspire.mq.send.total", "topic", topic, "result", "failed").increment();
             log.warn("MQ发送失败: {} - {}", e.getClass().getSimpleName(),
                     e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+        } finally {
+            sample.stop(Timer.builder("inspire.mq.send.latency")
+                    .tag("topic", topic)
+                    .publishPercentileHistogram()
+                    .register(meterRegistry));
         }
     }
 

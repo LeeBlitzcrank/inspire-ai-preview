@@ -11,14 +11,14 @@ import com.inspire.platform.common.util.TitleUtil;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
-import com.inspire.platform.core.service.InspireService;
-import com.inspire.platform.core.service.NotificationService;
+import com.inspire.platform.core.service.*;
 import com.inspire.platform.core.service.es.EsSyncService;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +40,10 @@ public class InspireServiceImpl implements InspireService {
     private final LikeMapper likeMapper;
     private final EsSyncService esSyncService;
     private final NotificationService notificationService;
+    private final ContentCacheService contentCacheService;
+    private final FeedService feedService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ViewCountService viewCountService;
     private final MqProducer mqProducer;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -79,9 +83,13 @@ public class InspireServiceImpl implements InspireService {
         if (m.getStatus() != 1 && (loginUserId == null || !m.getUserId().equals(loginUserId))) {
             throw new BusinessException("灵感不存在");
         }
-        // 原子更新单列，避免详情页把整行字段重新写一遍，也避免并发下的计数丢失。
-        jdbcTemplate.update("UPDATE inspire_main SET view_count = view_count + 1 WHERE id = ?", id);
-        m.setViewCount(m.getViewCount() + 1);
+        long pendingViews = viewCountService.increment(id);
+        if (pendingViews < 0) {
+            jdbcTemplate.update("UPDATE inspire_main SET view_count = view_count + 1 WHERE id = ?", id);
+            m.setViewCount(m.getViewCount() + 1);
+        } else {
+            m.setViewCount(m.getViewCount() + pendingViews);
+        }
         InspireContent c = contentMapper.selectById(id);
         InspireVO vo = toDetailVO(m, loginUserId, c != null ? c.getContent() : "");
         fillSeriesContext(vo, m);
@@ -505,7 +513,9 @@ public class InspireServiceImpl implements InspireService {
         contentMapper.insert(c);
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_PUBLISH, java.util.Map.of("inspireId", m.getId(), "userId", userId, "title", m.getTitle(), "tag", m.getTag()));
         esSyncService.sync(m);
+        contentCacheService.evictPublicContent();
         if (Integer.valueOf(1).equals(m.getStatus())) {
+            eventPublisher.publishEvent(new FeedFanoutEvent(m.getId(), userId, m.getCreateTime()));
             notifySeriesPublish(userId, m);
         }
         log.info("创建灵感: id={}, userId={}, status={}", m.getId(), userId, m.getStatus());
@@ -596,6 +606,10 @@ public class InspireServiceImpl implements InspireService {
             else { InspireContent nc = new InspireContent(); nc.setInspireId(id); nc.setContent(req.getContent()); contentMapper.insert(nc); }
         }
         esSyncService.sync(m);
+        contentCacheService.evictPublicContent();
+        if (Integer.valueOf(1).equals(m.getStatus())) {
+            eventPublisher.publishEvent(new FeedFanoutEvent(m.getId(), userId, m.getCreateTime()));
+        }
         return m;
     }
 
@@ -612,6 +626,8 @@ public class InspireServiceImpl implements InspireService {
         mainMapper.deleteById(m.getId());
         notificationService.invalidateTarget("inspire", m.getId());
         esSyncService.delete(m.getId());
+        feedService.deleteInspire(m.getId());
+        contentCacheService.evictPublicContent();
     }
 
     @Override @Transactional

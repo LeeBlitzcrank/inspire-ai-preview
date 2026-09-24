@@ -65,6 +65,7 @@ public class CommonCacheConfig {
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(base)
                 .withInitialCacheConfigurations(configs)
+                .enableStatistics()
                 .build();
     }
 }

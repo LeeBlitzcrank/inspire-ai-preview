@@ -4,6 +4,7 @@ import com.inspire.platform.common.util.TitleUtil;
 import com.inspire.platform.core.config.MinioConfig;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
+import com.inspire.platform.core.service.FeedService;
 import com.inspire.platform.core.service.ImageVariantService;
 import com.inspire.platform.core.service.es.EsSyncService;
 import com.inspire.platform.core.service.impl.InspireServiceImpl;
@@ -66,6 +67,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final ImageVariantService imageVariantService;
+    private final FeedService feedService;
     private final EsSyncService esSyncService;
 
     @Value("${inspire.image.cdn-domain:https://img.20sherry.com}")
@@ -318,6 +320,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         ensureQuotePosts(allUsers);
         ensureSeries(allUsers);
         ensureFollows(allUsers);
+        for (Long userId : allUsers) {
+            feedService.rebuildForUser(userId, 200);
+        }
         ensureConversations(allUsers);
         ensureMessageEnhancements();
         generateNotifications();

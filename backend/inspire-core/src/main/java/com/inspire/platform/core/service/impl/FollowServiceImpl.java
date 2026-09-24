@@ -2,6 +2,7 @@ package com.inspire.platform.core.service.impl;
 
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.core.dto.InspireVO;
+import com.inspire.platform.core.service.FeedService;
 import com.inspire.platform.core.service.FollowService;
 import com.inspire.platform.core.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -23,6 +23,7 @@ public class FollowServiceImpl implements FollowService {
 
     private final JdbcTemplate jdbcTemplate;
     private final NotificationService notificationService;
+    private final FeedService feedService;
 
     // 获取下一个ID
     private long nextId() {
@@ -44,6 +45,7 @@ public class FollowServiceImpl implements FollowService {
         }
         jdbcTemplate.update("INSERT INTO user_follow(id, follower_id, followee_id) VALUES(?, ?, ?)",
             nextId(), myId, userId);
+        feedService.backfillFollower(myId, userId, 100);
         log.info("关注: follower={}, followee={}", myId, userId);
         try {
             String myName = jdbcTemplate.queryForObject("SELECT nickname FROM user WHERE id=?", String.class, myId);
@@ -59,6 +61,7 @@ public class FollowServiceImpl implements FollowService {
         if (affected == 0) {
             throw new BusinessException("未关注该用户");
         }
+        feedService.removeFollower(myId, userId);
         log.info("取消关注: follower={}, followee={}", myId, userId);
     }
 
@@ -104,28 +107,24 @@ public class FollowServiceImpl implements FollowService {
 
     @Override
     public List<InspireVO> getFeed(Long myId, Long followeeId, int page, int size) {
-        List<Long> ids;
+        int safeSize = Math.max(1, Math.min(size, 50));
+        int offset = Math.max(0, page - 1) * safeSize;
+        List<Object> params = new ArrayList<>();
+        params.add(myId);
+        String authorFilter = "";
         if (followeeId != null) {
-            ids = new ArrayList<>();
-            ids.add(followeeId);
-        } else {
-            // 获取我关注的用户 ID 列表
-            ids = jdbcTemplate.query(
-                "SELECT followee_id FROM user_follow WHERE follower_id = ?",
-                (rs, n) -> rs.getLong("followee_id"), myId);
+            authorFilter = " AND f.author_id = ? ";
+            params.add(followeeId);
         }
-        if (ids.isEmpty()) {
-            return new ArrayList<>();
-        }
+        params.add(safeSize);
+        params.add(offset);
 
-        String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT id,title,img,tag,user_id,view_count,like_count,collect_count,heat,publish_city,create_time "
-            + "FROM inspire_main WHERE deleted=0 AND status=1 AND user_id IN (" + placeholders + ") "
-            + "ORDER BY create_time DESC LIMIT ? OFFSET ?";
-
-        List<Object> params = new ArrayList<>(ids);
-        params.add(size);
-        params.add((page - 1) * size);
+        String sql = "SELECT i.id,i.title,i.img,i.tag,i.user_id,i.view_count,i.like_count,"
+                + "i.collect_count,i.heat,i.publish_city,i.create_time "
+                + "FROM user_feed f JOIN inspire_main i ON i.id = f.inspire_id "
+                + "WHERE f.user_id = ? AND i.deleted = 0 AND i.status = 1 "
+                + authorFilter
+                + "ORDER BY f.create_time DESC, f.id DESC LIMIT ? OFFSET ?";
 
         return jdbcTemplate.query(sql, (rs, n) -> {
             InspireVO vo = new InspireVO();

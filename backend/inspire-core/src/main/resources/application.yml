@@ -1,5 +1,14 @@
 server:
   port: 8083
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      percentiles:
+        "[http.server.requests]": 0.5,0.95,0.99
+
 spring:
   application:
     name: inspire-core

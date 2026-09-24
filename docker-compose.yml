@@ -21,6 +21,10 @@ x-common-env: &common-env
   INSPIRE_ES_HOSTS: elasticsearch:9200
   # 日志文件路径（每个容器的 /logs 挂载到不同的宿主机目录）
   LOGGING_FILE_NAME: /logs/app.log
+  LOGGING_PATTERN_LEVEL: "%5p [traceId=%X{traceId:-}]"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+  SPRING_CACHE_REDIS_ENABLE_STATISTICS: "true"
   ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
   INSPIRE_REDIS_HOST: redis
   INSPIRE_REDIS_PORT: 6379
@@ -59,7 +63,11 @@ services:
       MYSQL_DATABASE: inspire_ai_preview
       # 容器时区固定为北京时间，避免 CURRENT_TIMESTAMP 写入 UTC 导致前后端时间差 8 小时
       TZ: Asia/Shanghai
-    command: [ "--default-time-zone=+08:00" ]
+    command:
+      - "--default-time-zone=+08:00"
+      - "--slow-query-log=1"
+      - "--long-query-time=0.5"
+      - "--slow-query-log-file=/var/log/mysql/slow.log"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./docker/init/init.sql:/docker-entrypoint-initdb.d/init.sql

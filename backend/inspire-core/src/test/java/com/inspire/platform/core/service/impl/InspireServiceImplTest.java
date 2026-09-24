@@ -2,44 +2,58 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.core.dto.InspirePageQuery;
 import com.inspire.platform.core.dto.InspireVO;
-import com.inspire.platform.core.entity.InspireMain;
-import com.inspire.platform.core.mapper.InspireMainMapper;
-import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.core.mapper.*;
+import com.inspire.platform.core.service.ContentCacheService;
+import com.inspire.platform.core.service.FeedService;
+import com.inspire.platform.core.service.NotificationService;
+import com.inspire.platform.core.service.ViewCountService;
+import com.inspire.platform.core.service.es.EsSyncService;
+import com.inspire.platform.mq.producer.MqProducer;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
-/**
- * InspireService 单元测试
- */
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class InspireServiceImplTest {
 
-    @Autowired
-    private InspireService inspireService;
+    @InjectMocks
+    private InspireServiceImpl inspireService;
 
-    @MockBean
-    private InspireMainMapper mainMapper;
+    @Mock private InspireMainMapper mainMapper;
+    @Mock private InspireContentMapper contentMapper;
+    @Mock private CollectMapper collectMapper;
+    @Mock private CollectFolderMapper collectFolderMapper;
+    @Mock private InspireSeriesMapper seriesMapper;
+    @Mock private LikeMapper likeMapper;
+    @Mock private EsSyncService esSyncService;
+    @Mock private NotificationService notificationService;
+    @Mock private ContentCacheService contentCacheService;
+    @Mock private FeedService feedService;
+    @Mock private ViewCountService viewCountService;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private MqProducer mqProducer;
+    @Mock private JdbcTemplate jdbcTemplate;
+    @Mock private ObjectMapper objectMapper;
 
-    /**
-     * 测试分页查询：listPublic 应返回不超过 pageSize 条数据
-     */
     @Test
     void testListPublicPagination() {
-        // mock 一个分页结果
-        Page<InspireMain> mockPage = new Page<>(1, 5);
-        // selectPage 会返回这个 mockPage
         when(mainMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class)))
-                .thenReturn(mockPage);
+                .thenReturn(new Page<>(1, 5));
 
         InspirePageQuery query = new InspirePageQuery();
         query.setPage(1);
@@ -49,9 +63,6 @@ class InspireServiceImplTest {
         assertNotNull(result);
     }
 
-    /**
-     * 测试 getDetail 对不存在的数据抛出异常
-     */
     @Test
     void testGetDetailNotFound() {
         when(mainMapper.selectById(anyLong())).thenReturn(null);

@@ -1,5 +1,7 @@
 package com.inspire.platform.mq.consumer;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,9 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Component
@@ -18,6 +23,12 @@ public class MqConsumer {
     private String nameServer;
 
     private final List<Object> consumers = new ArrayList<>();
+    private final MeterRegistry meterRegistry;
+    private final Map<String, AtomicLong> lastMessageAge = new ConcurrentHashMap<>();
+
+    public MqConsumer(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
     @PostConstruct
     public void init() {
@@ -50,6 +61,15 @@ public class MqConsumer {
                             List<Object> msgs = (List<Object>) args[0];
                             for (Object msg : msgs) {
                                 byte[] body = (byte[]) msg.getClass().getMethod("getBody").invoke(msg);
+                                meterRegistry.counter("inspire.mq.consume.total", "topic", topic).increment();
+                                lastMessageAge.computeIfAbsent(topic, key -> {
+                                    AtomicLong age = new AtomicLong(0);
+                                    Gauge.builder("inspire.mq.consume.last.message.age.seconds",
+                                                    age, value -> value.get() / 1000.0)
+                                            .tag("topic", key)
+                                            .register(meterRegistry);
+                                    return age;
+                                }).set(System.currentTimeMillis());
                                 log.info("【{}】收到消息: {}", topic, new String(body));
                             }
                             Class<?> stClz = Class.forName("org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus");

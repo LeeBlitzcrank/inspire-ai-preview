@@ -5,13 +5,16 @@ import com.inspire.platform.core.dto.MessageSendRequest;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
 import com.inspire.platform.core.service.MessageService;
+import com.inspire.platform.core.service.MessageStreamService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.Map;
 public class MessageController {
 
     private final MessageService messageService;
+    private final MessageStreamService messageStreamService;
     private final JdbcTemplate jdbcTemplate;
 
     private Long getUserId(HttpServletRequest request) {
@@ -39,9 +43,21 @@ public class MessageController {
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        return Result.success(messageService.sendMessage(
+        Message message = messageService.sendMessage(
                 userId, payload.getToUserId(), payload.getContent(),
-                payload.getType(), payload.getExtraJson()));
+                payload.getType(), payload.getExtraJson());
+        messageStreamService.emitToUsers(List.of(userId, payload.getToUserId()), "message", message);
+        return Result.success(message);
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "私信实时事件流")
+    public SseEmitter stream(HttpServletRequest request) {
+        Long userId = getUserId(request);
+        if (userId == null) {
+            throw new IllegalArgumentException("未登录");
+        }
+        return messageStreamService.connect(userId);
     }
 
     @GetMapping("/conversations")
@@ -79,6 +95,12 @@ public class MessageController {
             return Result.error(400, "参数缺失");
         }
         messageService.markAsRead(userId, conversationId);
+        messageStreamService.emitToUsers(
+                jdbcTemplate.queryForList(
+                        "SELECT user_id FROM conversation_member WHERE conversation_id = ?",
+                        Long.class, conversationId),
+                "read",
+                Map.of("conversationId", String.valueOf(conversationId), "userId", String.valueOf(userId)));
         return Result.success();
     }
 
@@ -102,6 +124,12 @@ public class MessageController {
             return Result.error(401, "未登录");
         }
         messageService.recallMessage(userId, conversationId, id);
+        messageStreamService.emitToUsers(
+                jdbcTemplate.queryForList(
+                        "SELECT user_id FROM conversation_member WHERE conversation_id = ?",
+                        Long.class, conversationId),
+                "recall",
+                Map.of("conversationId", String.valueOf(conversationId), "messageId", String.valueOf(id)));
         return Result.success("已撤回", null);
     }
 
@@ -114,6 +142,7 @@ public class MessageController {
             return Result.error(401, "未登录");
         }
         messageService.deleteConversation(userId, conversationId);
+        messageStreamService.emit(userId, "conversation", Map.of("conversationId", String.valueOf(conversationId)));
         return Result.success();
     }
 
@@ -147,6 +176,7 @@ public class MessageController {
             return Result.error(401, "未登录");
         }
         messageService.deleteAllConversations(userId);
+        messageStreamService.emit(userId, "conversation", Map.of("all", true));
         return Result.success();
     }
 

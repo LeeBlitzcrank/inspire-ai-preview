@@ -40,7 +40,7 @@ public class CommentServiceImpl implements CommentService {
         Page<InspireComment> rootPage;
         long total;
         List<InspireComment> rootRecords;
-        List<InspireComment> replyRecords = List.of();
+        List<ReplyPreview> replyPreviews = List.of();
         try {
             // 第一层只分页主评论，避免新回复因为全局热度分页而始终落在第一页之外。
             LambdaQueryWrapper<InspireComment> rootQuery = new LambdaQueryWrapper<InspireComment>()
@@ -63,17 +63,7 @@ public class CommentServiceImpl implements CommentService {
                 List<Long> rootIds = rootRecords.stream()
                         .map(InspireComment::getId)
                         .toList();
-                LambdaQueryWrapper<InspireComment> replyQuery = new LambdaQueryWrapper<InspireComment>()
-                        .eq(InspireComment::getInspireId, inspireId)
-                        .eq(InspireComment::getDeleted, 0)
-                        .in(InspireComment::getParentId, rootIds);
-                if (hotSort) {
-                    replyQuery.orderByDesc(InspireComment::getLikeCount)
-                            .orderByDesc(InspireComment::getCreateTime);
-                } else {
-                    replyQuery.orderByDesc(InspireComment::getCreateTime);
-                }
-                replyRecords = commentMapper.selectList(replyQuery);
+                replyPreviews = queryReplyPreviews(inspireId, rootIds, hotSort);
             }
 
             total = getRootTotal(inspireId);
@@ -82,21 +72,61 @@ public class CommentServiceImpl implements CommentService {
 
         Page<CommentVO> voPage = new Page<>(rootPage.getCurrent(), rootPage.getSize(),
                 total);
-        Map<Long, List<InspireComment>> repliesByRoot = new LinkedHashMap<>();
-        for (InspireComment reply : replyRecords) {
-            repliesByRoot.computeIfAbsent(reply.getParentId(), key -> new ArrayList<>()).add(reply);
+        Map<Long, List<ReplyPreview>> repliesByRoot = new LinkedHashMap<>();
+        Map<Long, Integer> replyCounts = new HashMap<>();
+        for (ReplyPreview preview : replyPreviews) {
+            Long parentId = preview.comment().getParentId();
+            repliesByRoot.computeIfAbsent(parentId, key -> new ArrayList<>()).add(preview);
+            replyCounts.putIfAbsent(parentId, preview.replyCount());
         }
-        List<CommentVO> voRecords = new ArrayList<>(rootRecords.size() + Math.min(replyRecords.size(), rootRecords.size() * 3));
+        List<CommentVO> voRecords = new ArrayList<>(rootRecords.size() + replyPreviews.size());
         for (InspireComment root : rootRecords) {
             CommentVO rootVo = toVO(root);
-            List<InspireComment> replies = repliesByRoot.getOrDefault(root.getId(), List.of());
-            rootVo.setReplyCount(replies.size());
+            List<ReplyPreview> replies = repliesByRoot.getOrDefault(root.getId(), List.of());
+            rootVo.setReplyCount(replyCounts.getOrDefault(root.getId(), 0));
             voRecords.add(rootVo);
-            replies.stream().limit(3).map(this::toVO).forEach(voRecords::add);
+            replies.stream().map(ReplyPreview::comment).map(this::toVO).forEach(voRecords::add);
         }
         fillLikedState(voRecords, userId);
         voPage.setRecords(voRecords);
         return voPage;
+    }
+
+    private List<ReplyPreview> queryReplyPreviews(Long inspireId, List<Long> rootIds, boolean hotSort) {
+        String placeholders = String.join(",", Collections.nCopies(rootIds.size(), "?"));
+        String order = hotSort
+                ? "like_count DESC, create_time DESC, id DESC"
+                : "create_time DESC, id DESC";
+        String sql = "SELECT * FROM ("
+                + "SELECT c.*, COUNT(*) OVER (PARTITION BY parent_id) AS reply_count, "
+                + "ROW_NUMBER() OVER (PARTITION BY parent_id ORDER BY " + order + ") AS rn "
+                + "FROM inspire_comment c "
+                + "WHERE c.inspire_id = ? AND c.deleted = 0 AND c.parent_id IN (" + placeholders + ")"
+                + ") t WHERE rn <= 3";
+        List<Object> args = new ArrayList<>();
+        args.add(inspireId);
+        args.addAll(rootIds);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            InspireComment c = new InspireComment();
+            c.setId(rs.getLong("id"));
+            c.setInspireId(rs.getLong("inspire_id"));
+            c.setUserId(rs.getLong("user_id"));
+            c.setAuthorNickname(rs.getString("author_nickname"));
+            c.setAvatar(rs.getString("avatar"));
+            c.setParentId(rs.getLong("parent_id"));
+            c.setRootId(rs.getLong("root_id"));
+            c.setReplyUserId(rs.getLong("reply_user_id"));
+            c.setReplyNickname(rs.getString("reply_nickname"));
+            c.setContent(rs.getString("content"));
+            c.setLikeCount(rs.getInt("like_count"));
+            c.setCreateTime(rs.getObject("create_time", LocalDateTime.class));
+            c.setUpdateTime(rs.getObject("update_time", LocalDateTime.class));
+            c.setDeleted(rs.getInt("deleted"));
+            return new ReplyPreview(c, rs.getInt("reply_count"));
+        }, args.toArray());
+    }
+
+    private record ReplyPreview(InspireComment comment, int replyCount) {
     }
 
     @Override

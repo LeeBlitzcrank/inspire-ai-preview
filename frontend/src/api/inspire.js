@@ -1,4 +1,4 @@
-import request, {cachedGet} from '@/utils/request.js'
+import request, {cachedGet, clearGetCache} from '@/utils/request.js'
 
 // ===== 用户认证 =====
 export const login = (data) => request.post('/auth/login', data)
@@ -34,9 +34,13 @@ export const getMyDrafts = (page = 1, size = 20) =>
   request.get('/inspire/my/drafts', { params: { page, size } })
 export const getMyCollects = (page = 1, size = 20) =>
   request.get('/inspire/my/collects', { params: { page, size } })
-export const createInspire = (data) => request.post('/inspire', data)
-export const updateInspire = (id, data) => request.put(`/inspire/${id}`, data)
-export const deleteInspire = (id) => request.delete(`/inspire/${id}`)
+const clearPublicCache = (res) => {
+  if (res?.code === 200) clearGetCache()
+  return res
+}
+export const createInspire = (data) => request.post('/inspire', data).then(clearPublicCache)
+export const updateInspire = (id, data) => request.put(`/inspire/${id}`, data).then(clearPublicCache)
+export const deleteInspire = (id) => request.delete(`/inspire/${id}`).then(clearPublicCache)
 export const collectInspire = (id) => request.post(`/inspire/${id}/collect`)
 export const uncollectInspire = (id) => request.delete(`/inspire/${id}/collect`)
 export const likeInspire = (id) => request.post(`/inspire/${id}/like`)
@@ -45,7 +49,7 @@ export const unlikeInspire = (id) => request.delete(`/inspire/${id}/like`)
 // ===== AI 创作 =====
 export const aiGenerate = (data) => request.post('/ai/generate', data)
 export const aiSelect = (data) => request.post('/ai/select', data)
-export const aiPublish = (data) => request.post('/ai/publish', data)
+export const aiPublish = (data) => request.post('/ai/publish', data).then(clearPublicCache)
 
 // ===== 搜索 =====
 export const searchInspires = (params) => request.get('/search/public', { params })

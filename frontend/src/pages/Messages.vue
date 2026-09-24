@@ -291,6 +291,7 @@ import {getAccessToken} from '@/utils/tokenStorage.js'
 import {thumbOf} from '@/utils/media.js'
 import {getMyInspires, uploadFile} from '@/api/inspire.js'
 import {
+  connectMessageStream,
   deleteAllConversations,
   deleteConversation,
   getConversations,
@@ -345,8 +346,10 @@ const inspirePickerOpen = ref(false)
 const inspirePickerLoading = ref(false)
 const myInspireList = ref([])
 const msgBox = ref(null)
-let pollTimer = null
-let pollBusy = false
+let fallbackTimer = null
+let fallbackBusy = false
+let streamDisconnect = null
+let streamRetryTimer = null
 
 const conversationState = computed(() => {
   if (conversationLoading.value && !conversations.value.length) return 'loading'
@@ -691,6 +694,40 @@ const onVisibilityChange = () => {
   refreshMessagesSilently()
 }
 
+const handleRealtimeEvent = async (event, payload) => {
+  if (event === 'connected') return
+  if (event === 'message') {
+    await loadConversations()
+    if (activeConversation.value
+        && String(payload?.conversationId || '') === String(activeConversation.value.id)) {
+      await refreshMessagesSilently()
+    }
+    return
+  }
+  if (event === 'recall') {
+    await loadConversations()
+    if (activeConversation.value
+        && String(payload?.conversationId || '') === String(activeConversation.value.id)) {
+      await refreshMessagesSilently()
+    }
+    return
+  }
+  if (event === 'read' || event === 'conversation') {
+    await loadConversations()
+  }
+}
+
+const connectStream = () => {
+  streamDisconnect?.()
+  streamDisconnect = connectMessageStream(
+    handleRealtimeEvent,
+    () => {
+      if (streamRetryTimer) window.clearTimeout(streamRetryTimer)
+      streamRetryTimer = window.setTimeout(connectStream, 3000)
+    }
+  )
+}
+
 onMounted(async () => {
   await loadConversations()
   if (route.query.convId && route.query.showList !== '1') {
@@ -698,17 +735,20 @@ onMounted(async () => {
     await openConversation(found || { id: route.query.convId })
   }
 
-  pollTimer = window.setInterval(() => {
-    if (document.visibilityState !== 'visible' || pollBusy) return
-    pollBusy = true
+  connectStream()
+  fallbackTimer = window.setInterval(() => {
+    if (document.visibilityState !== 'visible' || fallbackBusy) return
+    fallbackBusy = true
     Promise.allSettled([refreshMessagesSilently(), loadConversations()])
-      .finally(() => { pollBusy = false })
-  }, 3000)
+      .finally(() => { fallbackBusy = false })
+  }, 30000)
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onBeforeUnmount(() => {
-  if (pollTimer) window.clearInterval(pollTimer)
+  if (fallbackTimer) window.clearInterval(fallbackTimer)
+  if (streamRetryTimer) window.clearTimeout(streamRetryTimer)
+  streamDisconnect?.()
   document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>

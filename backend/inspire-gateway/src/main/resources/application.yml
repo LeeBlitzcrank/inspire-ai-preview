@@ -1,6 +1,14 @@
 server:
   port: 8080
 
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      percentiles:
+        "[http.server.requests]": 0.5,0.95,0.99
+
 spring:
   application:
     name: inspire-gateway
@@ -15,7 +23,7 @@ spring:
       default-filters:
         # 去重 CORS 响应头，防止下游/代理额外注入导致
         # "Access-Control-Allow-Origin cannot contain more than one origin"
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials X-Trace-Id, RETAIN_FIRST
       routes:
         # 公开接口：移除会阻止 Cloudflare 缓存的 Vary 响应头
         - id: inspire-public-api-cache

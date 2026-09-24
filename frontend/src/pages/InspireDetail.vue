@@ -426,6 +426,7 @@ import {
 } from '@/api/inspire.js'
 import {sanitizeHtml} from '@/utils/sanitizeHtml.js'
 import {thumbOf} from '@/utils/media.js'
+import {getAccessToken} from '@/utils/tokenStorage.js'
 
 // 海报封面代理：站外图片经本站转发，返回的响应带 ACAO，canvas 不会被跨域污染
 const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
@@ -483,8 +484,15 @@ let detailRequestSeq = 0
 let commentRequestSeq = 0
 let loadingDetailId = ''
 
-const isLogin = computed(() => auth.isLogin)
-const currentUserId = computed(() => sessionStorage.getItem('userId'))
+const isLogin = computed(() => Boolean(
+  auth.isLogin
+  || auth.userId
+  || getAccessToken()
+  || sessionStorage.getItem('isLogin') === '1'
+))
+const currentUserId = computed(() => (
+  auth.userId || sessionStorage.getItem('userId') || ''
+))
 const detailState = computed(() => {
   if (detailLoading.value && !detail.value.id) return 'loading'
   if (detailError.value && !detail.value.id) return 'error'
@@ -494,14 +502,21 @@ const detailState = computed(() => {
 const isOwnInspire = computed(() => {
   if (!detail.value.userId || !isLogin.value) return false
   let jwtUserId = ''
-  try {
-    const token = sessionStorage.getItem('token')
-    if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      jwtUserId = String(payload.sub)
+  const tokens = [getAccessToken(), sessionStorage.getItem('token')]
+  for (const token of tokens) {
+    if (!token) continue
+    try {
+      const payload = JSON.parse(atob(String(token).split('.')[1]))
+      if (payload?.sub) {
+        jwtUserId = String(payload.sub)
+        break
+      }
+    } catch (e) {
+      // 继续尝试下一个 token 来源
     }
-  } catch (e) {}
-  return String(detail.value.userId) === (jwtUserId || String(currentUserId.value))
+  }
+  const ownUserId = jwtUserId || String(currentUserId.value || '')
+  return Boolean(ownUserId) && String(detail.value.userId) === ownUserId
 })
 
 const normalizeImages = (value) => {

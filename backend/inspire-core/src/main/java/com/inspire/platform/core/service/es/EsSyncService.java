@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.mapper.InspireMainMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RestClient;
@@ -16,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -25,15 +29,32 @@ public class EsSyncService {
     private final ObjectMapper objectMapper;
     private final String esHosts;
     private final InspireMainMapper mainMapper;
+    private final MeterRegistry meterRegistry;
+    private final Timer singleWriteTimer;
+    private final Timer bulkWriteTimer;
+    private final Counter writeErrors;
     private static final String INDEX = "inspire_index";
     private volatile LocalDateTime lastIncrementalSync;
+    private final AtomicBoolean refreshPending = new AtomicBoolean(false);
 
     public EsSyncService(ObjectMapper objectMapper,
                          @Value("${inspire.es.hosts:}") String esHosts,
-                         InspireMainMapper mainMapper) {
+                         InspireMainMapper mainMapper,
+                         MeterRegistry meterRegistry) {
         this.objectMapper = objectMapper;
         this.esHosts = esHosts;
         this.mainMapper = mainMapper;
+        this.meterRegistry = meterRegistry;
+        this.singleWriteTimer = Timer.builder("inspire.es.write.latency")
+                .tag("operation", "single")
+                .publishPercentileHistogram()
+                .register(meterRegistry);
+        this.bulkWriteTimer = Timer.builder("inspire.es.write.latency")
+                .tag("operation", "bulk")
+                .publishPercentileHistogram()
+                .register(meterRegistry);
+        this.writeErrors = Counter.builder("inspire.es.write.errors")
+                .register(meterRegistry);
     }
 
     private boolean isEnabled() {
@@ -52,14 +73,19 @@ public class EsSyncService {
         if (!isEnabled()) {
             return;
         }
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             Map<String, Object> doc = buildDoc(main);
             Request req = new Request("PUT", "/" + INDEX + "/_doc/" + main.getId());
             req.setJsonEntity(objectMapper.writeValueAsString(doc));
             getClient().performRequest(req);
+            refreshPending.set(true);
             log.debug("ES同步成功: id={}", main.getId());
         } catch (Exception e) {
+            writeErrors.increment();
             log.warn("ES同步失败，不影响主流程: id={}, {}", main.getId(), e.getMessage());
+        } finally {
+            sample.stop(singleWriteTimer);
         }
     }
 
@@ -67,12 +93,17 @@ public class EsSyncService {
         if (!isEnabled()) {
             return;
         }
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             Request req = new Request("DELETE", "/" + INDEX + "/_doc/" + id);
             getClient().performRequest(req);
+            refreshPending.set(true);
             log.debug("ES删除成功: id={}", id);
         } catch (Exception e) {
+            writeErrors.increment();
             log.warn("ES删除失败，不影响主流程: id={}, {}", id, e.getMessage());
+        } finally {
+            sample.stop(singleWriteTimer);
         }
     }
 
@@ -122,6 +153,7 @@ public class EsSyncService {
     }
 
     private void bulkWrite(List<InspireMain> mains) throws Exception {
+        Timer.Sample sample = Timer.start(meterRegistry);
         StringBuilder bulkBody = new StringBuilder();
         int indexed = 0, deleted = 0;
         for (InspireMain main : mains) {
@@ -143,14 +175,35 @@ public class EsSyncService {
             bulkBody.append(objectMapper.writeValueAsString(doc)).append("\n");
             indexed++;
         }
-        Request req = new Request("POST", "/_bulk?refresh=true");
-        req.setJsonEntity(bulkBody.toString());
-        org.elasticsearch.client.Response resp = getClient().performRequest(req);
-        String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
-        if (respBody.contains("\"errors\":true")) {
-            throw new IllegalStateException("批量写入存在错误");
+        try {
+            Request req = new Request("POST", "/_bulk");
+            req.setJsonEntity(bulkBody.toString());
+            org.elasticsearch.client.Response resp = getClient().performRequest(req);
+            String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
+            if (respBody.contains("\"errors\":true")) {
+                throw new IllegalStateException("批量写入存在错误");
+            }
+            log.debug("ES批量写入: indexed={}, deleted={}", indexed, deleted);
+            refreshPending.set(true);
+        } catch (Exception e) {
+            writeErrors.increment();
+            throw e;
+        } finally {
+            sample.stop(bulkWriteTimer);
         }
-        log.debug("ES批量写入: indexed={}, deleted={}", indexed, deleted);
+    }
+
+    @Scheduled(fixedDelay = 5000, initialDelay = 5000)
+    public void refreshIndex() {
+        if (!isEnabled() || !refreshPending.compareAndSet(true, false)) {
+            return;
+        }
+        try {
+            getClient().performRequest(new Request("POST", "/" + INDEX + "/_refresh"));
+        } catch (Exception e) {
+            refreshPending.set(true);
+            log.debug("ES refresh失败: {}", e.getMessage());
+        }
     }
 
     private Map<String, Object> buildDoc(InspireMain main) {
