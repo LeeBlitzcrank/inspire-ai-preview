@@ -35,6 +35,7 @@ V2__message_recall_audit.sql
 V3__admin_totp_mfa.sql
 V4__user_feed_inbox.sql
 V5__metrics_and_archives.sql
+V6__multimodal_rag.sql
 ```
 
 职责：

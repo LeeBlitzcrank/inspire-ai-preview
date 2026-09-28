@@ -25,6 +25,7 @@
 │   ├── inspire-core/       # 灵感核心（端口 8083）
 │   ├── inspire-admin/      # 后台管理（端口 8085）
 │   ├── inspire-search/     # 搜索服务（端口 8086）
+│   ├── inspire-rag/        # 多模态 RAG（端口 8087）
 │   ├── inspire-common/     # 公共模块
 │   └── inspire-mq/         # 消息队列
 ├── database/
@@ -144,7 +145,7 @@ npm run dev      # http://localhost:5173
 
 ### 表结构
 
-空库基线共 **25 张表**；执行 Flyway 迁移后共 **32 张业务表**，另含 Flyway 元数据表。按功能分组：
+空库基线共 **25 张表**；执行 Flyway 迁移后共 **34 张业务表**，另含 Flyway 元数据表。按功能分组：
 
 | 模块 | 表 | 数量 |
 |------|-----|------|
@@ -160,7 +161,8 @@ npm run dev      # http://localhost:5173
 | 管理 | `admin_user`, `admin_config` | 2 |
 | 图片与分类 | `sys_upload_image`, `sys_category`, `sys_word_cloud` | 3 |
 | 归档表 | `user_notification_archive`, `web_vital_metric_archive`, `ai_call_log_archive`, `user_ai_history_archive`, `message_archive` | 5 |
-| **合计** | | **32** |
+| 多模态 RAG | `rag_index_state`, `rag_query_log` | 2 |
+| **合计** | | **34** |
 
 ### 修改表结构
 

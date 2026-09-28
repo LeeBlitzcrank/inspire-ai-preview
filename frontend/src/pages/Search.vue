@@ -10,6 +10,7 @@
           </svg>
         </button>
         <b>{{ searched ? '探索结果' : '灵感搜索' }}</b>
+        <button class="icon-button" type="button" aria-label="灵感问答" @click="$router.push('/rag')">🧠</button>
         <button class="icon-button user-button" type="button" aria-label="个人页" @click="goPersonal">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

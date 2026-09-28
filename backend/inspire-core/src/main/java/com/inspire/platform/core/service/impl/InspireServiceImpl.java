@@ -512,6 +512,8 @@ public class InspireServiceImpl implements InspireService {
         InspireContent c = new InspireContent(); c.setInspireId(m.getId()); c.setContent(req.getContent());
         contentMapper.insert(c);
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_PUBLISH, java.util.Map.of("inspireId", m.getId(), "userId", userId, "title", m.getTitle(), "tag", m.getTag()));
+        mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_RAG_SYNC,
+                java.util.Map.of("inspireId", m.getId(), "operation", "UPSERT"));
         esSyncService.sync(m);
         contentCacheService.evictPublicContent();
         if (Integer.valueOf(1).equals(m.getStatus())) {
@@ -606,6 +608,8 @@ public class InspireServiceImpl implements InspireService {
             else { InspireContent nc = new InspireContent(); nc.setInspireId(id); nc.setContent(req.getContent()); contentMapper.insert(nc); }
         }
         esSyncService.sync(m);
+        mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_RAG_SYNC,
+                java.util.Map.of("inspireId", m.getId(), "operation", "UPSERT"));
         contentCacheService.evictPublicContent();
         if (Integer.valueOf(1).equals(m.getStatus())) {
             eventPublisher.publishEvent(new FeedFanoutEvent(m.getId(), userId, m.getCreateTime()));
@@ -626,6 +630,8 @@ public class InspireServiceImpl implements InspireService {
         mainMapper.deleteById(m.getId());
         notificationService.invalidateTarget("inspire", m.getId());
         esSyncService.delete(m.getId());
+        mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_RAG_SYNC,
+                java.util.Map.of("inspireId", m.getId(), "operation", "DELETE"));
         feedService.deleteInspire(m.getId());
         contentCacheService.evictPublicContent();
     }

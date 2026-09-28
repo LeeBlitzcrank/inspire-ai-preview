@@ -207,6 +207,45 @@ services:
       retries: 24
       start_period: 30s
 
+  inspire-rag:
+    build:
+      <<: *service-build
+      args:
+        BUILD_MODULE: inspire-rag
+    container_name: inspire-rag
+    ports: [ "127.0.0.1:8087:8087" ]
+    depends_on:
+      mysql: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      rocketmq-broker: { condition: service_healthy }
+      inspire-core: { condition: service_healthy }
+      nginx-image: { condition: service_started }
+    environment:
+      <<: *common-env
+      INSPIRE_RAG_ENABLED: ${INSPIRE_RAG_ENABLED:-true}
+      INSPIRE_RAG_INDEX_NAME: ${INSPIRE_RAG_INDEX_NAME:-inspire_rag_index}
+      INSPIRE_RAG_EMBEDDING_DIMS: ${INSPIRE_RAG_EMBEDDING_DIMS:-768}
+      INSPIRE_RAG_EMBEDDING_BATCH_SIZE: ${INSPIRE_RAG_EMBEDDING_BATCH_SIZE:-32}
+      INSPIRE_RAG_SYNC_BATCH_SIZE: ${INSPIRE_RAG_SYNC_BATCH_SIZE:-50}
+      INSPIRE_RAG_IMAGE_ANALYSIS_ENABLED: ${INSPIRE_RAG_IMAGE_ANALYSIS_ENABLED:-true}
+      INSPIRE_RAG_OLLAMA_EMBEDDING_ENABLED: ${INSPIRE_RAG_OLLAMA_EMBEDDING_ENABLED:-false}
+      INSPIRE_RAG_OLLAMA_CAPTION_ENABLED: ${INSPIRE_RAG_OLLAMA_CAPTION_ENABLED:-false}
+      INSPIRE_RAG_OLLAMA_URL: ${INSPIRE_RAG_OLLAMA_URL:-http://host.docker.internal:11434}
+      INSPIRE_RAG_EMBEDDING_MODEL: ${INSPIRE_RAG_EMBEDDING_MODEL:-embeddinggemma:300m}
+      INSPIRE_RAG_CAPTION_MODEL: ${INSPIRE_RAG_CAPTION_MODEL:-qwen2.5vl:7b}
+      INSPIRE_RAG_ADMIN_TOKEN: ${INSPIRE_RAG_ADMIN_TOKEN:-}
+      INSPIRE_RAG_CORE_BASE_URL: http://inspire-core:8083
+      INSPIRE_RAG_IMAGE_BASE_URL: https://img.20sherry.com
+      INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
+      INSPIRE_DEEPSEEK_API_URL: ${INSPIRE_DEEPSEEK_API_URL:-https://api.deepseek.com/v1/chat/completions}
+    volumes: [ ./log/inspire-rag:/logs ]
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health | grep -q '\"status\":\"UP\"'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+
   inspire-admin:
     build:
       <<: *service-build
@@ -249,6 +288,7 @@ services:
       inspire-core: { condition: service_started }
       inspire-admin: { condition: service_started }
       inspire-search: { condition: service_started }
+      inspire-rag: { condition: service_healthy }
     environment:
       <<: *common-env
       INSPIRE_GATEWAY_RATE_LIMIT_REPLENISH: ${INSPIRE_GATEWAY_RATE_LIMIT_REPLENISH:-50}
@@ -259,11 +299,14 @@ services:
       INSPIRE_CORE_WRITE_RATE_LIMIT_BURST: ${INSPIRE_CORE_WRITE_RATE_LIMIT_BURST:-100}
       INSPIRE_AI_RATE_LIMIT_REPLENISH: ${INSPIRE_AI_RATE_LIMIT_REPLENISH:-5}
       INSPIRE_AI_RATE_LIMIT_BURST: ${INSPIRE_AI_RATE_LIMIT_BURST:-10}
+      INSPIRE_RAG_RATE_LIMIT_REPLENISH: ${INSPIRE_RAG_RATE_LIMIT_REPLENISH:-5}
+      INSPIRE_RAG_RATE_LIMIT_BURST: ${INSPIRE_RAG_RATE_LIMIT_BURST:-10}
       routes_auth_service: http://inspire-auth:8081
       routes_ai_service: http://inspire-ai:8082
       routes_core_service: http://inspire-core:8083
       routes_admin_service: http://inspire-admin:8085
       routes_search_service: http://inspire-search:8086
+      routes_rag_service: http://inspire-rag:8087
     volumes: [ ./log/inspire-gateway:/logs ]
 
   # -------- MinIO 对象存储 + Nginx 图片缓存 --------

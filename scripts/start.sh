@@ -8,19 +8,21 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${INSPIRE_ENV_FILE:-.env}"
 cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/docker.sh"
+source "$ROOT_DIR/scripts/lib/ollama.sh"
 
 # 仅从项目 env 文件读取该密钥，避免旧 shell 导出值覆盖新配置。
 unset INSPIRE_UNSPLASH_ACCESS_KEY
 
 # 0. 先确保 Docker daemon 可用，避免构建完成后才发现无法启动容器。
 ensure_docker_running
+ensure_ollama_ready "$ENV_FILE"
 
 # 1. 构建后端 JAR（Dockerfile.local 直接 COPY 各模块 target/*.jar）
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   echo "==> 构建后端 JAR …"
   export JAVA_HOME="${JAVA_HOME:-/Users/lee/Library/Java/JavaVirtualMachines/jbr-21.0.8-1/Contents/Home}"
   (cd backend && mvn package \
-      -pl inspire-common,inspire-mq,inspire-gateway,inspire-auth,inspire-core,inspire-admin,inspire-ai,inspire-search \
+      -pl inspire-common,inspire-mq,inspire-gateway,inspire-auth,inspire-core,inspire-admin,inspire-ai,inspire-search,inspire-rag \
       -am -DskipTests)
 fi
 

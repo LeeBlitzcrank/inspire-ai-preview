@@ -21,6 +21,7 @@
         <module>inspire-core</module>
         <module>inspire-search</module>
         <module>inspire-admin</module>
+        <module>inspire-rag</module>
     </modules>
 
     <parent>
