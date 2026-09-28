@@ -89,7 +89,19 @@
               @click="goDetail(row.data.id)"
             >
               <div class="item">
-                <div class="thumb" :style="thumbStyle(row.data, row.index)"></div>
+                <div class="thumb" :style="thumbFallbackStyle(row.index)">
+                  <img
+                    v-if="thumbUrl(row.data)"
+                    :src="thumbUrl(row.data)"
+                    alt=""
+                    width="54"
+                    height="54"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low"
+                    @error="hideBrokenImage"
+                  >
+                </div>
                 <div class="txt">
                   <div class="t">{{ row.data.title || '无标题' }}</div>
                   <div class="m">
@@ -170,7 +182,19 @@
               @click="goDetail(item.id)"
             >
               <div class="item">
-                <div class="thumb" :style="thumbStyle(item, idx)"></div>
+                <div class="thumb" :style="thumbFallbackStyle(idx)">
+                  <img
+                    v-if="thumbUrl(item)"
+                    :src="thumbUrl(item)"
+                    alt=""
+                    width="54"
+                    height="54"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low"
+                    @error="hideBrokenImage"
+                  >
+                </div>
                 <div>
                   <div class="t">{{ item.title || '无标题' }}</div>
                   <div class="m">
@@ -311,6 +335,7 @@ const PUB_OVERSCAN = 4
 // 结果只渲染 4 条（ceil(0/86)+4）——现在彻底不依赖测量。
 const PUB_VIEW_H = 340
 const pubScrollTop = ref(0)
+let pubScrollFrame = 0
 
 const pubVisible = computed(() => {
   const total = publishedList.value.length
@@ -323,9 +348,14 @@ const pubVisible = computed(() => {
 })
 
 const onPubScroll = (e) => {
-  pubScrollTop.value = e.target.scrollTop
   // 无限滚动：离底部还有 240px 就补下一页
   const el = e.target
+  if (pubScrollFrame) return
+  pubScrollFrame = requestAnimationFrame(() => {
+    pubScrollFrame = 0
+    const quantized = Math.floor(el.scrollTop / PUB_ITEM_H) * PUB_ITEM_H
+    if (quantized !== pubScrollTop.value) pubScrollTop.value = quantized
+  })
   if (!pubLoading.value && pubHasMore.value &&
       el.scrollTop + el.clientHeight >= el.scrollHeight - 240) {
     loadPublished(false)
@@ -335,7 +365,7 @@ const onPubScroll = (e) => {
 const setPubContainer = (el) => {
   if (!el) return
   // 可视高度用常量 PUB_VIEW_H，这里只需要把滚动位置同步过来
-  pubScrollTop.value = el.scrollTop
+  pubScrollTop.value = Math.floor(el.scrollTop / PUB_ITEM_H) * PUB_ITEM_H
 }
 const draftList = ref([])
 const collectList = ref([])
@@ -458,17 +488,15 @@ const firstImage = (item) => {
   }
   return item?.img || ''
 }
-const thumbStyle = (item, idx) => {
+const thumbUrl = (item) => {
   const url = firstImage(item)
-  if (url) {
-    const displayUrl = thumbOf(url, 200)
-    return {
-      backgroundImage: `url("${displayUrl}")`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center'
-    }
-  }
+  return url ? thumbOf(url, 200) : ''
+}
+const thumbFallbackStyle = (idx) => {
   return { background: GRADS[idx % GRADS.length] }
+}
+const hideBrokenImage = (event) => {
+  event.currentTarget.style.display = 'none'
 }
 
 /**
@@ -749,8 +777,13 @@ onMounted(async () => {
 })
 
 let personalRefreshPromise = null
+let lastPersonalRefreshAt = Date.now()
+const PERSONAL_REFRESH_COOLDOWN = 15_000
 const refreshPersonalData = () => {
   if (personalRefreshPromise || loading.value) return personalRefreshPromise
+  if (Date.now() - lastPersonalRefreshAt < PERSONAL_REFRESH_COOLDOWN) {
+    return Promise.resolve()
+  }
   personalRefreshPromise = Promise.all([
     getMyInspires(1, PUB_PAGE_SIZE),
     getMyDrafts(1, pageSize.value),
@@ -781,6 +814,7 @@ const refreshPersonalData = () => {
   }).catch(e => {
     console.error('[personal refresh]', e)
   }).finally(() => {
+    lastPersonalRefreshAt = Date.now()
     personalRefreshPromise = null
   })
   return personalRefreshPromise
@@ -791,6 +825,7 @@ const handleVisibilityRefresh = () => {
 }
 
 onBeforeUnmount(() => {
+  if (pubScrollFrame) cancelAnimationFrame(pubScrollFrame)
   window.removeEventListener('focus', refreshPersonalData)
   document.removeEventListener('visibilitychange', handleVisibilityRefresh)
 })
@@ -961,9 +996,10 @@ const handleLogout = () => {
 .virt-spacer { position: relative; width: 100%; }
 /* 卡片改成等高（76px，与预览一致），虚拟列表才能精确算偏移 */
 .card { height:76px; margin-bottom:10px; box-sizing:border-box; overflow:hidden;
-  border-radius:16px; cursor:pointer; transition:.16s; }
+  border-radius:16px; cursor:pointer; transition:.16s; contain:layout paint style; }
 .item { align-items:center; }
-.item .thumb { width:54px; height:54px; border-radius:11px; }
+.item .thumb { width:54px; height:54px; border-radius:11px; overflow:hidden; }
+.thumb img { display:block; width:100%; height:100%; object-fit:cover; }
 .item .t { font-size:13.5px; margin-bottom:5px; }
 .item .m { font-size:11.5px; }
 .item .txt { min-width: 0; }

@@ -200,6 +200,12 @@ services:
       - ./log/inspire-core:/logs
       # 上传文件放在项目目录内，避免 macOS 定期清理 /tmp 导致图片/视频丢失
       - ./data/uploads:/tmp/inspire-uploads
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q '\"status\":\"UP\"'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
 
   inspire-admin:
     build:
@@ -210,6 +216,8 @@ services:
     ports: [ "127.0.0.1:8085:8085" ]
     depends_on:
       mysql: { condition: service_healthy }
+      # Admin 会在启动时写入 TOTP 字段，必须等 Core 完成 Flyway 迁移。
+      inspire-core: { condition: service_healthy }
     environment:
       <<: *common-env
       INSPIRE_ADMIN_JWT_SECRET: ${INSPIRE_ADMIN_JWT_SECRET:?INSPIRE_ADMIN_JWT_SECRET is required}

@@ -3,17 +3,14 @@ package com.inspire.platform.core.controller;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/uploads")
@@ -33,10 +30,13 @@ public class FileServeController {
                 MediaType mediaType = MediaType.parseMediaType(
                         contentType != null ? contentType : "application/octet-stream");
                 long length = resource.contentLength();
+                long lastModified = Files.getLastModifiedTime(file).toMillis();
 
                 // 视频需要支持 Range 请求，否则 Safari 无法播放 / 拖动进度
                 if (rangeHeader == null || !rangeHeader.startsWith("bytes=")) {
                     return ResponseEntity.ok()
+                            .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                            .lastModified(lastModified)
                             .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                             .contentType(mediaType)
                             .contentLength(length)
@@ -56,6 +56,8 @@ public class FileServeController {
                     raf.readFully(chunk);
                 }
                 return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                        .lastModified(lastModified)
                         .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + length)
                         .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                         .contentType(mediaType)

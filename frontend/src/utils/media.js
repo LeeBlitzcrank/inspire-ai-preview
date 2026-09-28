@@ -1,3 +1,15 @@
+const CDN_ORIGIN = 'https://img.20sherry.com'
+
+/**
+ * 本地开发时不要绕公网访问 CDN。Vite 会把 /upload 代理到本机 Nginx，
+ * 既避免 Tunnel 往返，也避免本地图片受公网抖动影响。
+ */
+export function localizeMediaUrl(url) {
+  if (!url || typeof url !== 'string' || !import.meta.env.DEV) return url
+  if (!url.startsWith(CDN_ORIGIN + '/')) return url
+  return url.slice(CDN_ORIGIN.length)
+}
+
 /**
  * 列表场景的图片取址：优先用缩略图，避免列表里直接加载原图。
  *
@@ -9,6 +21,7 @@
  */
 export function thumbOf(url, width = 400) {
   if (!url || typeof url !== 'string') return url
+  url = localizeMediaUrl(url)
 
   // 0) 上传时已生成 _w200/_w400/_w800 WebP：直接切换到最接近的档位
   const variant = /^(.*)_w(200|400|800)\.webp(\?.*)?$/.exec(url)
@@ -45,7 +58,8 @@ export function thumbOf(url, width = 400) {
  * 目前只有两档可用：400px 缩略图 + 原图，所以只在两者确实不同时才返回。
  */
 export function srcsetOf(url) {
-  const thumb = thumbOf(url)
-  if (!thumb || thumb === url) return undefined
-  return `${thumb} 400w, ${url} 1200w`
+  const source = localizeMediaUrl(url)
+  const thumb = thumbOf(source)
+  if (!thumb || thumb === source) return undefined
+  return `${thumb} 400w, ${source} 1200w`
 }

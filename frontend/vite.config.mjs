@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite'
+import {defineConfig} from 'vite'
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { fileURLToPath } from 'node:url'
-import { copyFileSync } from 'node:fs'
+import {ElementPlusResolver} from 'unplugin-vue-components/resolvers'
+import {fileURLToPath} from 'node:url'
+import {copyFileSync} from 'node:fs'
 
 export default defineConfig({
   base: '/',
@@ -29,7 +29,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:8083', changeOrigin: true }
+      '/uploads': { target: 'http://localhost:8083', changeOrigin: true },
+      '/upload': { target: 'http://localhost:8088', changeOrigin: true }
     }
   },
   build: {
