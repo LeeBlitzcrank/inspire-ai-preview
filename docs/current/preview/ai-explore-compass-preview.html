@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>灵感罗盘 · 可操作预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#183b34;
+    --muted:#718781;
+    --line:#dfeae6;
+    --paper:#f7faf8;
+    --card:#fff;
+    --mint:#2f806d;
+    --mint-soft:#e9f6f1;
+    --coral:#d66a4d;
+    --coral-soft:#fff0eb;
+    --gold:#bd8428;
+    --gold-soft:#fff6df;
+    --blue:#4f6fc9;
+    --blue-soft:#eef3ff;
+  }
+  html,body{min-height:100%}
+  body{
+    margin:0;
+    color:var(--ink);
+    background:#e8efec;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  .page{
+    min-height:100dvh;
+    padding:28px 22px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:58px;
+  }
+  .intro{width:min(430px,36vw)}
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:12px;
+    color:var(--mint);
+    font-size:12px;
+    font-weight:850;
+    letter-spacing:.08em;
+  }
+  .eyebrow:before{content:"";width:20px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:0;font-size:36px;line-height:1.1;letter-spacing:0}
+  .intro>p{margin:14px 0 0;color:#627772;font-size:14px;line-height:1.8}
+  .principles{display:grid;gap:9px;margin-top:24px}
+  .principle{
+    display:flex;gap:10px;align-items:flex-start;padding:11px 12px;
+    border:1px solid rgba(47,128,109,.14);border-radius:13px;background:rgba(255,255,255,.58);
+  }
+  .principle i{
+    width:24px;height:24px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+    background:var(--mint-soft);color:var(--mint);font-size:11px;font-style:normal;font-weight:900;
+  }
+  .principle b{display:block;font-size:12.5px}
+  .principle span{display:block;margin-top:3px;color:#748681;font-size:11.5px;line-height:1.5}
+  .side-state{
+    margin-top:20px;padding:14px;border-radius:16px;background:#172e29;color:#fff;
+  }
+  .side-state small{display:block;color:rgba(255,255,255,.56);font-size:10.5px;letter-spacing:.08em}
+  .side-state b{display:block;margin-top:8px;font-size:14px;line-height:1.55}
+  .side-state .locks{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+  .side-state .locks span{
+    padding:4px 7px;border:1px solid rgba(255,255,255,.14);border-radius:999px;
+    color:rgba(255,255,255,.74);font-size:10px;
+  }
+  .reset{
+    margin-top:11px;width:100%;height:38px;border:1px solid rgba(255,255,255,.15);border-radius:11px;
+    background:transparent;color:rgba(255,255,255,.82);font-size:12px;font-weight:750;
+  }
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{
+    position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;
+    background:#0d1719;box-shadow:0 34px 80px rgba(15,52,44,.24),inset 0 0 0 1px rgba(255,255,255,.08);
+    transform-origin:top left;
+  }
+  .phone:before{
+    content:"";position:absolute;z-index:9;left:50%;top:9px;width:112px;height:26px;
+    transform:translateX(-50%);border-radius:999px;background:#0d1719;
+  }
+  .screen{
+    position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:var(--paper);
+  }
+  .statusbar{
+    position:absolute;z-index:8;top:0;left:0;right:0;height:31px;padding:0 18px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:#fff;color:#172823;font-size:10.5px;font-weight:850;
+  }
+  .status-right{display:flex;align-items:center;gap:4px;font-size:9px;letter-spacing:.04em}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-bottom:88px;scrollbar-width:none}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .topbar{
+    position:sticky;z-index:10;top:0;padding:11px 14px 10px;background:rgba(247,250,248,.94);
+    backdrop-filter:blur(14px);border-bottom:1px solid rgba(223,234,230,.82);
+  }
+  .top-row{display:flex;align-items:center;gap:9px}
+  .back{
+    width:34px;height:34px;padding:0;border:1px solid #dce8e4;border-radius:11px;background:#fff;
+    color:#315d53;font-size:18px;line-height:1;
+  }
+  .title-copy{min-width:0;flex:1}
+  .title-copy b{display:block;font-size:16px}
+  .title-copy span{display:block;margin-top:2px;color:#83958f;font-size:10.5px}
+  .pill{
+    display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:999px;
+    background:var(--mint-soft);color:var(--mint);font-size:10px;font-weight:850;
+  }
+  .mode-tabs{display:flex;gap:5px;margin-top:11px;padding:3px;border-radius:12px;background:#e9f0ed}
+  .mode-tabs button{
+    flex:1;height:32px;border:0;border-radius:9px;background:transparent;color:#74847f;font-size:11px;font-weight:800;
+  }
+  .mode-tabs button.on{background:#fff;color:#245f53;box-shadow:0 3px 9px rgba(30,79,68,.08)}
+  .view{display:none;padding:15px 14px 22px}
+  .view.on{display:block}
+  .hero{padding:2px 2px 13px}
+  .hero h2{margin:0;font-size:22px;line-height:1.25}
+  .hero p{margin:7px 0 0;color:#778a84;font-size:11.5px;line-height:1.65}
+  .condition-list{display:grid;gap:10px;margin-top:8px}
+  .condition{
+    padding:11px;border:1px solid var(--line);border-radius:14px;background:#fff;
+  }
+  .condition-head{display:flex;align-items:center;margin-bottom:8px}
+  .condition-head b{font-size:12px}
+  .condition-head span{margin-left:6px;color:#9aaba6;font-size:10px}
+  .lock-btn{
+    margin-left:auto;padding:5px 8px;border:1px solid #e2ece8;border-radius:9px;background:#f9fbfa;
+    color:#758983;font-size:10px;font-weight:800;
+  }
+  .lock-btn.on{border-color:#aad9cc;background:var(--mint-soft);color:var(--mint)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{
+    min-height:29px;padding:6px 9px;border:1px solid #dfeae6;border-radius:9px;background:#fbfdfc;
+    color:#59736c;font-size:11px;
+  }
+  .chip.on{border-color:#9dd2c4;background:var(--mint-soft);color:#256e5d;font-weight:800}
+  .generate{
+    width:100%;height:45px;margin-top:14px;border:0;border-radius:13px;background:#236f5d;color:#fff;
+    font-size:13px;font-weight:900;box-shadow:0 8px 18px rgba(35,111,93,.18);
+  }
+  .generate:active{transform:translateY(1px)}
+  .results{margin-top:17px}
+  .result-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:9px}
+  .result-head b{font-size:13.5px}
+  .result-head span{color:#8ea09a;font-size:10px}
+  .loading{display:none;padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff}
+  .loading.on{display:block}
+  .loading-line{height:10px;border-radius:999px;background:#edf3f1;margin-bottom:8px;animation:pulse 1s ease-in-out infinite alternate}
+  .loading-line:nth-child(2){width:76%}
+  .loading-line:nth-child(3){width:52%}
+  @keyframes pulse{from{opacity:.5}to{opacity:1}}
+  .result-stack{display:none}
+  .result-stack.on{display:grid;gap:10px}
+  .result-card{
+    position:relative;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;
+  }
+  .result-card.real{display:flex;gap:11px;padding:10px}
+  .real-image{
+    width:104px;height:92px;flex:0 0 auto;border-radius:12px;overflow:hidden;background:#edf3f1;
+  }
+  .real-image img{width:100%;height:100%;object-fit:cover;display:block}
+  .real-copy{min-width:0;flex:1}
+  .kind{
+    display:inline-flex;padding:3px 6px;border-radius:7px;background:var(--blue-soft);color:var(--blue);
+    font-size:9.5px;font-weight:900;letter-spacing:.02em;
+  }
+  .real-copy h3{margin:6px 0 5px;font-size:13.5px;line-height:1.38}
+  .real-copy p{margin:0;color:#778984;font-size:10.5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .meta{display:flex;gap:6px;margin-top:7px;color:#95a5a0;font-size:9.5px}
+  .result-card.variant{padding:13px;border-color:#d9e8e4;background:#f8fcfb}
+  .variant:before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--mint);
+  }
+  .result-card.variant .kind{background:var(--mint-soft);color:var(--mint)}
+  .result-card h3{margin:8px 0 6px;font-size:15px;line-height:1.4}
+  .result-card p{margin:0;color:#6f827c;font-size:11.5px;line-height:1.65}
+  .mini-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+  .mini-chips span{padding:4px 7px;border-radius:999px;background:#fff;border:1px solid #dfeae6;color:#6d817b;font-size:9.5px}
+  .result-card.challenge{padding:15px;border-color:#efdfc6;background:var(--gold-soft)}
+  .challenge .kind{background:#fff0d1;color:#aa741f}
+  .challenge-number{
+    position:absolute;right:12px;top:8px;color:rgba(170,116,31,.13);font-size:54px;font-weight:950;line-height:1;
+  }
+  .actions{display:flex;gap:6px;margin-top:11px}
+  .actions button{
+    height:31px;padding:0 10px;border:1px solid #dce8e4;border-radius:9px;background:#fff;
+    color:#5e746e;font-size:10.5px;font-weight:800;
+  }
+  .actions button.primary{border-color:#236f5d;background:#236f5d;color:#fff}
+  .actions button.saved{border-color:#e3b3a6;background:var(--coral-soft);color:var(--coral)}
+  .result-actions{display:flex;gap:7px;margin-top:11px}
+  .result-actions button{flex:1;height:38px;border-radius:11px;font-size:11px;font-weight:850}
+  .result-actions .soft{border:1px solid #dce8e4;background:#fff;color:#527069}
+  .result-actions .main{border:1px solid #236f5d;background:#236f5d;color:#fff}
+  .gallery{display:grid;gap:9px}
+  .gallery button{
+    display:flex;gap:10px;padding:9px;border:1px solid var(--line);border-radius:14px;
+    background:#fff;text-align:left;
+  }
+  .gallery button.on{border-color:#93cdbc;box-shadow:0 0 0 2px rgba(47,128,109,.08)}
+  .gallery img{width:78px;height:65px;border-radius:10px;object-fit:cover;flex:0 0 auto}
+  .gallery div{min-width:0}
+  .gallery b{display:block;font-size:12.5px;line-height:1.4}
+  .gallery span{display:block;margin-top:5px;color:#879995;font-size:10px;line-height:1.45}
+  .remix-builder{margin-top:14px;padding:12px;border:1px solid #e1ebe8;border-radius:14px;background:#fff}
+  .remix-builder h3{margin:0 0 9px;font-size:12.5px}
+  .blind-box{
+    position:relative;overflow:hidden;margin-top:8px;padding:22px 16px;border-radius:18px;
+    background:#193a32;color:#fff;text-align:center;
+  }
+  .blind-box:after{
+    content:"";position:absolute;width:160px;height:160px;border:28px solid rgba(255,255,255,.05);
+    border-radius:50%;right:-72px;top:-78px;
+  }
+  .box-icon{
+    width:66px;height:66px;margin:0 auto 12px;border-radius:20px;display:grid;place-items:center;
+    background:rgba(255,255,255,.1);font-size:30px;
+  }
+  .blind-box h3{position:relative;z-index:1;margin:0;font-size:18px}
+  .blind-box p{position:relative;z-index:1;margin:7px 0 15px;color:rgba(255,255,255,.65);font-size:11px;line-height:1.6}
+  .blind-box button{
+    position:relative;z-index:1;height:39px;padding:0 18px;border:0;border-radius:11px;
+    background:#f4c86e;color:#493713;font-size:12px;font-weight:900;
+  }
+  .blind-result{display:none;margin-top:13px;padding:13px;border:1px solid #e2ebe8;border-radius:15px;background:#fff}
+  .blind-result.on{display:block;animation:rise .28s ease-out}
+  @keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .blind-result h3{margin:0 0 8px;font-size:14px}
+  .blind-result p{margin:0;color:#6f827c;font-size:11.5px;line-height:1.65}
+  .toast{
+    position:absolute;z-index:40;left:50%;bottom:100px;transform:translateX(-50%);
+    padding:9px 12px;border-radius:11px;background:rgba(19,43,37,.9);color:#fff;
+    font-size:11px;white-space:nowrap;box-shadow:0 10px 24px rgba(12,35,29,.2);
+  }
+  .sheet-mask{
+    position:absolute;z-index:30;inset:0;display:none;align-items:flex-end;background:rgba(10,27,23,.34);
+  }
+  .sheet-mask.on{display:flex}
+  .sheet{
+    width:100%;padding:15px;border-radius:22px 22px 0 0;background:#fff;animation:sheetUp .24s ease-out;
+  }
+  @keyframes sheetUp{from{transform:translateY(30px)}to{transform:none}}
+  .sheet-head{display:flex;align-items:center;margin-bottom:13px}
+  .sheet-head b{font-size:15px}
+  .sheet-head button{margin-left:auto;border:0;background:transparent;color:#84958f;font-size:16px}
+  .sheet p{margin:0 0 11px;color:#7d8e89;font-size:11px;line-height:1.6}
+  .sheet-actions{display:flex;gap:7px;margin-top:13px}
+  .sheet-actions button{flex:1;height:40px;border-radius:11px;font-size:11.5px;font-weight:850}
+  .sheet-actions .soft{border:1px solid #dce8e4;background:#fff;color:#617973}
+  .sheet-actions .main{border:1px solid #236f5d;background:#236f5d;color:#fff}
+  .bottom-nav{
+    position:absolute;z-index:12;left:12px;right:12px;bottom:10px;height:58px;padding:7px 8px;
+    display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(216,229,225,.92);
+    border-radius:19px;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);
+    box-shadow:0 10px 24px rgba(24,75,64,.11);
+  }
+  .bottom-nav button{
+    min-width:58px;height:43px;border:0;border-radius:13px;background:transparent;color:#8a9b96;
+    font-size:10px;font-weight:750;
+  }
+  .bottom-nav button.on{background:var(--mint-soft);color:var(--mint)}
+  .bottom-nav span{display:block;font-size:16px;line-height:1;margin-bottom:3px}
+  @media (max-width:980px){
+    .page{display:block;padding:18px 0;min-height:auto}
+    .intro{display:none}
+    .phone-slot{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">AI EXPLORE CONCEPT</div>
+    <h1>灵感罗盘</h1>
+    <p>不再把用户丢给一个空白输入框。先选条件，再锁住偏好的部分，只改变其他变量，AI 每次给出真实灵感、变体和挑战。</p>
+    <div class="principles">
+      <div class="principle"><i>1</i><div><b>三张牌，不是一个答案</b><span>真实内容、AI 变体、约束挑战同时出现。</span></div></div>
+      <div class="principle"><i>2</i><div><b>锁一换一</b><span>保留喜欢的方向，只更换其他条件，持续产生惊喜。</span></div></div>
+      <div class="principle"><i>3</i><div><b>结果能继续操作</b><span>收藏、二创、去创建，不让探索停在聊天里。</span></div></div>
+    </div>
+    <div class="side-state">
+      <small>当前方向</small>
+      <b id="sideCondition">城市夜晚 · 安静 · 2小时 · 只用手机</b>
+      <div class="locks" id="sideLocks"></div>
+      <button class="reset" id="resetAll">重置探索条件</button>
+    </div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot">
+    <div class="phone" id="phone">
+      <div class="screen">
+        <div class="statusbar">
+          <span id="clock">09:41</span>
+          <div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div>
+        </div>
+        <div class="app">
+          <div class="app-scroll">
+            <header class="topbar">
+              <div class="top-row">
+                <button class="back" type="button" aria-label="返回">←</button>
+                <div class="title-copy">
+                  <b>灵感罗盘</b>
+                  <span>把模糊想法变成可执行方向</span>
+                </div>
+                <span class="pill">AI 探索</span>
+              </div>
+              <nav class="mode-tabs">
+                <button class="on" data-mode="combo" type="button">组合探索</button>
+                <button data-mode="existing" type="button">已有灵感</button>
+                <button data-mode="blind" type="button">灵感盲盒</button>
+              </nav>
+            </header>
+
+            <section class="view on" data-view="combo">
+              <div class="hero">
+                <h2>今天想从哪里开始？</h2>
+                <p>选四个条件。锁住你在意的部分，其他条件交给系统变化。</p>
+              </div>
+              <div class="condition-list" id="conditionList"></div>
+              <button class="generate" id="generateCombo" type="button">生成 3 个方向</button>
+
+              <div class="results">
+                <div class="result-head"><b>探索结果</b><span id="resultStatus">等待生成</span></div>
+                <div class="loading" id="loading">
+                  <div class="loading-line"></div>
+                  <div class="loading-line"></div>
+                  <div class="loading-line"></div>
+                </div>
+                <div class="result-stack" id="comboResults">
+                  <article class="result-card real">
+                    <div class="real-image"><img id="realImage" alt="真实灵感"></div>
+                    <div class="real-copy">
+                      <span class="kind">真实灵感</span>
+                      <h3 id="realTitle"></h3>
+                      <p id="realExcerpt"></p>
+                      <div class="meta"><span id="realTag"></span><span>已有作品</span></div>
+                    </div>
+                  </article>
+                  <article class="result-card variant">
+                    <span class="kind">AI 变体</span>
+                    <h3 id="variantTitle"></h3>
+                    <p id="variantText"></p>
+                    <div class="mini-chips" id="variantChips"></div>
+                    <div class="actions">
+                      <button class="save" type="button">收藏</button>
+                      <button class="remix" type="button">二创</button>
+                    </div>
+                  </article>
+                  <article class="result-card challenge">
+                    <span class="kind">挑战卡</span>
+                    <div class="challenge-number" id="challengeNumber">07</div>
+                    <h3 id="challengeTitle"></h3>
+                    <p id="challengeText"></p>
+                    <div class="actions">
+                      <button class="save" type="button">收下挑战</button>
+                      <button class="start primary" type="button">去创建</button>
+                    </div>
+                  </article>
+                </div>
+                <div class="result-actions">
+                  <button class="soft" id="shuffleCombo" type="button">锁住偏好，换一组</button>
+                  <button class="main blind-jump" type="button">试试盲盒</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="view" data-view="existing">
+              <div class="hero">
+                <h2>从一条已有灵感出发</h2>
+                <p>先选一条真实作品，再决定如何改变它。</p>
+              </div>
+              <div class="gallery" id="gallery"></div>
+              <div class="remix-builder">
+                <h3>这次想改变什么？</h3>
+                <div class="chips" id="remixChips">
+                  <button class="chip on" type="button">换场景</button>
+                  <button class="chip" type="button">换材质</button>
+                  <button class="chip" type="button">换颜色</button>
+                  <button class="chip" type="button">加一点反差</button>
+                </div>
+                <button class="generate" id="generateRemix" type="button">生成二创方向</button>
+              </div>
+              <article class="result-card variant" id="remixResult" style="display:none;margin-top:12px">
+                <span class="kind">二创草案</span>
+                <h3 id="remixTitle"></h3>
+                <p id="remixText"></p>
+                <div class="result-actions">
+                  <button class="soft save" type="button">收藏方向</button>
+                  <button class="main start" type="button">开始创作</button>
+                </div>
+              </article>
+            </section>
+
+            <section class="view" data-view="blind">
+              <div class="hero">
+                <h2>让系统替你决定一点</h2>
+                <p>随机三个条件，但保留一个可以替换的位置。</p>
+              </div>
+              <div class="blind-box">
+                <div class="box-icon">✦</div>
+                <h3>今日灵感盲盒</h3>
+                <p>一次抽出场景、情绪和限制，不接受“都可以”。</p>
+                <button id="rollBlind" type="button">抽一张</button>
+              </div>
+              <div class="blind-result" id="blindResult">
+                <div class="mini-chips" id="blindChips"></div>
+                <h3 id="blindTitle"></h3>
+                <p id="blindText"></p>
+                <div class="result-actions">
+                  <button class="soft save" type="button">收藏挑战</button>
+                  <button class="main start" type="button">按这个开始</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <nav class="bottom-nav">
+            <button type="button"><span>⌂</span>首页</button>
+            <button type="button"><span>⌕</span>搜索</button>
+            <button class="on" type="button"><span>✦</span>探索</button>
+            <button type="button"><span>☺</span>我的</button>
+          </nav>
+
+          <div class="sheet-mask" id="sheetMask">
+            <div class="sheet">
+              <div class="sheet-head">
+                <b>二创方向</b>
+                <button type="button" id="closeSheet" aria-label="关闭">×</button>
+              </div>
+              <p>选择一种变化方式，系统会保留原灵感的主线。</p>
+              <div class="chips" id="sheetChips">
+                <button class="chip on" type="button">换场景</button>
+                <button class="chip" type="button">换材质</button>
+                <button class="chip" type="button">换色调</button>
+                <button class="chip" type="button">缩短时间</button>
+              </div>
+              <div class="sheet-actions">
+                <button class="soft" type="button" id="cancelSheet">先不选</button>
+                <button class="main" type="button" id="applySheet">生成二创草案</button>
+              </div>
+            </div>
+          </div>
+          <div class="toast" id="toast" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const pools = {
+  scene: ['城市夜晚','家里一角','周末户外','通勤路上'],
+  mood: ['安静','治愈','反差','有一点神秘'],
+  time: ['30分钟','2小时','半天','周末'],
+  constraint: ['只用手机','0预算','只用现有材料','一个人完成']
+}
+
+const sceneData = {
+  '城市夜晚': {
+    image:'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=700&q=82',
+    realTitle:'便利店门口的最后一班车',
+    excerpt:'不拍招牌，只记录玻璃、路灯和等车的人影之间的关系。',
+    tag:'城市观察',
+    variant:'只拍橱窗反光里的城市',
+    challenge:'拍10张“没有人的城市”，让灯光替你讲人的故事。'
+  },
+  '家里一角': {
+    image:'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=700&q=82',
+    realTitle:'一块桌布的三种光线',
+    excerpt:'用早晨、午后和夜晚的同一盏灯，观察颜色如何改变空间情绪。',
+    tag:'居家记录',
+    variant:'把家里最普通的角落拍成一个小型展览',
+    challenge:'不移动任何家具，只用身体位置找到三个全新构图。'
+  },
+  '周末户外': {
+    image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=700&q=82',
+    realTitle:'不赶路的周末短途',
+    excerpt:'只安排半天的目的地，留下另一半时间给临时出现的小路。',
+    tag:'周末短途',
+    variant:'把一次散步拆成“颜色、声音、触感”三条记录线',
+    challenge:'每条路都走到最后一个能看见天空的位置再返回。'
+  },
+  '通勤路上': {
+    image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=82',
+    realTitle:'每天同一杯咖啡的不同桌面',
+    excerpt:'固定饮品和时间，让环境变化成为唯一变量。',
+    tag:'日常仪式',
+    variant:'连续七天记录同一段通勤里的一个小变化',
+    challenge:'用五个画面讲完今天的通勤，不出现交通工具。'
+  }
+}
+
+const state = {
+  mode:'combo',
+  selected:{scene:0,mood:0,time:1,constraint:0},
+  locks:{scene:false,mood:false,time:false,constraint:false},
+  saved:new Set(),
+  selectedExisting:0,
+  remixChoice:'换场景'
+}
+
+const conditionList = document.getElementById('conditionList')
+const labels = {scene:'场景',mood:'情绪',time:'时间',constraint:'限制'}
+const hints = {scene:'在哪里发生',mood:'希望带来什么感觉',time:'能拿出多少时间',constraint:'给创意一点边界'}
+
+function renderConditions(){
+  conditionList.innerHTML = Object.keys(pools).map(key => `
+    <div class="condition" data-key="${key}">
+      <div class="condition-head">
+        <b>${labels[key]}</b><span>${hints[key]}</span>
+        <button class="lock-btn ${state.locks[key] ? 'on' : ''}" type="button" data-lock="${key}">
+          ${state.locks[key] ? '已锁定' : '锁住'}
+        </button>
+      </div>
+      <div class="chips">
+        ${pools[key].map((item,index) => `
+          <button class="chip ${state.selected[key] === index ? 'on' : ''}" type="button"
+            data-key="${key}" data-index="${index}">${item}</button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')
+}
+
+function currentLine(){
+  return Object.keys(state.selected).map(key => pools[key][state.selected[key]]).join(' · ')
+}
+
+function renderSideState(){
+  document.getElementById('sideCondition').textContent = currentLine()
+  const lockNames = Object.keys(state.locks)
+    .filter(key => state.locks[key])
+    .map(key => `${labels[key]}：${pools[key][state.selected[key]]}`)
+  document.getElementById('sideLocks').innerHTML = lockNames.length
+    ? lockNames.map(item => `<span>${item}</span>`).join('')
+    : '<span>暂未锁定，换一组会全部变化</span>'
+}
+
+function refresh(){
+  renderConditions()
+  renderSideState()
+}
+
+conditionList.addEventListener('click', event => {
+  const chip = event.target.closest('.chip')
+  const lock = event.target.closest('[data-lock]')
+  if (chip){
+    state.selected[chip.dataset.key] = Number(chip.dataset.index)
+    refresh()
+  }
+  if (lock){
+    state.locks[lock.dataset.lock] = !state.locks[lock.dataset.lock]
+    refresh()
+  }
+})
+
+function randomDifferent(key,current){
+  const candidates = pools[key].map((_,index) => index).filter(index => index !== current)
+  return candidates[Math.floor(Math.random() * candidates.length)]
+}
+
+function shuffleUnlocked(){
+  Object.keys(state.selected).forEach(key => {
+    if (!state.locks[key]) state.selected[key] = randomDifferent(key,state.selected[key])
+  })
+  refresh()
+}
+
+function fillCombo(){
+  const scene = pools.scene[state.selected.scene]
+  const mood = pools.mood[state.selected.mood]
+  const time = pools.time[state.selected.time]
+  const limit = pools.constraint[state.selected.constraint]
+  const data = sceneData[scene]
+  const image = document.getElementById('realImage')
+  image.src = data.image
+  document.getElementById('realTitle').textContent = data.realTitle
+  document.getElementById('realExcerpt').textContent = data.excerpt
+  document.getElementById('realTag').textContent = data.tag
+  document.getElementById('variantTitle').textContent = data.variant
+  document.getElementById('variantText').textContent =
+    `保留“${mood}”的基调，在${time}内完成。不要追求完整作品，只做一个小观察：${data.excerpt}`
+  document.getElementById('variantChips').innerHTML =
+    [scene,mood,time,limit].map(item => `<span>${item}</span>`).join('')
+  document.getElementById('challengeNumber').textContent =
+    String((state.selected.scene + state.selected.mood + state.selected.time + state.selected.constraint + 3) % 30 + 1).padStart(2,'0')
+  document.getElementById('challengeTitle').textContent = `${scene} · ${limit}`
+  document.getElementById('challengeText').textContent = `${data.challenge} 规则：${limit}，${time}内完成。`
+  document.getElementById('resultStatus').textContent = '刚刚生成'
+}
+
+function generateCombo(){
+  const loading = document.getElementById('loading')
+  const results = document.getElementById('comboResults')
+  loading.classList.add('on')
+  results.classList.remove('on')
+  document.getElementById('resultStatus').textContent = '正在组合'
+  setTimeout(() => {
+    fillCombo()
+    loading.classList.remove('on')
+    results.classList.add('on')
+    toast('已生成 3 个可执行方向')
+  },720)
+}
+
+document.getElementById('generateCombo').addEventListener('click',generateCombo)
+document.getElementById('shuffleCombo').addEventListener('click',() => {
+  shuffleUnlocked()
+  generateCombo()
+})
+document.querySelectorAll('.blind-jump').forEach(button => {
+  button.addEventListener('click',() => switchMode('blind'))
+})
+
+function switchMode(mode){
+  state.mode = mode
+  document.querySelectorAll('.mode-tabs button').forEach(button => {
+    button.classList.toggle('on',button.dataset.mode === mode)
+  })
+  document.querySelectorAll('.view').forEach(view => {
+    view.classList.toggle('on',view.dataset.view === mode)
+  })
+}
+
+document.querySelectorAll('.mode-tabs button').forEach(button => {
+  button.addEventListener('click',() => switchMode(button.dataset.mode))
+})
+
+const galleryData = [
+  {
+    image:sceneData['城市夜晚'].image,
+    title:'夜晚街角的低饱和记录',
+    text:'用反光和留白，让普通街角像电影画面。'
+  },
+  {
+    image:sceneData['家里一角'].image,
+    title:'周末在家做的一人食',
+    text:'固定机位，记录光线从冷到暖的变化。'
+  },
+  {
+    image:sceneData['周末户外'].image,
+    title:'没有打卡点的短途散步',
+    text:'把路线交给路边的小店和树荫。'
+  }
+]
+
+function renderGallery(){
+  document.getElementById('gallery').innerHTML = galleryData.map((item,index) => `
+    <button class="${state.selectedExisting === index ? 'on' : ''}" type="button" data-existing="${index}">
+      <img src="${item.image}" alt="">
+      <div><b>${item.title}</b><span>${item.text}</span></div>
+    </button>
+  `).join('')
+}
+
+document.getElementById('gallery').addEventListener('click',event => {
+  const button = event.target.closest('[data-existing]')
+  if (!button) return
+  state.selectedExisting = Number(button.dataset.existing)
+  renderGallery()
+  document.getElementById('remixResult').style.display = 'none'
+})
+
+document.getElementById('remixChips').addEventListener('click',event => {
+  const chip = event.target.closest('.chip')
+  if (!chip) return
+  document.querySelectorAll('#remixChips .chip').forEach(item => item.classList.remove('on'))
+  chip.classList.add('on')
+  state.remixChoice = chip.textContent.trim()
+})
+
+document.getElementById('generateRemix').addEventListener('click',() => {
+  const source = galleryData[state.selectedExisting]
+  document.getElementById('remixTitle').textContent = `${state.remixChoice}：${source.title}`
+  document.getElementById('remixText').textContent =
+    `保留原作品“${source.text}”的节奏，只改变一个变量。先做一版 3 张图的小样，再决定是否扩展。`
+  document.getElementById('remixResult').style.display = 'block'
+  toast('二创方向已生成')
+})
+
+const blindTitles = [
+  '把熟悉的地方拍成第一次来',
+  '只用一个颜色完成一组记录',
+  '做一件没有实用价值但很开心的小物',
+  '用三个画面讲完今天最安静的时刻',
+  '在不买东西的前提下改造一个角落'
+]
+
+document.getElementById('rollBlind').addEventListener('click',() => {
+  const scene = pools.scene[Math.floor(Math.random() * pools.scene.length)]
+  const mood = pools.mood[Math.floor(Math.random() * pools.mood.length)]
+  const limit = pools.constraint[Math.floor(Math.random() * pools.constraint.length)]
+  const title = blindTitles[Math.floor(Math.random() * blindTitles.length)]
+  document.getElementById('blindChips').innerHTML = [scene,mood,limit].map(item => `<span>${item}</span>`).join('')
+  document.getElementById('blindTitle').textContent = title
+  document.getElementById('blindText').textContent =
+    `先从 ${scene} 开始，保持${mood}的基调。限制是“${limit}”，完成后只保留最满意的一张或一步。`
+  document.getElementById('blindResult').classList.add('on')
+  toast('盲盒已打开')
+})
+
+document.addEventListener('click',event => {
+  const save = event.target.closest('.save')
+  if (save){
+    const card = save.closest('.result-card') || save.closest('.blind-result')
+    const id = card ? (card.id || card.querySelector('h3')?.textContent || 'direction') : 'direction'
+    if (state.saved.has(id)){
+      state.saved.delete(id)
+      save.classList.remove('saved')
+      save.textContent = save.textContent.includes('挑战') ? '收下挑战' : '收藏'
+      toast('已取消收藏')
+    } else {
+      state.saved.add(id)
+      save.classList.add('saved')
+      save.textContent = '已收藏'
+      toast('已加入收藏夹')
+    }
+  }
+  const start = event.target.closest('.start')
+  if (start) toast('已带入创建页草稿')
+  const remix = event.target.closest('.remix')
+  if (remix) document.getElementById('sheetMask').classList.add('on')
+})
+
+document.getElementById('closeSheet').addEventListener('click',closeSheet)
+document.getElementById('cancelSheet').addEventListener('click',closeSheet)
+document.getElementById('sheetMask').addEventListener('click',event => {
+  if (event.target.id === 'sheetMask') closeSheet()
+})
+function closeSheet(){document.getElementById('sheetMask').classList.remove('on')}
+
+document.getElementById('sheetChips').addEventListener('click',event => {
+  const chip = event.target.closest('.chip')
+  if (!chip) return
+  document.querySelectorAll('#sheetChips .chip').forEach(item => item.classList.remove('on'))
+  chip.classList.add('on')
+})
+
+document.getElementById('applySheet').addEventListener('click',() => {
+  const choice = document.querySelector('#sheetChips .chip.on')?.textContent.trim() || '换场景'
+  const scene = pools.scene[state.selected.scene]
+  const data = sceneData[scene]
+  document.getElementById('variantTitle').textContent = `${choice}后的全新方向`
+  document.getElementById('variantText').textContent =
+    `基于“${data.realTitle}”，保留原来的观察方式，但把${choice.replace('换','')}变成主要变化。先做最小版本，再决定是否延展。`
+  closeSheet()
+  toast('已更新 AI 变体')
+})
+
+let toastTimer
+function toast(message){
+  const element = document.getElementById('toast')
+  element.textContent = message
+  element.style.display = 'block'
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {element.style.display = 'none'},1500)
+}
+
+document.getElementById('resetAll').addEventListener('click',() => {
+  state.selected = {scene:0,mood:0,time:1,constraint:0}
+  state.locks = {scene:false,mood:false,time:false,constraint:false}
+  refresh()
+  document.getElementById('comboResults').classList.remove('on')
+  document.getElementById('resultStatus').textContent = '等待生成'
+  switchMode('combo')
+  document.querySelector('.app-scroll').scrollTop = 0
+  toast('探索条件已重置')
+})
+
+function fitPhone(){
+  const slot = document.getElementById('phoneSlot')
+  const phone = document.getElementById('phone')
+  const scale = Math.min(1,(window.innerWidth - 24) / 412,(window.innerHeight - 24) / 866)
+  phone.style.transform = `scale(${scale})`
+  slot.style.width = `${412 * scale}px`
+  slot.style.height = `${866 * scale}px`
+}
+
+function tickClock(){
+  const now = new Date()
+  document.getElementById('clock').textContent =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+}
+
+renderConditions()
+renderSideState()
+renderGallery()
+fitPhone()
+tickClock()
+window.addEventListener('resize',fitPhone)
+setInterval(tickClock,30000)
+</script>
+</body>
+</html>

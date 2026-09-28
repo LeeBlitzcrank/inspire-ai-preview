@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>平行剧情 · 可操作预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#172b27;
+    --muted:#72857f;
+    --line:#dfe9e5;
+    --paper:#f5f8f6;
+    --card:#fff;
+    --green:#2d7463;
+    --green-soft:#e8f4ef;
+    --violet:#6856a4;
+    --violet-soft:#f0edff;
+    --orange:#b96535;
+    --orange-soft:#fff0e7;
+    --blue:#486aa6;
+    --blue-soft:#edf3ff;
+  }
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);background:#e9efec;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  .page{min-height:100dvh;padding:28px 22px;display:flex;align-items:center;justify-content:center;gap:58px}
+  .intro{width:min(430px,36vw)}
+  .eyebrow{display:inline-flex;align-items:center;gap:7px;margin-bottom:12px;color:var(--green);font-size:12px;font-weight:900;letter-spacing:.08em}
+  .eyebrow:before{content:"";width:22px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:0;font-size:38px;line-height:1.06}
+  .intro>p{margin:15px 0 0;color:#617772;font-size:14px;line-height:1.82}
+  .ideas{display:grid;gap:9px;margin-top:24px}
+  .idea{display:flex;gap:10px;padding:11px 12px;border:1px solid rgba(45,116,99,.14);border-radius:14px;background:rgba(255,255,255,.65)}
+  .idea i{width:25px;height:25px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;background:var(--green-soft);color:var(--green);font-size:11px;font-style:normal;font-weight:900}
+  .idea b{display:block;font-size:12.5px}
+  .idea span{display:block;margin-top:3px;color:#748681;font-size:11.5px;line-height:1.5}
+  .side-note{margin-top:20px;padding:15px;border-radius:16px;background:#17352f;color:#fff}
+  .side-note small{color:rgba(255,255,255,.54);font-size:10.5px;letter-spacing:.08em}
+  .side-note b{display:block;margin-top:8px;font-size:15px;line-height:1.5}
+  .side-note p{margin:7px 0 0;color:rgba(255,255,255,.65);font-size:11.5px;line-height:1.65}
+  .side-note button{margin-top:12px;width:100%;height:38px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:transparent;color:#fff;font-size:11.5px;font-weight:800}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{
+    position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;
+    background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);
+    transform-origin:top left;
+  }
+  .phone:before{content:"";position:absolute;z-index:9;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:var(--paper)}
+  .statusbar{position:absolute;z-index:10;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#1c302b;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:4px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:86px}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .topbar{position:sticky;z-index:12;top:0;padding:11px 14px 10px;background:rgba(245,248,246,.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(222,233,229,.88)}
+  .top-row{display:flex;align-items:center;gap:9px}
+  .back{width:34px;height:34px;padding:0;border:1px solid #d9e5e1;border-radius:11px;background:#fff;color:#315d53;font-size:18px}
+  .title-copy{min-width:0;flex:1}
+  .title-copy b{display:block;font-size:16px}
+  .title-copy span{display:block;margin-top:2px;color:#859691;font-size:10.5px}
+  .badge{padding:5px 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:9.5px;font-weight:900}
+  .view{display:none;padding:14px}
+  .view.on{display:block}
+  .daily{position:relative;overflow:hidden;padding:16px;border-radius:18px;background:#183a32;color:#fff}
+  .daily:after{content:"";position:absolute;right:-56px;top:-68px;width:160px;height:160px;border:26px solid rgba(255,255,255,.055);border-radius:50%}
+  .daily-label{position:relative;z-index:1;color:#9ed8c9;font-size:10px;font-weight:900;letter-spacing:.08em}
+  .daily h2{position:relative;z-index:1;margin:8px 0 7px;font-size:19px;line-height:1.35}
+  .daily p{position:relative;z-index:1;margin:0;color:rgba(255,255,255,.64);font-size:11px;line-height:1.55}
+  .daily-foot{position:relative;z-index:1;display:flex;align-items:center;margin-top:13px}
+  .daily-foot span{color:rgba(255,255,255,.58);font-size:10px}
+  .daily-foot button{margin-left:auto;height:31px;padding:0 11px;border:0;border-radius:9px;background:#f2c66d;color:#483713;font-size:10.5px;font-weight:900}
+  .pack-strip{display:flex;gap:6px;overflow-x:auto;padding:13px 0 8px;scrollbar-width:none}
+  .pack-strip::-webkit-scrollbar{display:none}
+  .pack{flex:0 0 auto;height:30px;padding:0 10px;border:1px solid #dfeae6;border-radius:999px;background:#fff;color:#61766f;font-size:10.5px}
+  .pack.on{border-color:#9fd3c5;background:var(--green-soft);color:var(--green);font-weight:850}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 1px 9px}
+  .section-head b{font-size:13.5px}
+  .section-head span{color:#8ca09a;font-size:10px}
+  .story-feed{display:grid;gap:11px}
+  .story-card{position:relative;overflow:hidden;border:1px solid #e0eae7;border-radius:17px;background:#fff;text-align:left}
+  .story-cover{position:relative;height:145px;background:#e7efec}
+  .story-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .cover-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(9,25,21,.8))}
+  .cover-copy{position:absolute;left:13px;right:13px;bottom:12px;color:#fff}
+  .cover-copy span{display:inline-flex;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.16);font-size:9px;font-weight:850;backdrop-filter:blur(8px)}
+  .cover-copy h3{margin:7px 0 3px;font-size:16px;line-height:1.25}
+  .cover-copy p{margin:0;color:rgba(255,255,255,.76);font-size:10.5px;line-height:1.4}
+  .story-body{padding:11px 12px}
+  .story-rule{margin:0;color:#61766f;font-size:10.5px;line-height:1.55}
+  .story-stats{display:flex;align-items:center;gap:9px;margin-top:9px;color:#96a6a1;font-size:9.5px}
+  .story-stats b{color:#4d6b63;font-weight:850}
+  .story-stats span:last-child{margin-left:auto;color:var(--green);font-weight:850}
+  .story-card:hover{border-color:#a9d7ca}
+  .detail-cover{position:relative;height:215px;margin:-14px -14px 0;overflow:hidden;background:#dce8e4}
+  .detail-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .detail-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,23,19,.04),rgba(8,23,19,.82))}
+  .detail-cover-copy{position:absolute;z-index:2;left:16px;right:16px;bottom:16px;color:#fff}
+  .detail-cover-copy span{display:inline-flex;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.16);font-size:9.5px;font-weight:850}
+  .detail-cover-copy h2{margin:8px 0 5px;font-size:22px;line-height:1.25}
+  .detail-cover-copy p{margin:0;color:rgba(255,255,255,.76);font-size:11.5px;line-height:1.5}
+  .detail-body{padding-top:15px}
+  .source-quote{padding:13px;border:1px solid #e4ebe8;border-radius:15px;background:#fff;color:#4c665f;font-size:12px;line-height:1.85;white-space:pre-line}
+  .source-quote small{display:block;margin-bottom:7px;color:#98a7a3;font-size:9.5px}
+  .line-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:12px;scrollbar-width:none}
+  .line-tabs::-webkit-scrollbar{display:none}
+  .line-tab{flex:0 0 auto;height:30px;padding:0 10px;border:1px solid #dfeae6;border-radius:999px;background:#fff;color:#647870;font-size:10.5px}
+  .line-tab.on{border-color:#9fd3c5;background:var(--green-soft);color:var(--green);font-weight:850}
+  .branch-card{margin-top:11px;padding:14px;border:1px solid #dce8e4;border-radius:16px;background:#fff}
+  .branch-card h3{margin:8px 0 7px;font-size:18px;line-height:1.35}
+  .branch-card p{margin:0;color:#6f827c;font-size:11.5px;line-height:1.7;white-space:pre-line}
+  .world-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .fact{padding:10px;border:1px solid var(--line);border-radius:13px;background:#fff}
+  .fact small{display:block;color:#98a8a3;font-size:9.5px}
+  .fact b{display:block;margin-top:5px;font-size:11.5px;line-height:1.45}
+  .choice{margin-top:12px;padding:13px;border:1px solid #eadfca;border-radius:16px;background:var(--orange-soft)}
+  .choice-head{display:flex;align-items:center;margin-bottom:9px}
+  .choice-head b{font-size:12.5px}
+  .choice-head span{margin-left:auto;color:#a6805e;font-size:9.5px;font-weight:750}
+  .choice-list{display:grid;gap:7px}
+  .choice-item{position:relative;overflow:hidden;min-height:44px;padding:9px 10px;border:1px solid rgba(185,101,53,.22);border-radius:11px;background:#fff;text-align:left}
+  .choice-item .fill{position:absolute;inset:0 auto 0 0;width:0;background:rgba(248,198,152,.27);transition:width .3s}
+  .choice-item span{position:relative;z-index:1;display:block;font-size:11px;font-weight:800}
+  .choice-item small{position:relative;z-index:1;display:block;margin-top:4px;color:#8a7464;font-size:9.5px}
+  .choice-item.on{border-color:#d48b5e;box-shadow:0 0 0 2px rgba(196,106,59,.08)}
+  .next-chapter{display:none;margin-top:10px;padding:11px;border-radius:12px;background:rgba(255,255,255,.68)}
+  .next-chapter.on{display:block}
+  .next-chapter b{display:block;font-size:11.5px}
+  .next-chapter p{margin:6px 0 0;color:#6f6359;font-size:10.5px;line-height:1.65}
+  .continue{width:100%;height:44px;margin-top:12px;border:0;border-radius:13px;background:#246f5e;color:#fff;font-size:12.5px;font-weight:900;box-shadow:0 8px 18px rgba(36,111,94,.18)}
+  .start-head{padding:4px 2px 13px}
+  .start-head h2{margin:0;font-size:22px}
+  .start-head p{margin:7px 0 0;color:#748782;font-size:11.5px;line-height:1.65}
+  .anchor-card{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:15px;background:#fff}
+  .anchor-card img{width:82px;height:72px;border-radius:11px;object-fit:cover}
+  .anchor-card b{display:block;font-size:12.5px}
+  .anchor-card span{display:block;margin-top:5px;color:#83958f;font-size:10.5px;line-height:1.5}
+  .variable-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .variable{padding:11px;border:1px solid var(--line);border-radius:14px;background:#fff;text-align:left}
+  .variable.on{border-color:#9fd3c5;background:var(--green-soft)}
+  .variable b{display:block;font-size:11.5px}
+  .variable span{display:block;margin-top:5px;color:#82938e;font-size:9.5px;line-height:1.45}
+  .variable-input{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fff}
+  .variable-input textarea{width:100%;min-height:67px;padding:0;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font-size:12.5px;line-height:1.65}
+  .generate{width:100%;height:44px;margin-top:11px;border:0;border-radius:13px;background:#246f5e;color:#fff;font-size:12.5px;font-weight:900}
+  .generated{display:none;margin-top:12px;padding:14px;border:1px solid #dce8e4;border-radius:16px;background:#fff}
+  .generated.on{display:block;animation:rise .3s ease-out}
+  @keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .generated h3{margin:8px 0 7px;font-size:17px}
+  .generated p{margin:0;color:#6f827c;font-size:11.5px;line-height:1.65;white-space:pre-line}
+  .generated-actions{display:flex;gap:7px;margin-top:11px}
+  .generated-actions button{flex:1;height:38px;border-radius:11px;font-size:11px;font-weight:850}
+  .generated-actions .soft{border:1px solid #dce8e4;background:#fff;color:#60776f}
+  .generated-actions .main{border:1px solid #246f5e;background:#246f5e;color:#fff}
+  .universe-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
+  .stat{padding:11px 7px;border:1px solid var(--line);border-radius:13px;background:#fff;text-align:center}
+  .stat b{display:block;font-size:18px}
+  .stat span{display:block;margin-top:4px;color:#8ea09a;font-size:9.5px}
+  .saved-list{display:grid;gap:8px;margin-top:15px}
+  .saved{display:flex;gap:10px;padding:9px;border:1px solid var(--line);border-radius:14px;background:#fff;text-align:left}
+  .saved img{width:72px;height:62px;border-radius:10px;object-fit:cover}
+  .saved b{display:block;font-size:12px}
+  .saved span{display:block;margin-top:5px;color:#849690;font-size:10px;line-height:1.45}
+  .bottom-nav{position:absolute;z-index:20;left:12px;right:12px;bottom:10px;height:58px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(216,229,225,.94);border-radius:19px;background:rgba(255,255,255,.95);backdrop-filter:blur(18px);box-shadow:0 10px 24px rgba(24,75,64,.11)}
+  .bottom-nav button{min-width:65px;height:43px;border:0;border-radius:13px;background:transparent;color:#8b9b96;font-size:10px;font-weight:750}
+  .bottom-nav button.on{background:var(--green-soft);color:var(--green)}
+  .bottom-nav span{display:block;margin-bottom:3px;font-size:16px;line-height:1}
+  .toast{position:absolute;z-index:50;left:50%;top:88px;transform:translateX(-50%);padding:9px 12px;border-radius:11px;background:rgba(18,43,37,.9);color:#fff;font-size:10.5px;white-space:nowrap;box-shadow:0 10px 24px rgba(12,35,29,.2)}
+  @media (max-width:980px){.page{display:block;padding:18px 0;min-height:auto}.intro{display:none}.phone-slot{margin:0 auto}}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">PARALLEL STORY CONCEPT</div>
+    <h1>平行剧情</h1>
+    <p>不再从空白世界开始。用户从一首古诗、一篇短文或一个熟悉故事出发，改变一个条件，看同一条世界线如何继续生长。</p>
+    <div class="ideas">
+      <div class="idea"><i>01</i><div><b>原文先建立情感前提</b><span>用户已经认识角色、场景和遗憾，不需要从零理解。</span></div></div>
+      <div class="idea"><i>02</i><div><b>读者用投票改变下一章</b><span>每次选择都会影响后续剧情，而不是只看一段生成文本。</span></div></div>
+      <div class="idea"><i>03</i><div><b>世界线可以同时更新</b><span>同一故事分裂出枯水、暴雨、多年后等多个版本。</span></div></div>
+    </div>
+    <div class="side-note">
+      <small>可操作路径</small>
+      <b>打开作品 → 切换世界线 → 参与本章抉择 → 创建平行分支</b>
+      <p>点击古诗、短文或神话卡片，投票决定下一章，并生成自己的新变量。</p>
+      <button type="button" id="resetPreview">返回作品首页</button>
+    </div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot">
+    <div class="phone" id="phone">
+      <div class="screen">
+        <div class="statusbar"><span id="clock">09:41</span><div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div></div>
+        <div class="app">
+          <div class="app-scroll" id="appScroll">
+            <header class="topbar">
+              <div class="top-row">
+                <button class="back" type="button" id="backButton">←</button>
+                <div class="title-copy"><b id="pageTitle">平行剧情</b><span id="pageSubtitle">同一故事，多条世界线同时更新</span></div>
+                <span class="badge">公版共创</span>
+              </div>
+            </header>
+
+            <section class="view on" data-view="home">
+              <article class="daily">
+                <div class="daily-label">今日世界变量</div>
+                <h2>如果主角在做出决定前，多看了一眼。</h2>
+                <p>已有 126 个故事线采用了这个变量，今日新增 18 个选择。</p>
+                <div class="daily-foot"><span>今晚 22:00 结算下一章</span><button type="button" data-daily>加入共创</button></div>
+              </article>
+              <div class="pack-strip">
+                <button class="pack on" type="button">全部作品</button>
+                <button class="pack" type="button">古诗</button>
+                <button class="pack" type="button">志怪</button>
+                <button class="pack" type="button">神话</button>
+                <button class="pack" type="button">公版名著</button>
+              </div>
+              <div class="section-head"><b>正在运行的世界线</b><span>点击进入</span></div>
+              <div class="story-feed" id="storyFeed"></div>
+            </section>
+
+            <section class="view" data-view="detail">
+              <div class="detail-cover">
+                <img id="detailImage" alt="">
+                <div class="detail-cover-copy"><span id="detailType"></span><h2 id="detailName"></h2><p id="detailSeed"></p></div>
+              </div>
+              <div class="detail-body">
+                <article class="source-quote"><small id="sourceLabel"></small><span id="sourceText"></span></article>
+                <div class="line-tabs" id="lineTabs"></div>
+                <article class="branch-card">
+                  <span class="badge" id="branchLabel"></span>
+                  <h3 id="branchTitle"></h3>
+                  <p id="branchText"></p>
+                  <div class="world-facts">
+                    <div class="fact"><small>当前环境</small><b id="factEnvironment"></b></div>
+                    <div class="fact"><small>核心变量</small><b id="factVariable"></b></div>
+                    <div class="fact"><small>角色状态</small><b id="factCharacter"></b></div>
+                    <div class="fact"><small>未解问题</small><b id="factQuestion"></b></div>
+                  </div>
+                </article>
+                <section class="choice">
+                  <div class="choice-head"><b>本章抉择</b><span id="voteMeta">3 个选择 · 读者投票</span></div>
+                  <div class="choice-list" id="choiceList"></div>
+                  <div class="next-chapter" id="nextChapter"><b>下一章预览</b><p id="nextChapterText"></p></div>
+                </section>
+                <button class="continue" type="button" id="createBranch">创建自己的平行世界线 +</button>
+              </div>
+            </section>
+
+            <section class="view" data-view="create">
+              <div class="start-head"><h2>创建平行世界线</h2><p>原文和人物保持不变，只改变一个条件。系统会据此推演新的章节。</p></div>
+              <article class="anchor-card">
+                <img id="anchorImage" alt="">
+                <div><b id="anchorName"></b><span id="anchorText"></span></div>
+              </article>
+              <div class="variable-grid" id="variables">
+                <button class="variable on" type="button" data-variable="environment"><b>改变环境</b><span>枯水、暴雨、夜晚、季节</span></button>
+                <button class="variable" type="button" data-variable="choice"><b>改变选择</b><span>留下、离开、回头、沉默</span></button>
+                <button class="variable" type="button" data-variable="time"><b>改变时间</b><span>多年后、结局之后、故事之前</span></button>
+                <button class="variable" type="button" data-variable="relation"><b>改变关系</b><span>换成另一个人观看或参与</span></button>
+              </div>
+              <div class="variable-input"><textarea id="variableText" maxlength="120">如果瀑布进入枯水期，只剩岩壁和一线细流</textarea></div>
+              <button class="generate" type="button" id="generateBranch">推演这个世界线</button>
+              <article class="generated" id="generated">
+                <span class="badge" id="generatedBadge"></span>
+                <h3 id="generatedTitle"></h3>
+                <p id="generatedText"></p>
+                <div class="generated-actions"><button class="soft" type="button" id="regenerate">换一种</button><button class="main" type="button" id="publish">发布世界线</button></div>
+              </article>
+            </section>
+
+            <section class="view" data-view="universe">
+              <div class="start-head"><h2>我追更的世界线</h2><p>你投过票、创建过分支或收藏过的故事都会留在这里。</p></div>
+              <div class="universe-stats"><div class="stat"><b>8</b><span>追更故事</span></div><div class="stat"><b>31</b><span>参与投票</span></div><div class="stat"><b>4</b><span>创建分支</span></div></div>
+              <div class="saved-list" id="savedList"></div>
+            </section>
+          </div>
+          <nav class="bottom-nav">
+            <button class="on" type="button" data-nav="home"><span>◫</span>作品</button>
+            <button type="button" data-nav="create"><span>＋</span>分支</button>
+            <button type="button" data-nav="universe"><span>◎</span>追更</button>
+          </nav>
+          <div class="toast" id="toast" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const stories = [
+  {
+    id:'journey-west-1',
+    type:'公版名著',
+    name:'西游记 · 第一回',
+    seed:'如果石猴没有第一个跳进水帘洞',
+    image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82',
+    sourceLabel:'明 · 吴承恩',
+    source:'海外有一国土，名曰傲来国。国近大海，海中有一座名山，唤为花果山。此山乃十洲之祖脉，三岛之来龙，自开清浊而立，鸿蒙判后而成。\n\n那座山正当顶上，有一块仙石。其石有三丈六尺五寸高，有二丈四尺围圆。上有九窍八孔，按九宫八卦。四面更无树木遮阴，左右倒有芝兰相衬。盖自开辟以来，每受天真地秀，日精月华，感之既久，遂有灵通之意。内育仙胞，一日迸裂，产一石卵，似圆球样大。因见风，化作一个石猴，五官俱备，四肢皆全。便就学爬学走，拜了四方。目运两道金光，射冲斗府。\n\n众猴拍手称扬道：“好水！好水！原来此处远通山脚之下，直接大海之波。”又道：“那一个有本事的，钻进去寻个源头出来，不伤身体者，我等即拜他为王。”连呼了三声，忽见丛杂中跳出一个石猴，应声高叫道：“我进去！我进去！”好猴！你看他瞑目蹲身，将身一纵，径跳入瀑布泉中。',
+    branches:5,
+    votes:4280,
+    lines:[
+      {
+        id:'original',tab:'原线',title:'原线：石猴出世，称美猴王',
+        text:'石猴闭目蹲身，纵身跳入瀑布泉中，发现水帘洞天。他看见洞中无水无波，桥下却有一条溪涧，直通山脚，尽头连着大海。石猴来回走了几遍，确认这里足以容纳整个猴群，才把身子探出瀑布，向众猴招手。\n\n众猴依前约拜他为王。石猴坐在高处，没有立刻接受欢呼，而是先问了一句：如果有一天水停了，或者他忘了自己从哪里来，花果山还会不会认他。众猴没有听懂，只把这句话当成新王的玩笑。\n\n这一天，花果山第一次有了王，也第一次有了一个不愿意被安排命运的人。',
+        environment:'花果山 · 水帘洞前',variable:'不改变任何条件',character:'石猴成为美猴王',question:'如果他从未走进水帘洞，还会是孙悟空吗？',
+        choices:[['众猴遵守承诺，齐拜石猴',45,'石猴坐上王位，但目光一直停在瀑布深处。'],['石猴发现洞中另有一扇门',35,'门后有第二条路，通往一个没有神仙的世界。'],['他先回到猴群，不急着称王',20,'王位空着，猴群开始讨论谁才有资格。']]
+      },
+      {
+        id:'outside',tab:'停在洞口',title:'石猴停在瀑布前',
+        text:'石猴已经跳到水帘洞前，却在最后一刻停住。水声遮住了洞内的光，他第一次感到害怕。猴群在身后催促，谁先进去，谁就可能不再是原来的自己。\n\n他想起仙石裂开的那一刻。那时他没有名字，也没有人告诉他应该往哪里去。现在所有人都在等他做决定，可这个决定一旦做出，花果山就会立刻多出一个王，也会多出一个必须承担后果的人。\n\n他没有回头看猴群，只听见瀑布像一道不断重复的问题。',
+        environment:'花果山 · 瀑布前',variable:'石猴选择不进入',character:'石猴失去称王的机会',question:'成为王，还是保留对未知的敬畏？',
+        choices:[['退回猴群，把机会让给别人',33,'另一只猴子进入水帘洞，成为新的王。'],['让所有猴子一起进入',42,'洞里没有王位，只有一群第一次共同看见世界的猴子。'],['在洞口等到天黑',25,'夜幕落下后，洞里传出声音，约他明晚再来。']]
+      },
+      {
+        id:'mirror',tab:'镜中未来',title:'水帘洞深处有一面石镜',
+        text:'石猴穿过瀑布，在洞底看见一面石镜。镜中不是花果山，而是一条漫长的取经路。他看见自己戴上金箍，也看见自己被压在一座山下。\n\n镜中的他有时像妖，有时像神，有时只是一个疲惫的旅人。石猴伸手去摸镜子，镜面却先把他的影子分成两半：一半留在花果山，一半走向远方的天门。\n\n镜子没有告诉他结局，只给了他一个问题：知道以后，你还要走吗？',
+        environment:'水帘洞 · 石镜前',variable:'石猴提前看到未来',character:'他知道未来，但不知道因果',question:'若知道未来，还会选择成为齐天大圣吗？',
+        choices:[['打碎石镜，不许未来发生',38,'镜子裂开，洞外同时响起一声来自天庭的雷鸣。'],['把镜中之事告诉众猴',34,'花果山开始流传一个关于取经人的预言。'],['独自离开花果山寻找答案',28,'石猴第一次离开家乡，比原线早了五百年。']]
+      },
+      {
+        id:'heaven',tab:'天兵提前',title:'玉帝先派太白金星下界',
+        text:'石猴出世时眼中两道金光惊动天庭。玉帝没有等到他闹龙宫，而是先派太白金星下界，带着一纸招安诏书。\n\n太白金星站在花果山山顶，看见石猴还没有名字，却已经能听懂天上来的话。他把诏书展开，没有让石猴立刻跪接，只问他是否愿意去天庭看看自己的另一种命运。\n\n石猴身后的猴群安静下来。太白金星又说：天庭愿意给你一个位置，但你要先决定，那个位置是不是你的名字。',
+        environment:'花果山 · 金光初现',variable:'天庭提前介入',character:'太白金星来到花果山',question:'招安是机会，还是另一种束缚？',
+        choices:[['接受诏书，立即上天',39,'石猴提前进入天庭，成为最年轻的低级神官。'],['撕掉诏书，拒绝招安',36,'天庭第一次把花果山列为潜在威胁。'],['请太白金星先在花果山住下',25,'天庭和猴群开始交换食物、语言和秘密。']]
+      },
+      {
+        id:'noking',tab:'不争王位',title:'猴群共同治理水帘洞',
+        text:'石猴发现洞天后，没有立刻坐上王位。他说：第一个进去的人，未必是永远应该决定一切的人。众猴先是以为他在试探，后来又以为他不愿意承担王位，直到他把洞中溪流、出口和食物分布一一画在地上。\n\n猴群第一次围坐在水帘洞中，开始讨论如何轮流守洞、分享食物和记录新的发现。石猴没有承诺自己会成为什么，只承诺每次做决定前都会让所有猴子知道原因。\n\n水帘洞第一次不像一个王的宫殿，而像一个还没有规则的村庄。',
+        environment:'水帘洞 · 猴群议事',variable:'取消单一王位',character:'猴群形成共同体',question:'没有王，花果山会更自由还是更混乱？',
+        choices:[['建立轮流执政的猴群议事会',41,'花果山出现第一部由猴群共同写下的规则。'],['推举最年长的猴子作为仲裁者',33,'长者获得了裁决权，但没有军队。'],['举行新的比试决定领导者',26,'水帘洞前再次搭起擂台，权力竞争重新开始。']]
+      }
+    ]
+  },
+  {
+    id:'waterfall',
+    type:'古诗',
+    name:'望庐山瀑布',
+    seed:'同一座香炉峰，遇上不同水量',
+    image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82',
+    sourceLabel:'唐 · 李白',
+    source:'日照香炉生紫烟，遥看瀑布挂前川。\n飞流直下三千尺，疑是银河落九天。',
+    branches:4,
+    votes:1842,
+    lines:[
+      {
+        id:'original',tab:'原线',title:'原线：水势充足',
+        text:'日光把香炉峰染成紫色，瀑布像一条完整的白练挂在山前。水声轰鸣，让人误以为银河真的从天上落了下来。',
+        environment:'晴日 · 丰水期',variable:'不改变任何条件',character:'李白正在遥看',question:'银河会不会真的落下？',
+        choices:[['继续凝视这条瀑布',42,'水声变得更大，远处出现第二道彩虹。'],['沿着山径靠近瀑布',36,'岩石上的水汽让诗句变得触手可及。'],['转身离开，把震撼留在记忆里',22,'诗停在此刻，但瀑布仍在身后轰鸣。']]
+      },
+      {
+        id:'dry',tab:'枯水期',title:'枯水期：岩壁显形',
+        text:'紫烟变淡，瀑布只剩一线细流。原本被水遮住的岩壁显露出来，像一封被拆开的旧信。李白仍然遥看，但这一次他看见的不是银河，而是山体留下的伤痕。',
+        environment:'晴日 · 枯水期',variable:'瀑布水量极少',character:'李白仍在等待',question:'等水回来，还是相信水不会回来？',
+        choices:[['继续等待丰水期',24,'他在岩壁下坐到日落，把等待写进下一段诗。'],['沿岩壁寻找新的水源',47,'细流从石缝里出现，诗开始转向一场寻找。'],['承认银河已经断线',29,'最后一句变成“疑是星河落半山”。']]
+      },
+      {
+        id:'storm',tab:'暴雨夜',title:'暴雨夜：瀑布变成白龙',
+        text:'夜里暴雨突至，瀑布宽了一倍。月光消失，只有水声像一列失控的银车。山下的村庄第一次听见庐山发出这样的声音。',
+        environment:'暴雨 · 夜间',variable:'水量暴涨',character:'村庄也被卷入',question:'明天的庐山还认得原来的河道吗？',
+        choices:[['把瀑布记成一条银龙',53,'当地传说由此开始，诗句成为目击证词。'],['去下游叫醒村庄',31,'故事从观看转为行动，瀑布成为灾难前兆。'],['留在山上记录水声',16,'没人知道结果，只留下一页被雨打湿的笔记。']]
+      },
+      {
+        id:'future',tab:'千年后',title:'千年后：瀑布已经消失',
+        text:'山还在，香炉峰还叫香炉峰，但瀑布已经没有了。游客拿着手机读到这首诗，只能在干涸的岩壁前想象李白的银河。',
+        environment:'现代 · 无瀑布',variable:'原景已经消失',character:'读者代替了李白',question:'当景物消失，诗句还能证明它曾经存在吗？',
+        choices:[['相信诗句比瀑布更长久',45,'岩壁上出现一块数字诗碑，孩子开始用 AR 复原瀑布。'],['寻找历史照片作为证据',34,'旧照片被找出来，世界线开始连接记忆与现场。'],['承认自己来得太晚',21,'故事变成一封写给消失景物的信。']]
+      }
+    ]
+  },
+  {
+    id:'peach',
+    type:'文言短篇',
+    name:'桃花源记',
+    seed:'如果渔人没有在归途做标记',
+    image:'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=82',
+    sourceLabel:'晋 · 陶渊明',
+    source:'缘溪行，忘路之远近。忽逢桃花林，夹岸数百步。\n林尽水源，便得一山，山有小口，仿佛若有光。',
+    branches:12,
+    votes:3260,
+    lines:[
+      {
+        id:'original',tab:'原线',title:'原线：标记与失路',
+        text:'渔人离开桃花源后处处做标记，太守派人随他前往寻找，却再也找不到那条通往桃源的路。',
+        environment:'现实世界',variable:'渔人做了标记',character:'太守介入',question:'桃花源是否存在？',
+        choices:[['相信桃花源已经关闭',48,'标记仍在，但道路改变了。'],['继续寻找新的入口',34,'一行人走入另一条不在地图上的溪流。'],['怀疑渔人从未进入',18,'故事变成一场集体记忆的争论。']]
+      },
+      {
+        id:'nomark',tab:'没有标记',title:'没有标记：桃花源开始遗忘来客',
+        text:'渔人没有留下任何标记。桃花源的人原以为他只是过客，却发现自己也开始想不起他的样子。村里第一次出现“外来者”这个词。',
+        environment:'桃花源内部',variable:'归途没有标记',character:'村民出现分歧',question:'不留下痕迹，是否就等于没有来过？',
+        choices:[['让村民主动寻找渔人',41,'桃花源第一次打开边界。'],['封锁山口不让任何人离开',36,'村庄开始失去时间概念。'],['把渔人写进村史',23,'故事变成了桃花源自己的传说。']]
+      },
+      {
+        id:'follow',tab:'村民外出',title:'村民外出：外面的时间已经走了三百年',
+        text:'一个年轻村民沿着水源离开桃花源。他抵达外面的世界时，朝代、语言和河流都已经改变，只有桃花仍然按原来的时间开放。',
+        environment:'三百年后',variable:'桃花源的人先出来',character:'年轻村民成为观察者',question:'他还能回到自己的那一代人吗？',
+        choices:[['留在外面记录新世界',44,'他成为唯一同时拥有两种历史的人。'],['带着种子返回桃花源',36,'桃花源开始与外部世界发生交换。'],['发现家乡其实只有一天',20,'时间线彻底崩解。']]
+      }
+    ]
+  },
+  {
+    id:'wolf',
+    type:'志怪短文',
+    name:'狼',
+    seed:'如果屠户一开始没有丢骨头',
+    image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=82',
+    sourceLabel:'清 · 蒲松龄',
+    source:'一屠晚归，担中肉尽，止有剩骨。\n途中两狼，缀行甚远。',
+    branches:7,
+    votes:1158,
+    lines:[
+      {
+        id:'original',tab:'原线',title:'原线：两只狼前后夹击',
+        text:'屠户先丢骨头，两狼交替跟随。骨头没有了，它们仍然一起追赶，最终把屠户逼向麦场。',
+        environment:'傍晚 · 野外',variable:'骨头被丢完',character:'屠户被迫反击',question:'狼真正想要的是骨头吗？',
+        choices:[['继续丢骨头换时间',38,'狼不再争夺骨头，而是开始观察屠户。'],['提前奔向麦场',44,'对峙地点改变，故事进入包围与反包围。'],['大声呼救',18,'远处传来另一群脚步声。']]
+      },
+      {
+        id:'keep',tab:'不丢骨头',title:'不丢骨头：狼第一次犹豫',
+        text:'屠户担中还有骨头，却决定不再喂食。两狼跟得更近，但没有扑上来。它们似乎在等一个没有出现的人。',
+        environment:'傍晚 · 对峙',variable:'屠户改变策略',character:'两狼变得更加谨慎',question:'狼在等谁？',
+        choices:[['回头观察第三只狼',42,'身后的草丛里有另一双眼睛。'],['用担子制造声响',33,'声音惊散狼群，也惊动了林中的人。'],['把骨头全部留到最后',25,'骨头从诱饵变成了谈判条件。']]
+      }
+    ]
+  }
+]
+
+let currentStory = stories[0]
+let currentLine = currentStory.lines[1]
+let currentView = 'home'
+let variableType = 'environment'
+let voted = false
+
+const pageMeta={
+  home:['平行剧情','同一故事，多条世界线同时更新'],
+  detail:['世界线详情','阅读当前章节并决定下一步'],
+  create:['创建平行世界线','改变一个条件，推演新的故事'],
+  universe:['我追更的世界线','你参与过的故事都会留在这里']
+}
+
+function renderStories(){
+  document.getElementById('storyFeed').innerHTML = stories.map(story => `
+    <button class="story-card" type="button" data-story="${story.id}">
+      <div class="story-cover">
+        <img src="${story.image}" alt="">
+        <div class="cover-overlay"></div>
+        <div class="cover-copy"><span>${story.type}</span><h3>${story.name}</h3><p>${story.seed}</p></div>
+      </div>
+      <div class="story-body">
+        <p class="story-rule">当前活跃世界线：${story.lines[1].title}</p>
+        <div class="story-stats"><span><b>${story.branches}</b> 条世界线</span><span><b>${story.votes}</b> 人参与</span><span>进入故事 →</span></div>
+      </div>
+    </button>
+  `).join('')
+}
+
+function renderSaved(){
+  document.getElementById('savedList').innerHTML = stories.slice(0,2).map(story => `
+    <button class="saved" type="button" data-story="${story.id}">
+      <img src="${story.image}" alt="">
+      <div><b>${story.name}</b><span>你最近选择了「${story.lines[1].choices[1][0]}」</span></div>
+    </button>
+  `).join('')
+}
+
+function renderDetail(){
+  document.getElementById('detailImage').src = currentStory.image
+  document.getElementById('detailType').textContent = currentStory.type
+  document.getElementById('detailName').textContent = currentStory.name
+  document.getElementById('detailSeed').textContent = currentStory.seed
+  document.getElementById('sourceLabel').textContent = currentStory.sourceLabel
+  document.getElementById('sourceText').textContent = currentStory.source
+  document.getElementById('lineTabs').innerHTML = currentStory.lines.map(line => `
+    <button class="line-tab ${line.id === currentLine.id ? 'on' : ''}" type="button" data-line="${line.id}">${line.tab}</button>
+  `).join('')
+  document.getElementById('branchLabel').textContent = currentLine.tab
+  document.getElementById('branchTitle').textContent = currentLine.title
+  document.getElementById('branchText').textContent = currentLine.text
+  document.getElementById('factEnvironment').textContent = currentLine.environment
+  document.getElementById('factVariable').textContent = currentLine.variable
+  document.getElementById('factCharacter').textContent = currentLine.character
+  document.getElementById('factQuestion').textContent = currentLine.question
+  document.getElementById('voteMeta').textContent = `${currentLine.choices.length} 个选择 · 读者投票`
+  document.getElementById('choiceList').innerHTML = currentLine.choices.map((choice,index) => `
+    <button class="choice-item" type="button" data-choice="${index}">
+      <span class="fill" style="width:${choice[1]}%"></span>
+      <span>${choice[0]}</span><small>${choice[1]}% 的读者选择</small>
+    </button>
+  `).join('')
+  document.getElementById('nextChapter').classList.remove('on')
+  voted = false
+}
+
+function openStory(id){
+  currentStory = stories.find(story => story.id === id) || stories[0]
+  currentLine = currentStory.lines[1] || currentStory.lines[0]
+  renderDetail()
+  switchView('detail')
+}
+
+function switchView(view){
+  currentView=view
+  document.querySelectorAll('.view').forEach(item => item.classList.toggle('on',item.dataset.view === view))
+  document.getElementById('pageTitle').textContent=pageMeta[view][0]
+  document.getElementById('pageSubtitle').textContent=pageMeta[view][1]
+  document.querySelectorAll('.bottom-nav button').forEach(button => button.classList.toggle('on',button.dataset.nav === view))
+  document.getElementById('appScroll').scrollTop=0
+}
+
+document.addEventListener('click',event => {
+  const story = event.target.closest('[data-story]')
+  if (story) openStory(story.dataset.story)
+  const nav = event.target.closest('[data-nav]')
+  if (nav) switchView(nav.dataset.nav)
+  const line = event.target.closest('[data-line]')
+  if (line){
+    currentLine=currentStory.lines.find(item => item.id === line.dataset.line)
+    renderDetail()
+  }
+  const choice = event.target.closest('[data-choice]')
+  if (choice){
+    document.querySelectorAll('.choice-item').forEach(item => item.classList.toggle('on',item === choice))
+    const index=Number(choice.dataset.choice)
+    document.getElementById('nextChapterText').textContent=currentLine.choices[index][2]
+    document.getElementById('nextChapter').classList.add('on')
+    voted=true
+    toast('选择已提交，将影响下一章')
+  }
+  const daily=event.target.closest('[data-daily]')
+  if (daily){
+    variableType='choice'
+    document.querySelectorAll('.variable').forEach(item=>item.classList.toggle('on',item.dataset.variable===variableType))
+    document.getElementById('variableText').value='如果主角在做出决定前，多看了一眼'
+    switchView('create')
+  }
+})
+
+document.getElementById('backButton').addEventListener('click',()=>{
+  if (currentView === 'home') return toast('这里已经是作品首页')
+  switchView('home')
+})
+
+document.getElementById('createBranch').addEventListener('click',()=>{
+  document.getElementById('anchorImage').src=currentStory.image
+  document.getElementById('anchorName').textContent=currentStory.name
+  document.getElementById('anchorText').textContent=`基于「${currentLine.title}」创建一个新变量`
+  document.getElementById('variableText').value = currentStory.id === 'waterfall'
+    ? '如果瀑布进入枯水期，只剩岩壁和一线细流'
+    : `如果「${currentLine.title}」发生后，主角改变了原来的选择`
+  switchView('create')
+})
+
+document.getElementById('variables').addEventListener('click',event=>{
+  const button=event.target.closest('[data-variable]')
+  if (!button) return
+  variableType=button.dataset.variable
+  document.querySelectorAll('.variable').forEach(item=>item.classList.toggle('on',item===button))
+})
+
+const branchTemplates={
+  'journey-west-1':{
+    title:'停在洞口：石猴没有成为王',
+    text:'瀑布仍在向前落下，但石猴没有跨进去。\n\n猴群在身后沉默了片刻，随后开始争论：谁有资格进入洞中？如果没有人愿意承担王位，花果山会不会变成另一种样子？\n\n这一世界线不写“石猴错过王位”，而是写他第一次意识到：成为王和成为自己，可能不是同一件事。'
+  },
+  waterfall:{
+    title:'枯水期：银河只剩一条线',
+    text:'日照香炉生薄烟，遥看石壁挂残泉。\n细流一线垂千尺，疑是星河落半山。\n\n这一世界线不再描写瀑布的壮丽，而是记录观看者如何面对景观的消失。'
+  },
+  peach:{
+    title:'没有标记：桃花源开始移动',
+    text:'渔人没有留下标记。第二天，村民发现溪水改了方向，桃花源也不再位于原来的山口。\n\n这条世界线把“找不到”变成了桃花源主动躲避外界。'
+  },
+  wolf:{
+    title:'不丢骨头：第三只狼一直跟在后面',
+    text:'屠户没有丢骨头，两狼却没有靠近。直到他回头，才看见第三只狼一直在等前两只做出选择。\n\n故事从人与狼的对峙，变成狼群内部的权力测试。'
+  }
+}
+
+function showGenerated(){
+  const template=branchTemplates[currentStory.id] || branchTemplates.waterfall
+  document.getElementById('generatedBadge').textContent=variableType === 'environment' ? '环境变量世界线' : '选择变量世界线'
+  document.getElementById('generatedTitle').textContent=template.title
+  document.getElementById('generatedText').textContent=template.text
+  document.getElementById('generated').classList.add('on')
+  document.getElementById('appScroll').scrollTop=9999
+}
+
+document.getElementById('generateBranch').addEventListener('click',()=>{
+  document.getElementById('generated').classList.remove('on')
+  toast('正在推演新的世界线')
+  setTimeout(showGenerated,650)
+})
+
+document.getElementById('regenerate').addEventListener('click',()=>document.getElementById('generateBranch').click())
+document.getElementById('publish').addEventListener('click',()=>{
+  currentStory.branches += 1
+  renderStories()
+  switchView('home')
+  toast('已发布新的世界线')
+})
+
+document.getElementById('resetPreview').addEventListener('click',()=>{
+  switchView('home')
+  toast('已返回作品首页')
+})
+
+let toastTimer
+function toast(message){
+  const element=document.getElementById('toast')
+  element.textContent=message
+  element.style.display='block'
+  clearTimeout(toastTimer)
+  toastTimer=setTimeout(()=>{element.style.display='none'},1500)
+}
+
+function fitPhone(){
+  const slot=document.getElementById('phoneSlot')
+  const phone=document.getElementById('phone')
+  const scale=Math.min(1,(window.innerWidth-24)/412,(window.innerHeight-24)/866)
+  phone.style.transform=`scale(${scale})`
+  slot.style.width=`${412*scale}px`
+  slot.style.height=`${866*scale}px`
+}
+
+function tickClock(){
+  const now=new Date()
+  document.getElementById('clock').textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+}
+
+renderStories()
+renderSaved()
+fitPhone()
+tickClock()
+const params=new URLSearchParams(window.location.search)
+if (params.get('view') === 'detail') openStory(params.get('story') || 'waterfall')
+if (params.get('line')) {
+  currentLine=currentStory.lines.find(line => line.id === params.get('line')) || currentLine
+  renderDetail()
+}
+window.addEventListener('resize',fitPhone)
+setInterval(tickClock,30000)
+</script>
+</body>
+</html>

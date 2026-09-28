@@ -4,7 +4,7 @@
       <span class="ico" @click="editId ? goBack() : $router.push('/')">{{ editId ? '←' : '🍎' }}</span>
       <span class="page-title">{{ editId ? '编辑灵感' : '录入新灵感' }}</span>
       <div class="topbar-right">
-        <span v-if="!editId" class="ico draft-ico" title="本地草稿" @click="draftPanelOpen = !draftPanelOpen">📝</span>
+        <span v-if="!editId" class="ico draft-ico" title="本地草稿" @click="toggleDraftPanel">📝</span>
         <span class="ico" @click="$router.push('/personal')">👤</span>
       </div>
     </div>
@@ -62,7 +62,7 @@
           </div>
 
           <div class="cloud-bar">
-            <input v-model="aiKeyword" placeholder="输入关键词，重新探索…" @keyup.enter="handleExplore" />
+            <input :value="aiKeyword" placeholder="输入关键词，重新探索…" @input="setAiKeyword($event.target.value)" @keyup.enter="handleExplore" />
             <button :disabled="exploring" @click="handleExplore">✨ 探索</button>
           </div>
         </div>
@@ -103,7 +103,7 @@
         </div>
 
         <div v-if="historyList.length" class="history-panel">
-          <button class="history-toggle" type="button" @click="historyOpen = !historyOpen">
+          <button class="history-toggle" type="button" @click="toggleHistoryPanel">
             <span>最近探索 · {{ historyList.length }}</span>
             <span>{{ historyOpen ? '收起' : '展开' }}</span>
           </button>
@@ -168,7 +168,7 @@
             <span class="tb-divider"></span>
             <button type="button" class="tb-btn auto" title="按段落、编号、清单自动排版" @mousedown.prevent @click="autoFormatContent">自动排版</button>
             <button type="button" class="tb-btn ai-rewrite-btn" title="改写选中的正文"
-                    @mousedown.prevent="captureEditorSelection" @click="rewriteOpen = !rewriteOpen">AI 改写</button>
+                    @mousedown.prevent="captureEditorSelection" @click="toggleRewritePanel">AI 改写</button>
           </div>
           <div v-if="rewriteOpen" class="rewrite-bar">
             <span>改写选中内容：</span>
@@ -197,7 +197,7 @@
         <div class="img-head">
           <span class="label" style="margin:0">图片（可多张）</span>
           <div class="img-head-actions">
-            <button type="button" class="ai-img-btn" :disabled="!form.images.length" @click="gridPreviewOpen = true">九宫格预览</button>
+            <button type="button" class="ai-img-btn" :disabled="!form.images.length" @click="setGridPreviewOpen(true)">九宫格预览</button>
             <button type="button" class="ai-img-btn" @click="toggleSuggest">🤖 AI 配图</button>
           </div>
         </div>
@@ -208,8 +208,8 @@
             class="thumb"
             :class="{ picked: selectedImage === img, cover: coverImage === img }"
             draggable="true"
-            @click="selectedImage = img"
-            @dragstart="dragImageIndex = idx"
+            @click="selectMediaImage(img)"
+            @dragstart="startImageDrag(idx)"
             @dragover.prevent
             @drop="dropImage(idx)"
           >
@@ -234,14 +234,14 @@
           </div>
         </div>
 
-        <div v-if="gridPreviewOpen" class="overlay grid-preview-overlay" @click.self="gridPreviewOpen = false">
+        <div v-if="gridPreviewOpen" class="overlay grid-preview-overlay" @click.self="setGridPreviewOpen(false)">
           <div class="grid-preview-panel">
             <div class="grid-preview-head">
               <div>
                 <h3>九宫格预览</h3>
                 <p>按当前顺序展示，封面图优先显示。</p>
               </div>
-              <button type="button" @click="gridPreviewOpen = false">×</button>
+              <button type="button" @click="setGridPreviewOpen(false)">×</button>
             </div>
             <div class="grid-preview">
               <div v-for="idx in 9" :key="idx" class="grid-cell">
@@ -297,7 +297,7 @@
 
         <div v-if="videoItems.length" class="video-tools">
           <label class="video-keep">
-            <input v-model="keepOriginalOnly" type="checkbox" />
+            <input :checked="keepOriginalOnly" type="checkbox" @change="setKeepOriginalOnly($event.target.checked)" />
             <span>只保留最终版（压缩/裁剪完成后自动删除原片）</span>
           </label>
           <div v-for="v in videoItems" :key="v.url" class="video-tool-row">
@@ -349,14 +349,15 @@
     </div>
 
     <!-- 视频裁剪：按秒指定开始时间与保留时长 -->
-    <el-dialog v-model="trimDialogVisible" title="裁剪视频" width="320px" append-to-body>
+    <el-dialog :model-value="trimDialogVisible" title="裁剪视频" width="320px" append-to-body
+               @update:model-value="setTrimDialogVisible">
       <div class="trim-tip">
         {{ trimTarget?.name || '视频' }}<template v-if="trimTarget?.duration"> · 总时长 {{ trimTarget.duration }} 秒</template>
       </div>
-      <el-input v-model="trimStart" placeholder="开始时间（秒）" />
-      <el-input v-model="trimDuration" placeholder="保留时长（秒）" style="margin-top:10px" />
+      <el-input :model-value="trimStart" placeholder="开始时间（秒）" @update:model-value="setTrimStart" />
+      <el-input :model-value="trimDuration" placeholder="保留时长（秒）" style="margin-top:10px" @update:model-value="setTrimDuration" />
       <template #footer>
-        <el-button @click="trimDialogVisible = false">取消</el-button>
+        <el-button @click="setTrimDialogVisible(false)">取消</el-button>
         <el-button type="primary" :loading="trimming" @click="doTrim">确定裁剪</el-button>
       </template>
     </el-dialog>
@@ -364,30 +365,17 @@
 </template>
 
 <script setup>
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {ElMessage} from '@/utils/uiFeedback.js'
-import {
-  aiRewrite,
-  aiTitles,
-  compressVideo,
-  createInspire,
-  deleteAiHistory,
-  exploreInspiration,
-  getAiHistory,
-  getCategoryTree,
-  getInspireDetail,
-  getUserInfo,
-  getWordCloud,
-  markAiHistorySelected,
-  saveAiHistory,
-  suggestImages as suggestImagesApi,
-  trimVideo,
-  updateInspire,
-  uploadFile,
-  uploadFromUrl
-} from '@/api/inspire.js'
-import {autoFormatHtml} from '@/utils/autoFormat.js'
+import {getInspireDetail, getUserInfo} from '@/api/inspire.js'
+import {useCreateMedia} from './create/composables/useCreateMedia.js'
+import {useCreateAssistant} from './create/composables/useCreateAssistant.js'
+import {useCreateImageSuggestions} from './create/composables/useCreateImageSuggestions.js'
+import {useCreateVoiceInput} from './create/composables/useCreateVoiceInput.js'
+import {useCreateDrafts} from './create/composables/useCreateDrafts.js'
+import {useCreateEditor} from './create/composables/useCreateEditor.js'
+import {useCreateSubmission} from './create/composables/useCreateSubmission.js'
+import {useCreateCategories} from './create/composables/useCreateCategories.js'
 import {thumbOf} from '@/utils/media.js'
 
 const router = useRouter()
@@ -395,909 +383,140 @@ const route = useRoute()
 const editId = computed(() => route.params.id)
 
 // 分类由后台维护，改成读接口；接口异常时退回一份默认值
-const DEFAULT_TAGS = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']
-const tags = ref([...DEFAULT_TAGS])
+const {tags, loadTags} = useCreateCategories()
 
-const loadTags = async () => {
-  try {
-    const res = await getCategoryTree()
-    const names = (res.data || []).map(c => c.name).filter(Boolean)
-    if (names.length) {
-      tags.value = names.includes('其他') ? names : [...names, '其他']
-    }
-  } catch (e) {
-    console.error('[tags]', e)
-  }
-}
 const loading = ref(false)
 const form = ref({ title: '', tag: '', content: '', images: [], img: '', publishCity: '' })
 const quoteSource = ref(null)
-const LOCAL_DRAFT_KEY = 'inspire:local-drafts:v1'
-const localDrafts = ref([])
-const localDraftId = ref('')
-const draftPanelOpen = ref(false)
-let draftSaveTimer = null
-let draftHydrating = true
+const {
+  descRef,
+  contentLen,
+  setContent,
+  onDescInput,
+  execCmd,
+  execBlock,
+  clearFormat,
+  getEditorPlainText,
+  autoFormatContent
+} = useCreateEditor(form)
 
-const loadLocalDrafts = () => {
-  try {
-    localDrafts.value = JSON.parse(localStorage.getItem(LOCAL_DRAFT_KEY) || '[]')
-  } catch {
-    localDrafts.value = []
-  }
-}
+const {
+  aiKeyword,
+  exploring,
+  options,
+  summary,
+  path,
+  pathLabels,
+  leafContent,
+  contentVariants,
+  activeVariant,
+  historyList,
+  historyOpen,
+  currentHistoryId,
+  TITLE_MAX_LENGTH,
+  titleLength,
+  titleSuggestions,
+  titleGenerating,
+  rewriteOpen,
+  rewriting,
+  savedEditorRange,
+  REWRITE_STYLES,
+  applyTitle,
+  generateTitles,
+  captureEditorSelection,
+  rewriteSelection,
+  pickedWordId,
+  DEFAULT_CLOUD_WORDS,
+  cloudWords,
+  loadCloudWords,
+  cloudLanes,
+  laneTop,
+  laneDur,
+  pickCloudWord,
+  exploreByWord,
+  handleExplore,
+  selectOption,
+  clampTitle,
+  applyContent,
+  loadAiHistory,
+  useHistory,
+  removeHistory,
+  formatHistoryTime,
+  reshuffle,
+  goToLevel,
+  resetExplore,
+  applyVariant
+} = useCreateAssistant({form, descRef, setContent, getEditorPlainText, onDescInput})
 
-const persistLocalDrafts = () => {
-  localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(localDrafts.value.slice(0, 30)))
-}
+const {voiceActive, voiceError, toggleVoice} = useCreateVoiceInput({form, descRef, setContent, onDescInput})
 
-const draftHasContent = () =>
-  Boolean(form.value.title.trim() || form.value.content.trim() || form.value.images.length || form.value.tag)
+const {
+  fileInput,
+  MAX_IMAGES,
+  uploadingCount,
+  imageProgress,
+  uploading,
+  uploadPercent,
+  triggerUpload,
+  IMAGE_FILTERS,
+  selectedImage,
+  filtering,
+  coverImage,
+  gridPreviewOpen,
+  dragImageIndex,
+  gridImages,
+  setCover,
+  dropImage,
+  imageOrigin,
+  originOf,
+  filterPreviewSrc,
+  applyFilter,
+  VIDEO_MAX_SIZE,
+  videoMeta,
+  videoUploadTasks,
+  keepOriginalOnly,
+  isVideoUrl,
+  videoItems,
+  replaceMediaUrl,
+  uploadVideoOne,
+  performVideoUpload,
+  retryVideoUpload,
+  applyProcessed,
+  doCompress,
+  trimDialogVisible,
+  trimTarget,
+  trimStart,
+  trimDuration,
+  trimming,
+  openTrim,
+  doTrim,
+  compressImage,
+  uploadOne,
+  handleFile,
+  removeImage
+} = useCreateMedia({form})
 
-const saveLocalDraftNow = () => {
-  if (editId.value || draftHydrating || !draftHasContent()) return
-  if (!localDraftId.value) localDraftId.value = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  const item = {
-    id: localDraftId.value,
-    title: form.value.title,
-    tag: form.value.tag,
-    content: form.value.content,
-    images: form.value.images.filter(url => !String(url).startsWith('blob:')),
-    img: coverImage.value,
-    quoteInspireId: quoteSource.value?.id || '',
-    publishCity: form.value.publishCity,
-    updatedAt: Date.now()
-  }
-  localDrafts.value = [item, ...localDrafts.value.filter(d => d.id !== item.id)]
-  persistLocalDrafts()
-}
+const {
+  localDrafts,
+  localDraftId,
+  draftPanelOpen,
+  draftHydrating,
+  loadLocalDrafts,
+  saveLocalDraftNow,
+  scheduleLocalDraft,
+  openLocalDraft,
+  newLocalDraft,
+  removeLocalDraft,
+  formatDraftTime
+} = useCreateDrafts({form, editId, coverImage, quoteSource, clampTitle, setContent})
 
-const scheduleLocalDraft = () => {
-  clearTimeout(draftSaveTimer)
-  draftSaveTimer = setTimeout(saveLocalDraftNow, 800)
-}
+const setAiKeyword = value => { aiKeyword.value = value }; const toggleDraftPanel = () => { draftPanelOpen.value = !draftPanelOpen.value }
+const toggleHistoryPanel = () => { historyOpen.value = !historyOpen.value }; const toggleRewritePanel = () => { rewriteOpen.value = !rewriteOpen.value }
+const setGridPreviewOpen = value => { gridPreviewOpen.value = value }; const selectMediaImage = url => { selectedImage.value = url }
+const startImageDrag = index => { dragImageIndex.value = index }; const setKeepOriginalOnly = value => { keepOriginalOnly.value = value }
+const setTrimDialogVisible = value => { trimDialogVisible.value = value }; const setTrimStart = value => { trimStart.value = value }; const setTrimDuration = value => { trimDuration.value = value }
 
-const openLocalDraft = (item) => {
-  draftHydrating = true
-  localDraftId.value = item.id
-  form.value = {
-    title: clampTitle(item.title || ''),
-    tag: item.tag || '',
-    content: item.content || '',
-    images: Array.isArray(item.images) ? item.images : [],
-    img: item.img || '',
-    publishCity: item.publishCity || ''
-  }
-  coverImage.value = item.img || form.value.images[0] || ''
-  quoteSource.value = null
-  setContent(form.value.content)
-  draftPanelOpen.value = false
-  draftHydrating = false
-}
-
-const newLocalDraft = () => {
-  form.value = { title: '', tag: '', content: '', images: [], img: '', publishCity: '' }
-  coverImage.value = ''
-  quoteSource.value = null
-  localDraftId.value = ''
-  setContent('')
-  draftPanelOpen.value = false
-}
-
-const removeLocalDraft = (id) => {
-  localDrafts.value = localDrafts.value.filter(item => item.id !== id)
-  if (localDraftId.value === id) localDraftId.value = ''
-  persistLocalDrafts()
-}
-
-const formatDraftTime = (ts) => {
-  const d = new Date(ts || 0)
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
-// —— 富文本详情（contenteditable）：以 HTML 字符串存储，提交与回显均走 innerHTML ——
-const descRef = ref(null)
-const contentLen = computed(() => {
-  const html = form.value.content || ''
-  const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ')
-  return text.replace(/\s/g, '').length
-})
-const onDescInput = () => { if (descRef.value) form.value.content = descRef.value.innerHTML }
-const setContent = (html) => {
-  form.value.content = html || ''
-  if (descRef.value) descRef.value.innerHTML = form.value.content
-}
-const execCmd = (cmd) => { descRef.value?.focus(); document.execCommand(cmd); onDescInput() }
-const execBlock = (tag) => { descRef.value?.focus(); document.execCommand('formatBlock', false, tag); onDescInput() }
-const clearFormat = () => {
-  descRef.value?.focus()
-  document.execCommand('removeFormat')
-  document.execCommand('formatBlock', false, 'P')
-  onDescInput()
-}
-// 读取编辑器里的纯文本：按块级元素补换行，并给列表/标题补回标记，
-// 这样反复点「自动排版」也不会把已有的列表结构弄丢
-const getEditorPlainText = () => {
-  const el = descRef.value
-  if (!el) return ''
-  const BLOCK = new Set(['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'BLOCKQUOTE'])
-  let out = ''
-  const walk = (node) => {
-    node.childNodes.forEach(child => {
-      if (child.nodeType === 3) { out += child.textContent; return }
-      if (child.nodeType !== 1) return
-      const tag = child.tagName
-      if (tag === 'BR') { out += '\n'; return }
-      const isBlock = BLOCK.has(tag)
-      if (isBlock && out && !out.endsWith('\n')) out += '\n'
-      if (tag === 'LI') {
-        // 有序列表补 "1. "，无序列表补 "- "，让下次排版仍能识别成列表
-        const parent = child.parentElement
-        if (parent && parent.tagName === 'OL') {
-          out += (Array.prototype.indexOf.call(parent.children, child) + 1) + '. '
-        } else {
-          out += '- '
-        }
-      }
-      if (tag === 'H1' || tag === 'H2' || tag === 'H3') out += '【'
-      walk(child)
-      if (tag === 'H1' || tag === 'H2' || tag === 'H3') out += '】'
-      if (isBlock && !out.endsWith('\n')) out += '\n'
-    })
-  }
-  walk(el)
-  return out.replace(/\n{3,}/g, '\n\n').trim()
-}
-
-// 自动排版：按段落 / 编号 / 清单把纯文本整理成结构化富文本
-const autoFormatContent = () => {
-  const plain = getEditorPlainText() || (form.value.content || '').replace(/<[^>]*>/g, ' ')
-  if (!plain.trim()) return ElMessage.warning('还没有内容可以排版')
-  const before = form.value.content || ''
-  const formatted = autoFormatHtml(plain)
-  if (formatted === before) return ElMessage.info('这段内容已经是排版后的效果')
-  setContent(formatted)
-  ElMessage.success('已自动排版')
-}
-
-// AI 探索状态
-const aiKeyword = ref('')
-const exploring = ref(false)
-const options = ref([])
-const summary = ref('')
-const path = ref([])
-const pathLabels = ref([])
-const leafContent = ref(null)
-const contentVariants = ref([])
-const activeVariant = ref(0)
-const historyList = ref([])
-const historyOpen = ref(false)
-const currentHistoryId = ref('')
-const TITLE_MAX_LENGTH = 16
-const titleLength = computed(() => Array.from(form.value.title || '').length)
-const titleSuggestions = ref([])
-const titleGenerating = ref(false)
-const rewriteOpen = ref(false)
-const rewriting = ref(false)
-const savedEditorRange = ref(null)
-const REWRITE_STYLES = ['简洁', '温柔', '文艺', '干货', '活泼']
-
-const applyTitle = (title) => {
-  form.value.title = clampTitle(title)
-  titleSuggestions.value = []
-}
-
-const generateTitles = async () => {
-  const content = getEditorPlainText()
-  if (!content.trim()) return ElMessage.warning('请先写一些正文内容')
-  titleGenerating.value = true
-  try {
-    const res = await aiTitles({ content })
-    titleSuggestions.value = (res.data?.titles || []).map(clampTitle).filter(Boolean)
-    if (!titleSuggestions.value.length) ElMessage.warning('没有生成可用标题')
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.msg || 'AI 标题生成失败')
-  } finally {
-    titleGenerating.value = false
-  }
-}
-
-const captureEditorSelection = () => {
-  const selection = window.getSelection()
-  if (!selection || !selection.rangeCount || !descRef.value) return
-  const range = selection.getRangeAt(0)
-  if (descRef.value.contains(range.commonAncestorContainer)) {
-    savedEditorRange.value = range.cloneRange()
-  }
-}
-
-const rewriteSelection = async (style) => {
-  const range = savedEditorRange.value
-  const text = range?.toString().trim()
-  if (!text) return ElMessage.warning('请先选中要改写的正文')
-  rewriting.value = true
-  try {
-    const res = await aiRewrite({ text, style })
-    const nextText = res.data?.text
-    if (!nextText) throw new Error('AI 未返回内容')
-    range.deleteContents()
-    range.insertNode(document.createTextNode(nextText))
-    range.collapse(false)
-    const selection = window.getSelection()
-    selection.removeAllRanges()
-    selection.addRange(range)
-    onDescInput()
-    rewriteOpen.value = false
-    ElMessage.success(`已改写为「${style}」风格`)
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.msg || e?.message || 'AI 改写失败')
-  } finally {
-    rewriting.value = false
-  }
-}
-
-// —— AI 探索 · 词云（把当前层的选项渲染成流动的书法词） ——
-const pickedWordId = ref(null)
-const CLOUD_SIZES = ['main', 'mid', 'small', 'mid']
-// 词云固定展示的一级方向词：点词只更新下方选项，词云本身永不变化
-// 词云是「推荐词/探索方向」，不是分类；这里是接口不可用时的兜底词
-const DEFAULT_CLOUD_WORDS = ['小户型收纳', '一人食', '秋日露营', '通勤穿搭', '手机摄影', '周末短途', '手冲咖啡', '情绪管理']
-// 后台可配置：优先读取 sys_word_cloud，接口不可用时退回默认词
-const cloudWords = ref(DEFAULT_CLOUD_WORDS.map(w => ({ word: w, weight: 0 })))
-
-const loadCloudWords = async () => {
-  try {
-    const res = await getWordCloud()
-    const words = (res.data || [])
-      .map(w => ({ word: w.word, weight: Number(w.weight || 0) }))
-      .filter(w => w.word)
-    if (words.length) cloudWords.value = words
-  } catch (e) {
-    console.error('[word-cloud]', e)
-  }
-}
-
-const cloudLanes = computed(() => {
-  const src = cloudWords.value.map((item, i) => ({
-    id: 'd' + i,
-    label: item.word,
-    deco: true,
-    size: item.weight >= 5 ? 'main'
-      : item.weight >= 3 ? 'mid'
-      : item.weight > 0 ? 'small'
-      : CLOUD_SIZES[i % CLOUD_SIZES.length],
-    rot: ((i * 37) % 13) - 6
-  }))
-  const laneCount = src.length <= 4 ? 1 : (src.length <= 8 ? 2 : 3)
-  const lanes = Array.from({ length: laneCount }, () => [])
-  src.forEach((w, i) => lanes[i % laneCount].push(w))
-  return lanes
-})
-
-const laneTop = (i) => {
-  if (cloudLanes.value.length === 1) return '44%'
-  return ['20%', '48%', '76%'][i] || '48%'
-}
-const laneDur = (i) => ['30s', '22s', '26s'][i] || '26s'
-
-// 点词 = 以该方向为关键词探索；结果只更新下方选项与摘要，词云保持不动
-const pickCloudWord = (w) => {
-  pickedWordId.value = w.id
-  // 立即给出反馈（与预览一致）：高亮 + 提示文案
-  summary.value = '已选择方向「' + w.label + '」，正在为你探索…'
-  exploreByWord(w.label)
-}
-
-// 用某个词作为关键词发起探索（点默认词时的入口）
-const exploreByWord = async (keyword) => {
-  if (!keyword) return
-  aiKeyword.value = keyword
-  path.value = []; pathLabels.value = []
-  leafContent.value = null
-  exploring.value = true
-  try {
-    const res = await exploreInspiration({ keyword, path: '' })
-    if (res.code === 200) {
-      applyExploreData(res.data, keyword, '')
-    }
-  } catch (e) {
-    console.error(e)
-    ElMessage.warning('探索失败，请重试')
-  } finally {
-    exploring.value = false
-  }
-}
-
-const handleExplore = async () => {
-  if (!aiKeyword.value.trim()) return ElMessage.warning('请输入关键词')
-  exploring.value = true; options.value = []; summary.value = ''; leafContent.value = null
-  pickedWordId.value = null
-  path.value = []; pathLabels.value = []
-  try {
-    const res = await exploreInspiration({ keyword: aiKeyword.value, path: '' })
-    if (res.code === 200) {
-      applyExploreData(res.data, aiKeyword.value, '')
-    }
-  } catch (e) { ElMessage.warning('探索失败请重试') }
-  finally { exploring.value = false }
-}
-
-const selectOption = async (opt) => {
-  path.value.push(opt.id)
-  pathLabels.value.push(opt.label)
-  exploring.value = true
-  // 保留旧词与高亮，等新数据回来再替换（避免闪烁，和预览一致）
-  try {
-    const res = await exploreInspiration({ keyword: aiKeyword.value, path: path.value.join(',') })
-    if (res.code === 200) {
-      applyExploreData(res.data, aiKeyword.value, path.value.join(','))
-    }
-  } catch (e) { console.error(e) }
-  finally { exploring.value = false }
-}
-
-const clampTitle = (value) => Array.from(String(value || '')).slice(0, TITLE_MAX_LENGTH).join('')
-
-const applyContent = (c) => {
-  leafContent.value = c
-  options.value = []
-  // 一次生成的多组风格候选（后端 content.variants）
-  contentVariants.value = Array.isArray(c.variants) ? c.variants.filter(v => v && v.text) : []
-  activeVariant.value = 0
-  form.value.title = clampTitle(c.title || form.value.title)
-  form.value.tag = c.tag || form.value.tag
-  // 编辑器以 HTML 存储：AI 返回的纯文本先自动排版（段落/编号/清单）再追加
-  const add = c.text ? autoFormatHtml(c.text) : ''
-  setContent((form.value.content || '') + add)
-}
-
-const loadAiHistory = async () => {
-  if (!sessionStorage.getItem('isLogin')) return
-  try {
-    const res = await getAiHistory(20)
-    historyList.value = res.data || []
-  } catch (e) {
-    console.error('[ai-history]', e)
-  }
-}
-
-const recordAiHistory = async (data, keyword, pathString) => {
-  if (!sessionStorage.getItem('isLogin') || !data?.content) return
-  try {
-    const res = await saveAiHistory({
-      keyword,
-      path: pathString || '',
-      cacheKey: data.cacheKey || '',
-      result: data
-    })
-    currentHistoryId.value = res.data?.id || ''
-    historyList.value = [res.data, ...historyList.value.filter(item => item.id !== res.data?.id)].slice(0, 20)
-  } catch (e) {
-    console.error('[ai-history-save]', e)
-  }
-}
-
-const applyExploreData = (data, keyword, pathString) => {
-  options.value = data?.options || []
-  summary.value = data?.summary || ''
-  if (data?.content) {
-    applyContent(data.content)
-    recordAiHistory(data, keyword, pathString)
-  } else {
-    currentHistoryId.value = ''
-  }
-}
-
-/** 切换风格：直接替换标题与正文（避免和上一组内容叠加） */
-const applyVariant = (index) => {
-  const v = contentVariants.value[index]
-  if (!v) return
-  activeVariant.value = index
-  if (v.title) form.value.title = clampTitle(v.title)
-  if (v.text) setContent(autoFormatHtml(v.text))
-  if (currentHistoryId.value) {
-    markAiHistorySelected(currentHistoryId.value, {
-      selectedIndex: index,
-      selectedTitle: v.title || form.value.title || ''
-    }).catch(() => {})
-  }
-  ElMessage.success('已切换到「' + (v.style || ('风格' + (index + 1))) + '」')
-}
-
-const useHistory = (item) => {
-  const result = item?.result || {}
-  const content = result.content
-  if (!content) return
-  aiKeyword.value = item.keyword || ''
-  path.value = item.path ? String(item.path).split(',').filter(Boolean) : []
-  pathLabels.value = []
-  options.value = []
-  summary.value = result.summary || ''
-  leafContent.value = content
-  contentVariants.value = Array.isArray(content.variants) ? content.variants.filter(v => v?.text) : []
-  activeVariant.value = Math.max(0, Number(item.selectedIndex ?? 0))
-  form.value.title = content.title || form.value.title
-  form.value.tag = content.tag || form.value.tag
-  if (content.text) setContent(autoFormatHtml(content.text))
-  currentHistoryId.value = item.id
-  ElMessage.success('已载入探索记录')
-}
-
-const removeHistory = async (id) => {
-  try {
-    await deleteAiHistory(id)
-    historyList.value = historyList.value.filter(item => String(item.id) !== String(id))
-    if (String(currentHistoryId.value) === String(id)) currentHistoryId.value = ''
-  } catch (e) {
-    ElMessage.error('删除探索记录失败')
-  }
-}
-
-const formatHistoryTime = (value) => {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-const reshuffle = async () => {
-  exploring.value = true
-  try {
-    const p = path.value.join(',')
-    const res = await exploreInspiration({ keyword: aiKeyword.value, path: p, refresh: true })
-    if (res.code === 200) {
-      options.value = res.data?.options || []
-      summary.value = res.data?.summary || ''
-    }
-  } catch (e) { console.error(e) }
-  finally { exploring.value = false }
-}
-
-const goToLevel = (idx) => {
-  path.value = path.value.slice(0, idx + 1)
-  pathLabels.value = pathLabels.value.slice(0, idx + 1)
-  leafContent.value = null
-  // 重载该层
-  const last = path.value.join(',')
-  exploring.value = true; options.value = []; summary.value = ''
-  exploreInspiration({ keyword: aiKeyword.value, path: last || '' }).then(res => {
-    if (res.code === 200) { options.value = res.data?.options || []; summary.value = res.data?.summary || '' }
-  }).finally(() => exploring.value = false)
-}
-
-const resetExplore = () => {
-  path.value = []; pathLabels.value = []; options.value = []; summary.value = ''; leafContent.value = null
-  handleExplore()
-}
-
-// 语音识别
-const voiceActive = ref(false)
-const voiceError = ref('')
-let recognition = null
-
-const initRecognition = () => {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!SR) { voiceError.value = '当前浏览器不支持语音识别（推荐使用 Chrome/Safari）'; return null }
-  const r = new SR()
-  r.lang = 'zh-CN'
-  r.interimResults = true
-  r.continuous = true
-  r.maxAlternatives = 1
-  r.onresult = (e) => {
-    let transcript = ''
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      transcript += e.results[i][0].transcript
-    }
-    // 语音结果插入富文本编辑器光标处
-    if (descRef.value) {
-      descRef.value.focus()
-      document.execCommand('insertText', false, transcript)
-      onDescInput()
-    }
-  }
-  r.onerror = (e) => {
-    voiceError.value = '语音识别错误: ' + e.error
-    voiceActive.value = false
-  }
-  r.onend = () => {
-    if (voiceActive.value) {
-      try { r.start() } catch(e) {}
-    }
-  }
-  return r
-}
-
-const toggleVoice = () => {
-  voiceError.value = ''
-  if (voiceActive.value) {
-    if (recognition) { recognition.stop(); recognition = null }
-    voiceActive.value = false
-    return
-  }
-  const r = initRecognition()
-  if (!r) return
-  recognition = r
-  try {
-    r.start()
-    voiceActive.value = true
-  } catch (e) {
-    voiceError.value = '启动失败，请检查麦克风权限'
-  }
-}
-
-onUnmounted(() => {
-  if (recognition) { recognition.abort(); recognition = null }
-  clearTimeout(draftSaveTimer)
-})
-
-// 文件上传（支持一次选多张，逐张并发上传）
-const fileInput = ref(null)
-const MAX_IMAGES = 9
-const uploadingCount = ref(0)
-const imageProgress = ref({})            // 本地预览地址 -> 该张图片的上传百分比
-const uploading = computed(() => uploadingCount.value > 0)
-const uploadPercent = computed(() => {
-  const list = Object.values(imageProgress.value)
-  if (!list.length) return 0
-  return Math.round(list.reduce((a, b) => a + b, 0) / list.length)
-})
-const triggerUpload = () => { fileInput.value?.click() }
-
-// ===== 图片滤镜（纯前端 Canvas 烘焙，不需要后端） =====
-const IMAGE_FILTERS = [
-  { key: 'none', label: '原图', css: 'none' },
-  { key: 'fresh', label: '清新', css: 'saturate(1.18) brightness(1.06) contrast(0.98)' },
-  { key: 'warm', label: '暖阳', css: 'sepia(0.28) saturate(1.22) brightness(1.05)' },
-  { key: 'film', label: '胶片', css: 'contrast(1.18) saturate(0.82) sepia(0.18)' },
-  { key: 'cool', label: '冷调', css: 'hue-rotate(-14deg) saturate(1.08) brightness(1.02)' },
-  { key: 'mono', label: '黑白', css: 'grayscale(1) contrast(1.06)' }
-]
-const selectedImage = ref('')
-const filtering = ref(false)
-const coverImage = ref('')
-const gridPreviewOpen = ref(false)
-const dragImageIndex = ref(-1)
-const gridImages = computed(() => {
-  if (!form.value.images.length) return []
-  const cover = coverImage.value && form.value.images.includes(coverImage.value)
-    ? coverImage.value
-    : form.value.images[0]
-  return [cover, ...form.value.images.filter(img => img !== cover)].slice(0, 9)
-})
-const setCover = (url) => {
-  coverImage.value = url
-  ElMessage.success('已设为封面')
-}
-const dropImage = (targetIndex) => {
-  const from = dragImageIndex.value
-  dragImageIndex.value = -1
-  if (from < 0 || from === targetIndex) return
-  const list = [...form.value.images]
-  const [moved] = list.splice(from, 1)
-  list.splice(targetIndex, 0, moved)
-  form.value.images = list
-}
 watch([form, coverImage], scheduleLocalDraft, { deep: true })
-// 记录「当前图 -> 原图」，保证每次滤镜都是从原图重新烘焙，不会叠加
-const imageOrigin = ref({})
-const originOf = (url) => imageOrigin.value[url] || url
-/** 滤镜预览与烘焙都以原图为准 */
-const filterPreviewSrc = computed(() => originOf(selectedImage.value))
-
-/** 把 CSS 滤镜烘焙进图片，返回处理后的 Blob */
-const bakeFilter = (src, css) => new Promise((resolve, reject) => {
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.onload = () => {
-    try {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth || img.width
-      canvas.height = img.naturalHeight || img.height
-      const ctx = canvas.getContext('2d')
-      // Canvas filter：Chrome 52+ / Firefox 49+ / Safari 17+
-      if ('filter' in ctx) ctx.filter = css
-      ctx.drawImage(img, 0, 0)
-      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('导出失败')), 'image/jpeg', 0.92)
-    } catch (e) {
-      reject(e)
-    }
-  }
-  img.onerror = () => reject(new Error('图片加载失败'))
-  img.src = src
-})
-
-const applyFilter = async (preset) => {
-  const url = selectedImage.value
-  if (!url || filtering.value) return
-  if (/\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(url))) return ElMessage.warning('视频不支持滤镜')
-  const origin = originOf(url)
-
-  // 选「原图」= 还原成最初上传的那张
-  if (preset.key === 'none') {
-    if (origin !== url) {
-      replaceMediaUrl(url, origin)
-      imageOrigin.value[origin] = origin
-      delete imageOrigin.value[url]
-      selectedImage.value = origin
-      ElMessage.success('已还原为原图')
-    }
-    return
-  }
-
-  filtering.value = true
-  try {
-    // 始终基于原图烘焙，避免「黑白 + 暖阳」这种叠加
-    const blob = await bakeFilter(origin, preset.css)
-    const fd = new FormData()
-    fd.append('file', blob, 'filtered.jpg')
-    const res = await uploadFile(fd)
-    if (res.code === 200 && res.data?.url) {
-      imageOrigin.value[res.data.url] = origin
-      delete imageOrigin.value[url]
-      replaceMediaUrl(url, res.data.url)
-      selectedImage.value = res.data.url
-      ElMessage.success('已应用「' + preset.label + '」')
-    } else {
-      ElMessage.error(res.msg || '滤镜应用失败')
-    }
-  } catch (e) {
-    ElMessage.error('滤镜应用失败：' + (e.message || '未知错误'))
-  } finally {
-    filtering.value = false
-  }
-}
-
-// ===== 视频 =====
-const VIDEO_MAX_SIZE = 50 * 1024 * 1024
-const videoMeta = ref({})                 // 服务端 url -> { name, sizeText, duration, processing }
-const videoUploadTasks = ref([])
-const keepOriginalOnly = ref(false)       // 只保留最终版：处理后删掉原片
-const isVideoUrl = (u) => /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(String(u || ''))
-const videoItems = computed(() => form.value.images
-  .filter(isVideoUrl)
-  .map(url => ({ url, ...(videoMeta.value[url] || {}) })))
-
-const replaceMediaUrl = (oldUrl, newUrl) => {
-  const idx = form.value.images.indexOf(oldUrl)
-  if (idx >= 0) form.value.images.splice(idx, 1, newUrl)
-}
-
-// 视频不做前端压缩，原样上传，压缩/裁剪交给服务端 ffmpeg
-const uploadVideoOne = async (raw) => {
-  if (raw.size > VIDEO_MAX_SIZE) { ElMessage.warning('视频不能超过 50MB'); return }
-  const localUrl = URL.createObjectURL(raw)
-  form.value.images.push(localUrl)
-  const task = {
-    id: localUrl,
-    raw,
-    localUrl,
-    serverUrl: '',
-    name: raw.name || '视频',
-    sizeText: (raw.size / 1024 / 1024).toFixed(1) + 'MB',
-    progress: 0,
-    status: 'uploading',
-    error: '',
-    objectUrlRevoked: false
-  }
-  videoUploadTasks.value.push(task)
-  await performVideoUpload(task)
-}
-
-const performVideoUpload = async (task) => {
-  if (!task?.raw) return
-  task.status = 'uploading'
-  task.error = ''
-  task.progress = Math.max(0, Number(task.progress || 0))
-  imageProgress.value[task.localUrl] = task.progress
-  uploadingCount.value++
-  try {
-    const fd = new FormData()
-    fd.append('file', task.raw, task.raw.name)
-    const res = await uploadFile(fd, (evt) => {
-      const total = evt.total || evt.loaded || 1
-      const percent = Math.min(100, Math.round(evt.loaded * 100 / total))
-      task.progress = percent
-      if (percent >= 100) task.status = 'processing'
-      imageProgress.value[task.localUrl] = percent
-    })
-    const idx = form.value.images.indexOf(task.localUrl)
-    if (res.code === 200 && res.data?.url) {
-      if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
-      if (!coverImage.value) coverImage.value = res.data.url
-      videoMeta.value[res.data.url] = {
-        name: res.data.name || task.name,
-        sizeText: task.sizeText,
-        duration: Number(res.data.duration || 0),
-        processing: ''
-      }
-      task.serverUrl = res.data.url
-      task.status = 'done'
-      task.progress = 100
-      delete imageProgress.value[task.localUrl]
-      if (!task.objectUrlRevoked) {
-        URL.revokeObjectURL(task.localUrl)
-        task.objectUrlRevoked = true
-      }
-    } else {
-      throw new Error(res.msg || '视频上传失败')
-    }
-  } catch (e) {
-    task.status = 'failed'
-    task.error = e?.response?.data?.msg || e?.message || '网络中断，请重试'
-    ElMessage.error(task.error)
-  } finally {
-    uploadingCount.value = Math.max(0, uploadingCount.value - 1)
-  }
-}
-
-const retryVideoUpload = (task) => {
-  task.progress = 0
-  task.status = 'uploading'
-  imageProgress.value[task.localUrl] = 0
-  return performVideoUpload(task)
-}
-
-const applyProcessed = (oldUrl, data) => {
-  replaceMediaUrl(oldUrl, data.url)
-  delete videoMeta.value[oldUrl]
-  videoMeta.value[data.url] = {
-    name: data.name,
-    sizeText: data.sizeText || '',
-    duration: Number(data.duration || 0),
-    processing: ''
-  }
-}
-
-const doCompress = async (v) => {
-  if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = 'compress'
-  else videoMeta.value[v.url] = { processing: 'compress' }
-  try {
-    const res = await compressVideo(v.url, 28, !keepOriginalOnly.value)
-    if (res.code === 200 && res.data?.url) {
-      applyProcessed(v.url, res.data)
-      ElMessage.success('压缩完成，当前大小 ' + (res.data.sizeText || ''))
-    } else {
-      ElMessage.error(res.msg || '压缩失败')
-      if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = ''
-    }
-  } catch (e) {
-    ElMessage.error('压缩失败，请确认服务端已安装 ffmpeg')
-    if (videoMeta.value[v.url]) videoMeta.value[v.url].processing = ''
-  }
-}
-
-const trimDialogVisible = ref(false)
-const trimTarget = ref(null)
-const trimStart = ref('0')
-const trimDuration = ref('')
-const trimming = ref(false)
-
-const openTrim = (v) => {
-  trimTarget.value = v
-  trimStart.value = '0'
-  trimDuration.value = v.duration ? String(v.duration) : ''
-  trimDialogVisible.value = true
-}
-
-const doTrim = async () => {
-  const target = trimTarget.value
-  if (!target) return
-  if (!trimDuration.value || Number(trimDuration.value) <= 0) {
-    ElMessage.warning('请填写需要保留的时长（秒）')
-    return
-  }
-  trimming.value = true
-  try {
-    const res = await trimVideo(target.url, Number(trimStart.value) || 0, Number(trimDuration.value), !keepOriginalOnly.value)
-    if (res.code === 200 && res.data?.url) {
-      applyProcessed(target.url, res.data)
-      trimDialogVisible.value = false
-      ElMessage.success('裁剪完成')
-    } else {
-      ElMessage.error(res.msg || '裁剪失败')
-    }
-  } catch (e) {
-    ElMessage.error('裁剪失败，请确认服务端已安装 ffmpeg')
-  } finally {
-    trimming.value = false
-  }
-}
-
-// C. 前端压缩：Canvas 缩到最大边 1920，输出 jpeg（质量 0.85），GIF 不处理
-const compressImage = (file) => new Promise((resolve) => {
-  if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file)
-  const img = new Image()
-  const objUrl = URL.createObjectURL(file)
-  img.onload = () => {
-    const maxSide = 1920
-    let w = img.width, h = img.height
-    if (Math.max(w, h) > maxSide) {
-      const ratio = maxSide / Math.max(w, h)
-      w = Math.round(w * ratio); h = Math.round(h * ratio)
-    }
-    const canvas = document.createElement('canvas')
-    canvas.width = w; canvas.height = h
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-    URL.revokeObjectURL(objUrl)
-    canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', 0.85)
-  }
-  img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(file) }
-  img.src = objUrl
-})
-
-// 单张上传：立即本地预览 → 压缩 → 带进度上传 → 用服务端地址替换预览
-const uploadOne = async (raw) => {
-  const localUrl = URL.createObjectURL(raw)
-  form.value.images.push(localUrl)
-  imageProgress.value[localUrl] = 0
-  uploadingCount.value++
-
-  try {
-    const blob = await compressImage(raw)
-    const fd = new FormData()
-    fd.append('file', blob, raw.name.replace(/\.[^.]+$/, '') + '.jpg')
-
-    const res = await uploadFile(fd, (evt) => {
-      const total = evt.total || evt.loaded || 1
-      imageProgress.value[localUrl] = Math.min(99, Math.round(evt.loaded * 100 / total))
-    })
-    const idx = form.value.images.indexOf(localUrl)
-    if (res.code === 200 && res.data?.url) {
-      if (idx >= 0) form.value.images.splice(idx, 1, res.data.url)
-      if (!coverImage.value) coverImage.value = res.data.url
-      // 记录原图，滤镜始终从这张开始烘焙
-      imageOrigin.value[res.data.url] = res.data.url
-    } else {
-      if (idx >= 0) form.value.images.splice(idx, 1)
-      ElMessage.error(res.msg || '上传失败')
-    }
-  } catch (err) {
-    const idx = form.value.images.indexOf(localUrl)
-    if (idx >= 0) form.value.images.splice(idx, 1)
-    ElMessage.error(err?.response?.data?.msg || err?.message || '上传失败')
-  } finally {
-    URL.revokeObjectURL(localUrl)
-    delete imageProgress.value[localUrl]
-    uploadingCount.value = Math.max(0, uploadingCount.value - 1)
-  }
-}
-
-// 批量：一次可选中多张，超出上限的部分自动忽略
-const handleFile = async (e) => {
-  const files = Array.from(e.target.files || [])
-  e.target.value = ''
-  if (!files.length) return
-
-  const images = files.filter(f => f.type.startsWith('image/'))
-  const videos = files.filter(f => f.type.startsWith('video/'))
-  if (!images.length && !videos.length) return ElMessage.warning('请选择图片或视频文件')
-
-  const room = MAX_IMAGES - form.value.images.length
-  if (room <= 0) return ElMessage.warning(`最多上传 ${MAX_IMAGES} 个文件`)
-  const picked = [...images, ...videos]
-  if (picked.length > room) ElMessage.warning(`最多 ${MAX_IMAGES} 个，已忽略多余的 ${picked.length - room} 个`)
-
-  await Promise.all(picked.slice(0, room)
-    .map(f => f.type.startsWith('video/') ? uploadVideoOne(f) : uploadOne(f)))
-}
-
-const removeImage = (idx) => {
-  const url = form.value.images[idx]
-  const task = videoUploadTasks.value.find(item => item.localUrl === url || item.serverUrl === url)
-  if (task) {
-    if (!task.objectUrlRevoked) {
-      URL.revokeObjectURL(task.localUrl)
-      task.objectUrlRevoked = true
-    }
-    delete imageProgress.value[task.localUrl]
-    videoUploadTasks.value = videoUploadTasks.value.filter(item => item !== task)
-  }
-  form.value.images = form.value.images.filter((_, index) => index !== idx)
-  if (selectedImage.value === url) selectedImage.value = form.value.images[0] || ''
-  if (coverImage.value === url || !form.value.images.includes(coverImage.value)) {
-    coverImage.value = form.value.images[0] || ''
-  }
-}
 
 // 编辑模式：预填表单
 onMounted(async () => {
@@ -1339,460 +558,38 @@ onMounted(async () => {
       }
     } catch (e) {}
   }
-  draftHydrating = false
+  draftHydrating.value = false
 })
 
-const goBack = () => { router.back() }
-const submit = async (status) => {
-  if (uploading.value) return ElMessage.warning('图片上传中，请稍候再提交')
-  // 剔除未完成上传的本地预览（blob:）地址
-  const pending = form.value.images.filter(i => typeof i === 'string' && i.startsWith('blob:'))
-  if (pending.length > 0) return ElMessage.warning('有图片尚未上传完成，请稍候')
-  if (!form.value.title) return ElMessage.warning('请填写标题')
-  if (titleLength.value > TITLE_MAX_LENGTH) return ElMessage.warning(`标题不能超过 ${TITLE_MAX_LENGTH} 个字`)
-  if (!form.value.tag) return ElMessage.warning('请选择分类')
-  if (!contentLen.value) return ElMessage.warning('请填写灵感详情')
-  loading.value = true
-  try {
-    let payload = { ...form.value, status: status !== undefined ? status : 1 }
-    if (!editId.value && quoteSource.value?.id) payload.quoteInspireId = quoteSource.value.id
-    payload.img = coverImage.value || payload.images[0] || ''
-    payload.images = JSON.stringify(payload.images)
-    let res
-    if (editId.value) {
-      res = await updateInspire(editId.value, payload)
-    } else {
-      res = await createInspire(payload)
-    }
-    ElMessage.success(res.msg || (editId.value ? '修改成功' : '发布成功'))
-    if (localDraftId.value) removeLocalDraft(localDraftId.value)
-    router.push('/')
-  } catch (e) { console.error(e) } finally { loading.value = false }
-}
-
-const imageSuggestOpen = ref(false)
-const imageSuggestions = ref([])
-const selectedSuggests = ref([])          // 已勾选的配图（可跨「换一批」累积）
-const imageKeywords = ref('')
-const addingSuggest = ref(false)
-
-// 点图切换勾选状态（支持多选）
-const toggleSuggestPick = (url) => {
-  const i = selectedSuggests.value.indexOf(url)
-  if (i >= 0) selectedSuggests.value.splice(i, 1)
-  else selectedSuggests.value.push(url)
-}
-
-// 展开/收起内联 AI 配图面板；首次展开时拉取推荐
-const toggleSuggest = async () => {
-  imageSuggestOpen.value = !imageSuggestOpen.value
-  if (imageSuggestOpen.value && imageSuggestions.value.length === 0) await suggestImages()
-}
-
-const suggestLoading = ref(false)
-const suggestError = ref('')
-const suggestPage = ref(1)                 // 当前批次页码，「换一批」递增
-const suggestState = computed(() => {
-  if (suggestLoading.value && !imageSuggestions.value.length) return 'loading'
-  if (suggestError.value && !imageSuggestions.value.length) return 'error'
-  return imageSuggestions.value.length ? 'ready' : 'empty'
+const {goBack, submit} = useCreateSubmission({
+  router,
+  form,
+  editId,
+  quoteSource,
+  coverImage,
+  uploading,
+  titleLength,
+  TITLE_MAX_LENGTH,
+  contentLen,
+  loading,
+  localDraftId,
+  removeLocalDraft
 })
 
-// 取一批推荐图（走统一请求封装：自动带上 baseURL 与 Token）
-const fetchSuggest = async (keyword, page) => {
-  const res = await suggestImagesApi(keyword, page)
-  return (res && res.code === 200 && Array.isArray(res.data)) ? res.data : []
-}
-
-// next=true 表示「换一批」：往后翻一页，返回不同批次
-const suggestImages = async ({ next = false } = {}) => {
-  const plain = (form.value.content || '').replace(/<[^>]*>/g, ' ').trim()
-  const keyword = form.value.title || plain.slice(0, 50) || 'inspiration'
-  if (keyword !== imageKeywords.value) {
-    // 关键词变了：从头开始
-    imageKeywords.value = keyword
-    suggestPage.value = 1
-  } else if (next) {
-    suggestPage.value += 1
-  }
-  suggestLoading.value = true
-  suggestError.value = ''
-  try {
-    let list = await fetchSuggest(keyword, suggestPage.value)
-    // 翻到末页后回到第一页，保证「换一批」永远有内容
-    if (!list.length && suggestPage.value > 1) {
-      suggestPage.value = 1
-      list = await fetchSuggest(keyword, 1)
-    }
-    imageSuggestions.value = list
-    if (!list.length) ElMessage.warning('没有找到合适的配图，换个标题或关键词再试试')
-  } catch (e) {
-    console.error('suggestImages failed:', e)
-    imageSuggestions.value = []
-    suggestError.value = e?.message || 'suggest images failed'
-    ElMessage.error('获取配图失败')
-  } finally {
-    suggestLoading.value = false
-  }
-}
-
-
-
-// 把勾选的配图批量转存到自己的存储并加入图片列表（面板保持展开，方便继续换一批再挑）
-const useSuggestedImages = async () => {
-  if (!selectedSuggests.value.length) return
-  const urls = [...selectedSuggests.value]
-  addingSuggest.value = true
-  try {
-    const results = await Promise.all(urls.map(u => uploadFromUrl(u).catch(() => null)))
-    let ok = 0
-    results.forEach(data => {
-      if (data && data.code === 200 && data.data?.url) {
-        form.value.images.push(data.data.url)
-        if (!coverImage.value) coverImage.value = data.data.url
-        ok++
-      }
-    })
-    if (ok) {
-      ElMessage.success(`已添加 ${ok} 张配图`)
-      selectedSuggests.value = []
-    } else {
-      ElMessage.error('配图添加失败，请重试')
-    }
-  } finally {
-    addingSuggest.value = false
-  }
-}
+const {
+  imageSuggestOpen,
+  imageSuggestions,
+  selectedSuggests,
+  imageKeywords,
+  addingSuggest,
+  toggleSuggestPick,
+  toggleSuggest,
+  suggestLoading,
+  suggestError,
+  suggestPage,
+  suggestState,
+  suggestImages,
+  useSuggestedImages
+} = useCreateImageSuggestions({form, coverImage})
 </script>
-<style scoped>
-@font-face {
-  font-family: "Ma Shan Zheng";
-  src: url("/fonts/ma-shan-zheng.woff2") format("woff2");
-  font-display: swap;
-  font-style: normal;
-  font-weight: 400;
-}
-
-.create-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#fbfcfe; min-height:100vh; }
-
-/* ---------- 顶部栏 ---------- */
-.topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 14px; }
-.topbar .page-title { font-size:17px; font-weight:600; }
-.topbar .ico { width:38px; height:38px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 1px 6px rgba(0,0,0,.05); cursor:pointer; }
-.quote-create-card { display:flex; align-items:center; gap:10px; padding:10px 12px; }
-.quote-create-card img { width:48px; height:48px; flex:0 0 auto; border-radius:10px; object-fit:cover; }
-.quote-create-copy { flex:1; min-width:0; }
-.quote-create-copy small { display:block; margin-bottom:4px; color:#a17b5c; font-size:10.5px; }
-.quote-create-copy b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#674026; font-size:12.5px; }
-.quote-create-card button { border:0; background:transparent; color:#b85c4b; font:inherit; font-size:11.5px; cursor:pointer; }
-.topbar-right { display:flex; gap:8px; align-items:center; }
-.draft-ico { position:relative; }
-.local-draft-panel {
-  position:relative; z-index:20; margin:-4px 0 12px; padding:12px;
-  border:1px solid #d9ebe8; border-radius:14px; background:#fff;
-  box-shadow:0 10px 28px rgba(32,71,66,.1);
-}
-.local-draft-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-.local-draft-head b { font-size:14px; color:#294a46; }
-.local-draft-head span { flex:1; color:#8a9b98; font-size:11px; }
-.local-draft-head button {
-  border:1px solid #9dccc5; border-radius:999px; background:#effaf8;
-  color:#0f766e; padding:4px 10px; font-size:11px; cursor:pointer;
-}
-.local-draft-list { display:flex; flex-direction:column; gap:7px; }
-.local-draft-item {
-  display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #e2efed;
-  border-radius:10px; background:#f9fdfc; cursor:pointer;
-}
-.local-draft-item.active { border-color:#75b8ae; background:#effaf8; }
-.local-draft-item b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; color:#315f5a; }
-.local-draft-item small { color:#93a39f; font-size:10.5px; }
-.local-draft-item button { border:0; background:transparent; color:#b6675d; font-size:10.5px; cursor:pointer; }
-.local-draft-empty { padding:14px; text-align:center; color:#96a5a2; font-size:12px; }
-
-/* ---------- 通用卡片 ---------- */
-.card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.04); margin-bottom:14px; }
-.label { font-size:13px; color:#6b7280; margin-bottom:8px; display:block; }
-.ai-card { background:linear-gradient(180deg,#f5f9ff 0%,#fff 60%); border:1px solid #e8f1ff; }
-
-/* ---------- AI 探索：摘要 / 选项 ---------- */
-.summary { margin-top:10px; font-size:13px; color:#6b7280; line-height:1.7; background:#f8fafc; border-radius:10px; padding:10px 12px; }
-.spin { display:inline-block; width:11px; height:11px; margin-right:8px; vertical-align:-1px; border-radius:50%; border:2px solid #cfe4ff; border-top-color:#409eff; animation:spin .7s linear infinite; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.option-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
-.option-card { border:1px solid #ebeef5; border-radius:12px; padding:14px 12px; font-size:14px; text-align:center; cursor:pointer; background:#fff; transition:.15s; }
-.option-card:hover { border-color:#b3d8ff; background:#ecf5ff; color:#409eff; }
-.option-shuffle { color:#6b7280; background:#fafbfc; }
-.option-shuffle:hover { border-color:#b3d8ff; background:#ecf5ff; color:#409eff; }
-.leaf-notice { margin-top:12px; font-size:13px; color:#67c23a; background:#f0f9eb; border-radius:10px; padding:10px 12px; text-align:center; }
-.variant-bar {
-  margin-top:10px; padding:8px 10px;
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  background:#f4fbf6; border-radius:10px;
-}
-.variant-label { font-size:12.5px; color:#4f8a48; }
-.variant-chip {
-  padding:5px 14px; font-size:12.5px;
-  border:1.5px solid #cfe6cf; border-radius:999px;
-  background:#fff; color:#4f8a48; cursor:pointer;
-}
-.variant-chip:hover { border-color:#7ec07a; }
-.variant-chip.active { background:#4f8a48; border-color:#4f8a48; color:#f3faf2; font-weight:600; }
-
-.history-panel { margin-top:14px; border-top:1px dashed #c7dfc3; padding-top:11px; }
-.history-toggle {
-  width:100%; display:flex; align-items:center; justify-content:space-between;
-  padding:0; border:0; background:transparent; color:#4f7c4a; font:inherit; font-size:12.5px; cursor:pointer;
-}
-.history-list { margin-top:9px; display:flex; flex-direction:column; gap:7px; }
-.history-item {
-  display:flex; align-items:center; gap:9px; padding:9px 10px; border:1px solid #dfeddb;
-  border-radius:11px; background:#f8fcf7; cursor:pointer;
-}
-.history-item.active { border-color:#73ae6d; background:#f0f9eb; }
-.history-main { min-width:0; flex:1; }
-.history-main b { display:block; color:#395f35; font-size:12.5px; }
-.history-main span { display:block; margin-top:2px; color:#8b9b88; font-size:10px; }
-.history-item small { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#7e927a; font-size:10.5px; }
-.history-item button { border:0; background:transparent; color:#b26a5c; font-size:10.5px; cursor:pointer; }
-
-/* ---------- 标题 / 分类 ---------- */
-.title-input { width:100%; border:none; outline:none; font-size:19px; font-weight:600; color:#1d1d1f; background:transparent; padding:4px 0; }
-.title-input::placeholder { color:#c0c4cc; font-weight:400; }
-.title-count { margin-top:4px; text-align:right; color:#a0a8b5; font-size:11px; }
-.title-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.ai-mini {
-  border:1px solid #b9d8d3; border-radius:999px; background:#effaf8; color:#0f766e;
-  padding:5px 11px; font-size:11px; font-weight:700; cursor:pointer;
-}
-.ai-mini:disabled { opacity:.6; cursor:wait; }
-.title-suggestions { display:flex; flex-direction:column; gap:7px; margin-top:10px; }
-.title-suggestions button {
-  border:1px solid #d9ebe8; border-radius:10px; background:#f8fdfc; color:#315f5a;
-  padding:8px 11px; text-align:left; font:inherit; font-size:12.5px; cursor:pointer;
-}
-.title-suggestions button:hover { border-color:#79b9af; background:#effaf8; }
-.chips { display:flex; flex-wrap:wrap; gap:8px; }
-.chip { padding:6px 14px; border-radius:999px; font-size:13px; color:#6b7280; background:#f5f7fa; cursor:pointer; border:1px solid transparent; transition:.15s; }
-.chip.on { color:#409eff; background:#ecf5ff; border-color:#b3d8ff; }
-
-/* ---------- 富文本编辑器 ---------- */
-.editor { border:1px solid #ebeef5; border-radius:14px; overflow:hidden; background:#fff; }
-.toolbar { display:flex; align-items:center; gap:2px; padding:8px 10px; background:#fafbfc; border-bottom:1px solid #ebeef5; overflow-x:auto; }
-.toolbar::-webkit-scrollbar { display:none; }
-.tb-btn { flex:0 0 auto; min-width:34px; height:32px; padding:0 8px; border:none; background:transparent; border-radius:8px; cursor:pointer; font-size:14px; color:#4b5563; display:inline-flex; align-items:center; justify-content:center; transition:.15s; }
-.tb-btn:hover { background:#eef1f5; }
-.tb-btn.bold { font-weight:800; }
-.tb-btn.italic { font-style:italic; font-family:Georgia,serif; }
-.tb-btn.h1 { font-weight:800; font-size:15px; }
-.tb-btn.h2 { font-weight:700; font-size:14px; }
-.tb-btn.auto { padding:0 10px; font-size:12.5px; font-weight:600; color:#409eff; }
-.tb-btn.auto:hover { background:#ecf5ff; }
-.tb-divider { width:1px; height:18px; background:#ebeef5; margin:0 4px; flex:0 0 auto; }
-.editable { min-height:150px; padding:14px 16px; outline:none; font-size:15.5px; line-height:1.75; color:#1d1d1f; }
-.editable:empty:before { content:attr(data-placeholder); color:#c0c4cc; }
-.rewrite-bar {
-  display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:8px 12px;
-  border-bottom:1px solid #ebeef5; background:#f7fbfa; color:#56706c; font-size:11.5px;
-}
-.rewrite-bar button {
-  border:1px solid #b9d8d3; border-radius:999px; background:#fff; color:#0f766e;
-  padding:4px 10px; font-size:11px; cursor:pointer;
-}
-.rewrite-bar button:disabled { opacity:.55; cursor:wait; }
-.ai-rewrite-btn { color:#0f766e !important; border-color:#b9d8d3 !important; background:#effaf8 !important; }
-.editable h1 { font-size:22px; font-weight:700; margin:8px 0; }
-.editable h2 { font-size:18px; font-weight:700; margin:8px 0; }
-.editable blockquote { margin:8px 0; padding:6px 12px; border-left:3px solid #409eff; background:#f7fbff; color:#4b5563; border-radius:0 8px 8px 0; }
-.editable ul { margin:8px 0; padding-left:22px; }
-.editable hr { border:none; border-top:1px solid #ebeef5; margin:14px 0; }
-.editor-foot { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-top:1px solid #ebeef5; background:#fafbfc; }
-.mic { display:inline-flex; align-items:center; gap:8px; border:none; cursor:pointer; background:transparent; padding:6px 10px; border-radius:999px; color:#6b7280; font-size:13px; font-family:inherit; transition:.15s; }
-.mic:hover { background:#eef1f5; }
-.mic .ico { width:30px; height:30px; border-radius:50%; background:#ecf5ff; color:#409eff; display:inline-flex; align-items:center; justify-content:center; font-size:15px; transition:.15s; }
-.mic.rec { color:#f56c6c; }
-.mic.rec .ico { background:#fff0f0; color:#f56c6c; animation:pulse 1.1s infinite; }
-@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(245,108,108,.5)} 70%{box-shadow:0 0 0 12px rgba(245,108,108,0)} 100%{box-shadow:0 0 0 0 rgba(245,108,108,0)} }
-.count { font-size:12px; color:#a8abb2; }
-
-/* ---------- 图片 + AI 配图 ---------- */
-.img-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-.img-head-actions { display:flex; gap:8px; align-items:center; }
-.ai-img-btn { display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px; border-radius:999px; border:1px solid #b3d8ff; background:#ecf5ff; color:#409eff; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
-.image-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.thumb { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#f5f7fa; display:flex; align-items:center; justify-content:center; cursor:grab; }
-.thumb.cover { outline:2px solid #0f766e; outline-offset:2px; }
-.thumb img { width:100%; height:100%; object-fit:cover; }
-.thumb video { width:100%; height:100%; object-fit:cover; background:#000; }
-.video-badge {
-  position:absolute; left:6px; bottom:6px;
-  width:22px; height:22px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.55); color:#fff; font-size:11px;
-}
-.cover-badge {
-  position:absolute; left:5px; top:5px; padding:2px 6px; border-radius:999px;
-  background:rgba(15,118,110,.92); color:#fff; font-size:9px; font-weight:700;
-}
-.cover-btn {
-  position:absolute; left:4px; bottom:4px; border:0; border-radius:6px;
-  padding:3px 6px; background:rgba(0,0,0,.56); color:#fff; font-size:9px; cursor:pointer;
-}
-.overlay {
-  position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:center;
-  padding:18px; background:rgba(22,34,31,.42); backdrop-filter:blur(3px);
-}
-.grid-preview-overlay { align-items:center !important; }
-.grid-preview-panel {
-  width:min(100%, 340px); max-width:100%; max-height:calc(100% - 8px); overflow:auto;
-  border-radius:18px; padding:18px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.2);
-  box-sizing:border-box;
-}
-.grid-preview-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:14px; }
-.grid-preview-head h3 { margin:0; font-size:17px; }
-.grid-preview-head p { margin:4px 0 0; color:#8a9591; font-size:12px; }
-.grid-preview-head button { border:0; background:transparent; font-size:24px; cursor:pointer; color:#7b8581; }
-.grid-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
-.grid-cell { position:relative; aspect-ratio:1; overflow:hidden; border-radius:8px; background:#eef2f0; }
-.grid-cell img, .grid-cell video { width:100%; height:100%; object-fit:cover; display:block; }
-.grid-cover {
-  position:absolute; left:5px; top:5px; padding:2px 6px; border-radius:999px;
-  background:rgba(15,118,110,.92); color:#fff; font-size:9px;
-}
-.video-tools { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
-.video-upload-list { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
-.video-upload-item {
-  padding:10px 11px; border:1px solid #dceaf8; border-radius:12px; background:#f7fbff;
-}
-.video-upload-head { display:flex; align-items:center; gap:8px; min-width:0; }
-.video-upload-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#35516d; font-size:12.5px; }
-.video-upload-size { color:#8a94a6; font-size:11px; }
-.video-upload-state { color:#409eff; font-size:11px; font-weight:700; }
-.video-upload-bar { height:5px; margin-top:8px; overflow:hidden; border-radius:99px; background:#e4edf7; }
-.video-upload-bar i { display:block; height:100%; border-radius:99px; background:#409eff; transition:width .18s ease; }
-.video-upload-bar i.failed { background:#f56c6c; }
-.video-upload-error { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; color:#d45d5d; font-size:11px; }
-.video-upload-error button { border:0; background:transparent; color:#409eff; font-size:11px; font-weight:700; cursor:pointer; }
-.thumb.picked { outline:2px solid #409eff; outline-offset:2px; }
-.filter-bar {
-  margin-top:12px; padding:10px 12px;
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  border-radius:12px; background:#f4f7fd;
-}
-.filter-label { font-size:12.5px; color:#6b7280; }
-.filter-chip {
-  display:flex; flex-direction:column; align-items:center; gap:4px;
-  padding:6px 8px; border:2px solid transparent; border-radius:10px;
-  background:#fff; cursor:pointer; font-size:11px; color:#6b7280;
-}
-.filter-chip:hover:not(:disabled) { border-color:#c6dcff; }
-.filter-chip:disabled { opacity:.55; cursor:not-allowed; }
-.filter-chip img { width:42px; height:42px; object-fit:cover; border-radius:6px; display:block; }
-.filter-tip { font-size:12px; color:#409eff; }
-.video-keep {
-  display:flex; align-items:center; gap:8px;
-  font-size:12.5px; color:#6b7280; cursor:pointer;
-}
-.video-keep input { width:14px; height:14px; accent-color:#409eff; }
-.video-tool-row {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:12px;
-  background:#f4f7fd; font-size:13px; color:#374151;
-}
-.video-tool-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.video-tool-meta { color:#8a94a6; font-size:12px; }
-.video-tool-row .ghost { padding:5px 12px; font-size:12px; }
-.trim-tip { margin-bottom:10px; font-size:13px; color:#6b7280; }
-.thumb .del {
-  position:absolute; top:5px; right:5px; z-index:8; width:24px; height:24px; padding:0;
-  border:0; border-radius:50%; background:rgba(0,0,0,.62); color:#fff; font-size:16px;
-  line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer;
-}
-.thumb.add { border:1.5px dashed #d3dce6; color:#a8abb2; flex-direction:column; gap:4px; cursor:pointer; font-size:12px; }
-.thumb.add .plus { font-size:24px; line-height:1; }
-.thumb.add :deep(.el-progress__text) { font-size:11px !important; }
-.thumb-mask { position:absolute; inset:0; background:rgba(0,0,0,.35); color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; }
-
-.suggest-panel { margin-top:14px; border-top:1px dashed #ebeef5; padding-top:12px; }
-.suggest-title { font-size:13px; color:#6b7280; margin-bottom:10px; }
-.suggest-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.suggest-img { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; cursor:pointer; border:2px solid transparent; background:#f5f7fa; }
-.suggest-img img { width:100%; height:100%; object-fit:cover; display:block; }
-.suggest-img.selected { border-color:#409eff; }
-.suggest-img .check { position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; background:#409eff; color:#fff; display:none; align-items:center; justify-content:center; font-size:13px; font-weight:700; }
-.suggest-img.selected .check { display:flex; }
-.suggest-empty { font-size:13px; color:#a8abb2; padding:8px 0; }
-.suggest-actions { display:flex; gap:10px; margin-top:12px; }
-.suggest-actions .ghost { flex:1; height:40px; border-radius:10px; border:1px solid #ebeef5; background:#fff; color:#6b7280; font-size:14px; cursor:pointer; font-family:inherit; }
-.suggest-actions .primary { flex:1.6; height:40px; border-radius:10px; border:none; background:#409eff; color:#fff; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
-.suggest-actions button:disabled { opacity:.55; cursor:not-allowed; }
-
-/* ---------- 底部按钮 ---------- */
-.actions { display:flex; gap:12px; margin-top:18px; }
-.actions .btn { flex:1; height:46px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
-.actions .btn.publish { background:#409eff; color:#fff; box-shadow:0 4px 12px rgba(64,158,255,.28); }
-.actions .btn.draft { background:#f5f7fa; color:#6b7280; }
-.actions .btn:disabled { opacity:.6; cursor:not-allowed; }
-
-/* ================= AI 探索 · 薄荷绿书法词云 ================= */
-.cloud-scene{
-  position:relative;width:100%;height:250px;border-radius:16px;overflow:hidden;
-  background:url('/bg/explore-bg.svg') center / cover no-repeat, #a8dcd2;
-  box-shadow:0 6px 20px rgba(60,120,110,.18);
-  margin-bottom:14px;
-}
-.cloud-hint{
-  position:absolute;z-index:4;left:14px;top:12px;font-size:12px;color:rgba(38,68,63,.72);
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-}
-.cloud-hint .dot{width:6px;height:6px;border-radius:50%;background:#d98200;box-shadow:0 0 8px rgba(217,130,0,.9)}
-.cloud-hint .crumb{color:#0f766e;cursor:pointer}
-.cloud-hint .crumb .sep{color:rgba(38,68,63,.4);margin:0 4px}
-.cloud-hint .crumb-txt:hover{text-decoration:underline}
-
-/* 轨道：右 → 左无缝流动 */
-.lane{position:absolute;left:0;width:100%;height:0}
-.lane .track{
-  position:absolute;top:0;left:0;display:flex;align-items:center;white-space:nowrap;
-  will-change:transform;animation:cloudMarquee linear infinite;
-}
-@keyframes cloudMarquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
-.lane:hover .track{ animation-play-state:paused }   /* 悬停暂停，方便点选 */
-
-.cloud-scene .word{
-  position:static;flex:0 0 auto;margin-right:3rem;cursor:pointer;user-select:none;
-  font-family:"Ma Shan Zheng","STKaiti","KaiTi","Songti SC",serif;font-weight:400;color:#2f4f4a;
-  line-height:1;white-space:nowrap;rotate:var(--rot,0deg);
-  animation:cloudTwinkle 5s ease-in-out infinite;
-  transition:color .22s, text-shadow .22s, scale .22s, opacity .22s;
-}
-.cloud-scene .word.small{font-size:15px;--tmin:.42;--tmax:.72}
-.cloud-scene .word.mid{font-size:21px;--tmin:.6;--tmax:.9}
-.cloud-scene .word.big{font-size:32px;--tmin:.78;--tmax:1}
-.cloud-scene .word.main{font-size:40px;--tmin:.82;--tmax:1}
-@keyframes cloudTwinkle{0%,100%{opacity:var(--tmin,.5)}50%{opacity:var(--tmax,.95)}}
-.cloud-scene .word:hover{scale:1.08}
-/* 选中的词：琥珀色 + 暖光脉冲（覆盖闪烁动画，避免被压暗） */
-.cloud-scene .word.picked{
-  color:#d98200;
-  animation:cloudPop .34s ease-out, cloudPickGlow 1.8s ease-in-out infinite;
-}
-@keyframes cloudPop{0%{scale:1}40%{scale:1.22}100%{scale:1}}
-@keyframes cloudPickGlow{
-  0%,100%{text-shadow:0 0 6px rgba(217,130,0,.35),0 0 16px rgba(217,130,0,.18)}
-  50%{text-shadow:0 0 12px rgba(217,130,0,.72),0 0 28px rgba(217,130,0,.42)}
-}
-
-.cloud-bar{position:absolute;z-index:5;left:12px;right:12px;bottom:12px;display:flex;gap:8px}
-.cloud-bar input{
-  flex:1;height:40px;border-radius:11px;border:1px solid rgba(47,79,74,.18);
-  background:rgba(255,255,255,.82);color:#2f4f4a;padding:0 14px;font-size:14px;outline:none;
-}
-.cloud-bar input::placeholder{color:rgba(47,79,74,.45)}
-.cloud-bar button{
-  height:40px;padding:0 16px;border:none;border-radius:11px;font-size:14px;font-weight:700;
-  color:#5a3d00;background:linear-gradient(135deg,#ffd76a,#f0b429);cursor:pointer;white-space:nowrap;
-  box-shadow:0 3px 12px rgba(240,180,41,.35);
-}
-.cloud-bar button:disabled{opacity:.7;cursor:not-allowed}
-</style>
+<style scoped src="./create/styles/create.css"></style>

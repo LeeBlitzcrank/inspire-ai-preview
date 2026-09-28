@@ -41,6 +41,7 @@ backend/inspire-core/src/main/resources/db/migration/V*.sql
 | 内容 | 当前文档 |
 | --- | --- |
 | 前端性能优化 | [前端性能优化记录.md](current/前端性能优化记录.md) |
+| 前端组件职责拆分 | [前端组件重构说明.md](current/前端组件重构说明.md) |
 | 可观测性与测试 | [可观测性与安全并发测试说明.md](current/可观测性与安全并发测试说明.md) |
 | 数据库扩容与监控 | [数据库扩容与运行监控.md](current/数据库扩容与运行监控.md) |
 | 生产优化操作 | [生产性能优化操作清单.md](current/生产性能优化操作清单.md) |

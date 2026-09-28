@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>世界种子 · AI 共创预览</title>
+<script>window.location.replace('parallel-story-preview.html' + window.location.search)</script>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#172b27;
+    --muted:#748681;
+    --line:#dfe9e5;
+    --paper:#f5f8f6;
+    --card:#fff;
+    --green:#2c7564;
+    --green-soft:#e7f4ef;
+    --violet:#6957a8;
+    --violet-soft:#f0edff;
+    --orange:#c66b38;
+    --orange-soft:#fff0e7;
+    --blue:#4269a9;
+    --blue-soft:#edf3ff;
+  }
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);background:#e8efec;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  .page{min-height:100dvh;padding:28px 22px;display:flex;align-items:center;justify-content:center;gap:58px}
+  .intro{width:min(430px,36vw)}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:7px;margin-bottom:12px;color:var(--green);
+    font-size:12px;font-weight:900;letter-spacing:.08em;
+  }
+  .eyebrow:before{content:"";width:22px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:0;font-size:38px;line-height:1.06;letter-spacing:0}
+  .intro>p{margin:15px 0 0;color:#617772;font-size:14px;line-height:1.82}
+  .concept-list{display:grid;gap:9px;margin-top:24px}
+  .concept{
+    display:flex;gap:10px;padding:11px 12px;border:1px solid rgba(44,117,100,.14);
+    border-radius:14px;background:rgba(255,255,255,.65);
+  }
+  .concept i{
+    width:25px;height:25px;border-radius:8px;background:var(--green-soft);color:var(--green);
+    display:grid;place-items:center;flex:0 0 auto;font-size:11px;font-style:normal;font-weight:900;
+  }
+  .concept b{display:block;font-size:12.5px}
+  .concept span{display:block;margin-top:3px;color:#758681;font-size:11.5px;line-height:1.5}
+  .side-note{margin-top:20px;padding:15px;border-radius:16px;background:#17352f;color:#fff}
+  .side-note small{color:rgba(255,255,255,.54);font-size:10.5px;letter-spacing:.08em}
+  .side-note b{display:block;margin-top:8px;font-size:15px;line-height:1.5}
+  .side-note p{margin:7px 0 0;color:rgba(255,255,255,.65);font-size:11.5px;line-height:1.65}
+  .reset{margin-top:12px;width:100%;height:38px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:transparent;color:#fff;font-size:11.5px;font-weight:800}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{
+    position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;
+    background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);
+    transform-origin:top left;
+  }
+  .phone:before{content:"";position:absolute;z-index:9;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:var(--paper)}
+  .statusbar{position:absolute;z-index:10;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#1c302b;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:4px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:86px}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .topbar{
+    position:sticky;z-index:12;top:0;padding:11px 14px 10px;background:rgba(245,248,246,.94);
+    backdrop-filter:blur(16px);border-bottom:1px solid rgba(222,233,229,.88);
+  }
+  .top-row{display:flex;align-items:center;gap:9px}
+  .back{width:34px;height:34px;padding:0;border:1px solid #d9e5e1;border-radius:11px;background:#fff;color:#315d53;font-size:18px}
+  .title-copy{min-width:0;flex:1}
+  .title-copy b{display:block;font-size:16px}
+  .title-copy span{display:block;margin-top:2px;color:#859691;font-size:10.5px}
+  .badge{padding:5px 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:9.5px;font-weight:900}
+  .page-view{display:none;padding:14px}
+  .page-view.on{display:block}
+  .daily{
+    position:relative;overflow:hidden;padding:16px;border-radius:18px;background:#183a32;color:#fff;
+  }
+  .daily:after{
+    content:"";position:absolute;right:-52px;top:-65px;width:150px;height:150px;border:24px solid rgba(255,255,255,.055);border-radius:50%;
+  }
+  .daily-label{position:relative;z-index:1;color:#9ed8c9;font-size:10px;font-weight:900;letter-spacing:.08em}
+  .daily h2{position:relative;z-index:1;margin:8px 0 7px;font-size:19px;line-height:1.35}
+  .daily p{position:relative;z-index:1;margin:0;color:rgba(255,255,255,.63);font-size:11px;line-height:1.55}
+  .daily-foot{position:relative;z-index:1;display:flex;align-items:center;margin-top:13px}
+  .daily-foot span{color:rgba(255,255,255,.58);font-size:10px}
+  .daily-foot button{margin-left:auto;height:31px;padding:0 11px;border:0;border-radius:9px;background:#f2c66d;color:#483713;font-size:10.5px;font-weight:900}
+  .pack-strip{display:flex;gap:6px;overflow-x:auto;padding:13px 0 8px;scrollbar-width:none}
+  .pack-strip::-webkit-scrollbar{display:none}
+  .pack{
+    flex:0 0 auto;height:30px;padding:0 10px;border:1px solid #dfeae6;border-radius:999px;
+    background:#fff;color:#61766f;font-size:10.5px;
+  }
+  .pack.on{border-color:#9fd3c5;background:var(--green-soft);color:var(--green);font-weight:850}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 1px 9px}
+  .section-head b{font-size:13.5px}
+  .section-head span{color:#8ca09a;font-size:10px}
+  .world-feed{display:grid;gap:11px}
+  .world-card{
+    position:relative;overflow:hidden;border:1px solid #e0eae7;border-radius:17px;background:#fff;text-align:left;
+  }
+  .world-cover{position:relative;height:145px;background:#e7efec}
+  .world-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .cover-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(9,25,21,.78))}
+  .cover-copy{position:absolute;left:13px;right:13px;bottom:12px;color:#fff}
+  .cover-copy span{display:inline-flex;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.15);font-size:9px;font-weight:850;backdrop-filter:blur(8px)}
+  .cover-copy h3{margin:7px 0 3px;font-size:16px;line-height:1.25}
+  .cover-copy p{margin:0;color:rgba(255,255,255,.76);font-size:10.5px;line-height:1.4}
+  .world-body{padding:11px 12px}
+  .world-rule{margin:0;color:#61766f;font-size:10.5px;line-height:1.55}
+  .world-stats{display:flex;align-items:center;gap:9px;margin-top:9px;color:#96a6a1;font-size:9.5px}
+  .world-stats b{color:#4d6b63;font-weight:850}
+  .world-stats span:last-child{margin-left:auto;color:var(--green);font-weight:850}
+  .world-card:hover{border-color:#a9d7ca}
+  .detail-cover{position:relative;height:220px;margin:-14px -14px 0;overflow:hidden;background:#dce8e4}
+  .detail-cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .detail-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,23,19,.06),rgba(8,23,19,.82))}
+  .detail-cover-copy{position:absolute;z-index:2;left:16px;right:16px;bottom:16px;color:#fff}
+  .detail-cover-copy span{display:inline-flex;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.15);font-size:9.5px;font-weight:850}
+  .detail-cover-copy h2{margin:8px 0 5px;font-size:22px;line-height:1.25}
+  .detail-cover-copy p{margin:0;color:rgba(255,255,255,.76);font-size:11.5px;line-height:1.5}
+  .detail-body{padding-top:15px}
+  .world-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .world-fact{padding:11px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .world-fact small{display:block;color:#93a49f;font-size:9.5px;letter-spacing:.05em}
+  .world-fact b{display:block;margin-top:6px;font-size:12px;line-height:1.45}
+  .world-fact p{margin:5px 0 0;color:#6e827c;font-size:10.5px;line-height:1.5}
+  .growth{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fff}
+  .growth-head{display:flex;align-items:center;margin-bottom:10px}
+  .growth-head b{font-size:12.5px}
+  .growth-head span{margin-left:auto;color:#91a29d;font-size:10px}
+  .timeline{position:relative;display:grid;gap:10px;padding-left:19px}
+  .timeline:before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:1px;background:#dce8e4}
+  .event{position:relative}
+  .event:before{content:"";position:absolute;left:-18px;top:3px;width:9px;height:9px;border:2px solid #fff;border-radius:50%;background:var(--green);box-shadow:0 0 0 1px #b9d9d0}
+  .event b{display:block;font-size:11.5px}
+  .event span{display:block;margin-top:3px;color:#82938e;font-size:10px;line-height:1.45}
+  .continue{
+    width:100%;height:44px;margin-top:12px;border:0;border-radius:13px;background:#246f5e;color:#fff;
+    font-size:12.5px;font-weight:900;box-shadow:0 8px 18px rgba(36,111,94,.18);
+  }
+  .start-head{padding:4px 2px 13px}
+  .start-head h2{margin:0;font-size:22px}
+  .start-head p{margin:7px 0 0;color:#748782;font-size:11.5px;line-height:1.65}
+  .start-types{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .start-type{
+    min-height:68px;padding:9px;border:1px solid var(--line);border-radius:14px;background:#fff;
+    color:#5f756e;text-align:left;
+  }
+  .start-type.on{border-color:#99d0c2;background:var(--green-soft);color:var(--green)}
+  .start-type span{display:block;font-size:18px;line-height:1}
+  .start-type b{display:block;margin-top:8px;font-size:10.5px}
+  .seed-input{margin-top:11px;padding:12px;border:1px solid var(--line);border-radius:15px;background:#fff}
+  .seed-input textarea{
+    width:100%;min-height:78px;padding:0;border:0;outline:0;resize:none;background:transparent;
+    color:var(--ink);font-size:13px;line-height:1.65;
+  }
+  .seed-input textarea::placeholder{color:#9aaba6}
+  .quick-seeds{display:flex;gap:6px;overflow-x:auto;padding-top:9px;border-top:1px solid #edf3f1;scrollbar-width:none}
+  .quick-seeds::-webkit-scrollbar{display:none}
+  .quick-seeds button{flex:0 0 auto;border:0;background:transparent;color:#5e8379;font-size:10px}
+  .create-btn{width:100%;height:44px;margin-top:11px;border:0;border-radius:13px;background:#246f5e;color:#fff;font-size:12.5px;font-weight:900}
+  .create-loading{display:none;padding:20px;text-align:center;color:#83958f;font-size:11px}
+  .create-loading.on{display:block}
+  .loading-orbit{width:35px;height:35px;margin:0 auto 10px;border:3px solid #dce8e4;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .generated{display:none;margin-top:12px}
+  .generated.on{display:block;animation:rise .3s ease-out}
+  @keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .generated-image{height:175px;border-radius:15px;overflow:hidden;background:#e4ece9}
+  .generated-image img{width:100%;height:100%;object-fit:cover;display:block}
+  .generated-card{margin-top:-24px;position:relative;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 12px 25px rgba(20,65,55,.09)}
+  .generated-card .badge{background:var(--violet-soft);color:var(--violet)}
+  .generated-card h3{margin:8px 0 6px;font-size:18px}
+  .generated-card p{margin:0;color:#6e827c;font-size:11.5px;line-height:1.6}
+  .generated-facts{display:grid;gap:6px;margin-top:10px}
+  .generated-facts div{padding:8px 9px;border-radius:10px;background:#f5f8f7;color:#647b74;font-size:10.5px;line-height:1.5}
+  .generated-actions{display:flex;gap:7px;margin-top:11px}
+  .generated-actions button{flex:1;height:38px;border-radius:11px;font-size:11px;font-weight:850}
+  .generated-actions .soft{border:1px solid #dce8e4;background:#fff;color:#60776f}
+  .generated-actions .main{border:1px solid #246f5e;background:#246f5e;color:#fff}
+  .universe-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
+  .stat{padding:11px 7px;border:1px solid var(--line);border-radius:13px;background:#fff;text-align:center}
+  .stat b{display:block;font-size:18px}
+  .stat span{display:block;margin-top:4px;color:#8ea09a;font-size:9.5px}
+  .collection-card{margin-top:16px}
+  .collection-card h3{margin:0 0 8px;font-size:13px}
+  .saved-list{display:grid;gap:8px}
+  .saved-world{display:flex;gap:10px;padding:9px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .saved-world img{width:72px;height:62px;border-radius:10px;object-fit:cover}
+  .saved-world b{display:block;font-size:12px}
+  .saved-world span{display:block;margin-top:5px;color:#849690;font-size:10px;line-height:1.45}
+  .bottom-nav{
+    position:absolute;z-index:20;left:12px;right:12px;bottom:10px;height:58px;padding:7px 12px;
+    display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(216,229,225,.94);
+    border-radius:19px;background:rgba(255,255,255,.95);backdrop-filter:blur(18px);
+    box-shadow:0 10px 24px rgba(24,75,64,.11);
+  }
+  .bottom-nav button{min-width:65px;height:43px;border:0;border-radius:13px;background:transparent;color:#8b9b96;font-size:10px;font-weight:750}
+  .bottom-nav button.on{background:var(--green-soft);color:var(--green)}
+  .bottom-nav span{display:block;margin-bottom:3px;font-size:16px;line-height:1}
+  .sheet-mask{position:absolute;z-index:35;inset:0;display:none;align-items:flex-end;background:rgba(10,27,23,.34)}
+  .sheet-mask.on{display:flex}
+  .sheet{width:100%;padding:15px;border-radius:22px 22px 0 0;background:#fff;animation:sheetUp .24s ease-out}
+  @keyframes sheetUp{from{transform:translateY(28px)}to{transform:none}}
+  .sheet-head{display:flex;align-items:center;margin-bottom:11px}
+  .sheet-head b{font-size:15px}
+  .sheet-head button{margin-left:auto;border:0;background:transparent;color:#84958f;font-size:18px}
+  .sheet p{margin:0 0 11px;color:#7b8d87;font-size:11px;line-height:1.6}
+  .extend-options{display:grid;gap:7px}
+  .extend-options button{
+    display:flex;align-items:center;gap:10px;min-height:47px;padding:9px 10px;border:1px solid #dfeae6;
+    border-radius:12px;background:#fbfdfc;text-align:left;
+  }
+  .extend-options i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--green-soft);color:var(--green);font-size:14px;font-style:normal}
+  .extend-options b{font-size:11.5px}
+  .extend-options span{display:block;margin-top:2px;color:#8b9c97;font-size:9.5px}
+  .toast{
+    position:absolute;z-index:50;left:50%;top:88px;transform:translateX(-50%);
+    padding:9px 12px;border-radius:11px;background:rgba(18,43,37,.9);color:#fff;
+    font-size:10.5px;white-space:nowrap;box-shadow:0 10px 24px rgba(12,35,29,.2);
+  }
+  @media (max-width:980px){
+    .page{display:block;padding:18px 0;min-height:auto}
+    .intro{display:none}
+    .phone-slot{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">AI CO-CREATION CONCEPT</div>
+    <h1>世界种子</h1>
+    <p>用户不创建孤立灵感，而是从一个物件、一句话或一种情绪开始，让一个世界持续生长。每一条补充都能成为新的规则、人物、地点或分支。</p>
+    <div class="concept-list">
+      <div class="concept"><i>01</i><div><b>内容有明确单位</b><span>不是帖子，而是可持续扩展的世界卡。</span></div></div>
+      <div class="concept"><i>02</i><div><b>AI 种子天然合法</b><span>内容明确是虚构共创，不需要假装真实经历。</span></div></div>
+      <div class="concept"><i>03</i><div><b>社区负责让世界生长</b><span>补充规则、角色、地图和分支，而不是只点赞。</span></div></div>
+    </div>
+    <div class="side-note">
+      <small>可操作路径</small>
+      <b>打开世界 → 继续一个设定 → 创建平行分支</b>
+      <p>点击任意世界卡、生成新种子、添加规则或角色，都会在预览里得到即时反馈。</p>
+      <button class="reset" id="resetPreview" type="button">返回世界首页</button>
+    </div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot">
+    <div class="phone" id="phone">
+      <div class="screen">
+        <div class="statusbar">
+          <span id="clock">09:41</span>
+          <div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div>
+        </div>
+        <div class="app">
+          <div class="app-scroll" id="appScroll">
+            <header class="topbar">
+              <div class="top-row">
+                <button class="back" type="button" id="backButton" aria-label="返回">←</button>
+                <div class="title-copy">
+                  <b id="pageTitle">世界种子</b>
+                  <span id="pageSubtitle">从一个种子开始共同生长</span>
+                </div>
+                <span class="badge">AI 共创</span>
+              </div>
+            </header>
+
+            <section class="page-view on" data-page="home">
+              <article class="daily">
+                <div class="daily-label">今天的世界规则</div>
+                <h2>所有被遗忘的物件，都会在午夜开口说话。</h2>
+                <p>已有 238 个世界使用了这条规则，今日新增 41 条分支。</p>
+                <div class="daily-foot">
+                  <span>距离今天结束还有 7 小时</span>
+                  <button type="button" data-start-rule>用这条规则创作</button>
+                </div>
+              </article>
+
+              <div class="pack-strip">
+                <button class="pack on" type="button">全部世界</button>
+                <button class="pack" type="button">无名之物</button>
+                <button class="pack" type="button">古诗今画</button>
+                <button class="pack" type="button">梦境</button>
+                <button class="pack" type="button">城市传说</button>
+                <button class="pack" type="button">未来遗物</button>
+              </div>
+
+              <div class="section-head"><b>正在生长的世界</b><span>点击进入</span></div>
+              <div class="world-feed" id="worldFeed"></div>
+            </section>
+
+            <section class="page-view" data-page="detail">
+              <div class="detail-cover">
+                <img id="detailImage" alt="">
+                <div class="detail-cover-copy">
+                  <span id="detailPack">无名之物</span>
+                  <h2 id="detailName"></h2>
+                  <p id="detailSeed"></p>
+                </div>
+              </div>
+              <div class="detail-body">
+                <div class="world-grid">
+                  <article class="world-fact"><small>世界规则</small><b id="detailRule"></b></article>
+                  <article class="world-fact"><small>主要地点</small><b id="detailPlace"></b></article>
+                  <article class="world-fact"><small>角色</small><b id="detailCharacter"></b><p id="detailCharacterNote"></p></article>
+                  <article class="world-fact"><small>未解问题</small><b id="detailQuestion"></b></article>
+                </div>
+                <section class="growth">
+                  <div class="growth-head"><b>最近生长</b><span id="growthCount"></span></div>
+                  <div class="timeline" id="timeline"></div>
+                </section>
+                <button class="continue" type="button" id="continueWorld">继续这个世界 +</button>
+              </div>
+            </section>
+
+            <section class="page-view" data-page="create">
+              <div class="start-head">
+                <h2>创建一个世界种子</h2>
+                <p>不需要写完整故事，只给系统一个起点。剩下的由你和社区一起长出来。</p>
+              </div>
+              <div class="start-types" id="startTypes">
+                <button class="start-type on" type="button" data-type="object"><span>⌑</span><b>一个物件</b></button>
+                <button class="start-type" type="button" data-type="sentence"><span>“</span><b>一句话</b></button>
+                <button class="start-type" type="button" data-type="emotion"><span>◌</span><b>一种情绪</b></button>
+                <button class="start-type" type="button" data-type="poem"><span>诗</span><b>一句古诗</b></button>
+                <button class="start-type" type="button" data-type="city"><span>⌂</span><b>一座城市</b></button>
+                <button class="start-type" type="button" data-type="dream"><span>☾</span><b>一个梦境</b></button>
+              </div>
+              <div class="seed-input">
+                <textarea id="seedText" maxlength="120" placeholder="例如：我捡到一把打不开任何门的旧钥匙"></textarea>
+                <div class="quick-seeds">
+                  <button type="button" data-quick="我捡到一片不会腐烂的银杏叶">一片不会腐烂的银杏叶</button>
+                  <button type="button" data-quick="一只只在雨天出现的纸飞机">雨天出现的纸飞机</button>
+                  <button type="button" data-quick="如果一棵树记得所有离开的人">记得离开的树</button>
+                </div>
+              </div>
+              <button class="create-btn" type="button" id="createWorld">生成世界种子</button>
+              <div class="create-loading" id="createLoading">
+                <div class="loading-orbit"></div>
+                正在为这个种子建立规则、地点和角色…
+              </div>
+              <section class="generated" id="generated">
+                <div class="generated-image"><img id="generatedImage" alt=""></div>
+                <div class="generated-card">
+                  <span class="badge">新世界种子</span>
+                  <h3 id="generatedName"></h3>
+                  <p id="generatedSeed"></p>
+                  <div class="generated-facts">
+                    <div id="generatedRule"></div>
+                    <div id="generatedPlace"></div>
+                    <div id="generatedCharacter"></div>
+                    <div id="generatedQuestion"></div>
+                  </div>
+                  <div class="generated-actions">
+                    <button class="soft" type="button" id="regenerate">再换一个</button>
+                    <button class="main" type="button" id="publishWorld">发布到共创广场</button>
+                  </div>
+                </div>
+              </section>
+            </section>
+
+            <section class="page-view" data-page="universe">
+              <div class="start-head">
+                <h2>我的宇宙</h2>
+                <p>你参与过的世界、收藏的规则和创建的分支都会留在这里。</p>
+              </div>
+              <div class="universe-stats">
+                <div class="stat"><b>12</b><span>参与世界</span></div>
+                <div class="stat"><b>37</b><span>设定贡献</span></div>
+                <div class="stat"><b>6</b><span>我的分支</span></div>
+              </div>
+              <section class="collection-card">
+                <h3>最近参与</h3>
+                <div class="saved-list" id="savedList"></div>
+              </section>
+            </section>
+          </div>
+
+          <nav class="bottom-nav">
+            <button class="on" type="button" data-nav="home"><span>◫</span>世界</button>
+            <button type="button" data-nav="create"><span>＋</span>创建</button>
+            <button type="button" data-nav="universe"><span>◎</span>宇宙</button>
+          </nav>
+
+          <div class="sheet-mask" id="extendMask">
+            <div class="sheet">
+              <div class="sheet-head">
+                <b>让这个世界继续生长</b>
+                <button type="button" id="closeExtend">×</button>
+              </div>
+              <p>每次只增加一个元素，保留世界的连贯性。</p>
+              <div class="extend-options">
+                <button type="button" data-extend="rule"><i>规</i><div><b>添加一条世界规则</b><span>例如：这里的人不能说出自己的名字</span></div></button>
+                <button type="button" data-extend="character"><i>人</i><div><b>增加一个角色</b><span>给他一个秘密，而不是完整履历</span></div></button>
+                <button type="button" data-extend="place"><i>地</i><div><b>增加一个地点</b><span>让已有故事在新空间继续发生</span></div></button>
+                <button type="button" data-extend="branch"><i>分</i><div><b>创建一个平行分支</b><span>改变一条规则，再看看世界会怎样</span></div></button>
+              </div>
+            </div>
+          </div>
+          <div class="toast" id="toast" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const worlds = [
+  {
+    id:'ginkgo',
+    pack:'无名之物',
+    name:'永不落叶的城',
+    seed:'我捡到一片不会腐烂的银杏叶',
+    image:'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=82',
+    rule:'这里的秋天只存在 24 小时',
+    place:'第 13 号候车亭',
+    character:'守叶人',
+    characterNote:'他没有影子，也不记得自己来自哪里。',
+    question:'为什么这片叶子记得所有失去的秋天？',
+    events:[
+      ['叶子会变成一把钥匙','来自用户“叶子落下时”'],
+      ['第13号候车亭新增失物招领箱','来自用户“末班车乘客”'],
+      ['守叶人开始忘记自己的名字','来自用户“空白站牌”']
+    ],
+    branches:12,
+    settings:36
+  },
+  {
+    id:'rain',
+    pack:'城市传说',
+    name:'只记得雨的城市',
+    seed:'这里的雨，只记得离开的人',
+    image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82',
+    rule:'每场雨都会留下一个没有寄件人的名字',
+    place:'旧气象站',
+    character:'收雨员',
+    characterNote:'她只在下雨时出现，随身带着一本被水泡过的通讯录。',
+    question:'被雨记下来的人，会回到这座城市吗？',
+    events:[
+      ['旧气象站出现了第十三个天气按钮','来自用户“低气压”'],
+      ['收雨员收到一封没有文字的信','来自用户“屋檐下”']
+    ],
+    branches:8,
+    settings:24
+  },
+  {
+    id:'cup',
+    pack:'梦境',
+    name:'会做梦的茶杯',
+    seed:'杯子里的水每晚都会变成一片海',
+    image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=82',
+    rule:'喝下杯中的海，就会梦见别人的昨天',
+    place:'凌晨两点的厨房',
+    character:'值夜的水手',
+    characterNote:'他只有一枚茶杯那么高，却坚持记录每一场风暴。',
+    question:'如果茶杯碎了，那片海会去哪里？',
+    events:[
+      ['厨房水槽出现一条纸做的小船','来自用户“夜航”'],
+      ['杯底多了一座迷你灯塔','来自用户“失眠港口”'],
+      ['水手开始给每个梦编号','来自用户“无风带”']
+    ],
+    branches:21,
+    settings:47
+  }
+]
+
+const templates = {
+  object:{
+    name:'会认领主人的失物招领处',
+    rule:'所有丢失的物件只能找到真正想念它的人',
+    place:'旧火车站地下二层',
+    character:'编号 404 的保管员',
+    note:'他能叫出每件物品被遗失时的天气。',
+    question:'如果一件物品想念的人已经不存在了，它会去哪里？'
+  },
+  sentence:{
+    name:'句子尽头的房间',
+    rule:'没有说完的话会变成一扇门',
+    place:'图书馆最后一张桌子',
+    character:'删改师',
+    note:'她负责把写错的人生改成旁注。',
+    question:'被删掉的那句话，会自己回来吗？'
+  },
+  emotion:{
+    name:'焦虑停车场',
+    rule:'每一层都会比上一层更安静一点',
+    place:'城市中心永不关闭的 B7 层',
+    character:'电梯管理员',
+    note:'他从不告诉乘客终点在哪一层。',
+    question:'如果找到出口，焦虑会消失还是换一个形状？'
+  },
+  poem:{
+    name:'月落之后的河',
+    rule:'月光离开后，河流会替人保存一句话',
+    place:'没有桥的渡口',
+    character:'背诗的人',
+    note:'他每忘记一句诗，河面就会多一盏灯。',
+    question:'那些没有被记住的诗，最后流向了哪里？'
+  },
+  city:{
+    name:'城市的第二个夜晚',
+    rule:'凌晨三点以后，所有路牌都会指向另一个地方',
+    place:'末班地铁之后的站台',
+    character:'替城市值班的人',
+    note:'他没有工作证，只拿着一把打不开任何闸机的钥匙。',
+    question:'白天的那座城市，知道夜晚发生了什么吗？'
+  },
+  dream:{
+    name:'梦的回收站',
+    rule:'被忘记的梦会被送回来重做一次',
+    place:'一间没有入口的放映厅',
+    character:'片尾字幕整理员',
+    note:'她给每个梦重新起名字，却从不看完结局。',
+    question:'如果同一个梦被做了两次，哪一个版本才是真的？'
+  }
+}
+
+const createImages = {
+  object:'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=900&q=82',
+  sentence:'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=900&q=82',
+  emotion:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82',
+  poem:'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=82',
+  city:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=82',
+  dream:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82'
+}
+
+let currentWorld = worlds[0]
+let currentPage = 'home'
+let createType = 'object'
+
+const pageMeta = {
+  home:['世界种子','从一个种子开始共同生长'],
+  detail:['世界详情','继续它、改变它，或创建分支'],
+  create:['创建世界','从一个小起点开始'],
+  universe:['我的宇宙','收藏、参与和创建过的世界']
+}
+
+function renderWorlds(){
+  document.getElementById('worldFeed').innerHTML = worlds.map(world => `
+    <button class="world-card" type="button" data-world="${world.id}">
+      <div class="world-cover">
+        <img src="${world.image}" alt="">
+        <div class="cover-overlay"></div>
+        <div class="cover-copy">
+          <span>${world.pack}</span>
+          <h3>${world.name}</h3>
+          <p>${world.seed}</p>
+        </div>
+      </div>
+      <div class="world-body">
+        <p class="world-rule">规则：${world.rule}</p>
+        <div class="world-stats">
+          <span><b>${world.settings}</b> 个设定</span>
+          <span><b>${world.branches}</b> 个分支</span>
+          <span>进入世界 →</span>
+        </div>
+      </div>
+    </button>
+  `).join('')
+}
+
+function renderSaved(){
+  document.getElementById('savedList').innerHTML = worlds.slice(0,2).map(world => `
+    <button class="saved-world" type="button" data-world="${world.id}">
+      <img src="${world.image}" alt="">
+      <div><b>${world.name}</b><span>你最近补充了「${world.events[0][0]}」</span></div>
+    </button>
+  `).join('')
+}
+
+function openWorld(id){
+  currentWorld = worlds.find(world => world.id === id) || worlds[0]
+  document.getElementById('detailImage').src = currentWorld.image
+  document.getElementById('detailPack').textContent = currentWorld.pack
+  document.getElementById('detailName').textContent = currentWorld.name
+  document.getElementById('detailSeed').textContent = currentWorld.seed
+  document.getElementById('detailRule').textContent = currentWorld.rule
+  document.getElementById('detailPlace').textContent = currentWorld.place
+  document.getElementById('detailCharacter').textContent = currentWorld.character
+  document.getElementById('detailCharacterNote').textContent = currentWorld.characterNote
+  document.getElementById('detailQuestion').textContent = currentWorld.question
+  document.getElementById('growthCount').textContent = `${currentWorld.settings} 个设定 · ${currentWorld.branches} 个分支`
+  document.getElementById('timeline').innerHTML = currentWorld.events.map(event => `
+    <article class="event"><b>${event[0]}</b><span>${event[1]}</span></article>
+  `).join('')
+  switchPage('detail')
+}
+
+function switchPage(page){
+  currentPage = page
+  document.querySelectorAll('.page-view').forEach(view => view.classList.toggle('on',view.dataset.page === page))
+  document.getElementById('pageTitle').textContent = pageMeta[page][0]
+  document.getElementById('pageSubtitle').textContent = pageMeta[page][1]
+  document.querySelectorAll('.bottom-nav button').forEach(button => button.classList.toggle('on',button.dataset.nav === page))
+  document.getElementById('appScroll').scrollTop = 0
+}
+
+document.addEventListener('click',event => {
+  const worldButton = event.target.closest('[data-world]')
+  if (worldButton) openWorld(worldButton.dataset.world)
+  const nav = event.target.closest('[data-nav]')
+  if (nav) switchPage(nav.dataset.nav)
+  const startRule = event.target.closest('[data-start-rule]')
+  if (startRule){
+    document.getElementById('seedText').value = '所有被遗忘的物件，都会在午夜开口说话'
+    createType = 'sentence'
+    document.querySelectorAll('.start-type').forEach(item => item.classList.toggle('on',item.dataset.type === createType))
+    switchPage('create')
+  }
+})
+
+document.getElementById('backButton').addEventListener('click',() => {
+  if (currentPage === 'home') return toast('这里已经是世界首页')
+  switchPage('home')
+})
+
+document.getElementById('startTypes').addEventListener('click',event => {
+  const button = event.target.closest('[data-type]')
+  if (!button) return
+  createType = button.dataset.type
+  document.querySelectorAll('.start-type').forEach(item => item.classList.toggle('on',item === button))
+})
+
+document.querySelectorAll('[data-quick]').forEach(button => {
+  button.addEventListener('click',() => {
+    document.getElementById('seedText').value = button.dataset.quick
+  })
+})
+
+document.getElementById('continueWorld').addEventListener('click',() => {
+  document.getElementById('extendMask').classList.add('on')
+})
+document.getElementById('closeExtend').addEventListener('click',() => document.getElementById('extendMask').classList.remove('on'))
+document.getElementById('extendMask').addEventListener('click',event => {
+  if (event.target.id === 'extendMask') document.getElementById('extendMask').classList.remove('on')
+})
+
+const extensionText = {
+  rule:['新增规则：这里的人不能说出自己的名字','来自你的共创'],
+  character:['新增角色：专门收集谎言的邮差','来自你的共创'],
+  place:['新增地点：凌晨四点才出现的邮局','来自你的共创'],
+  branch:['创建分支：如果所有人突然恢复了名字','来自你的共创']
+}
+
+document.querySelectorAll('[data-extend]').forEach(button => {
+  button.addEventListener('click',() => {
+    const item = extensionText[button.dataset.extend]
+    currentWorld.events.unshift(item)
+    currentWorld.settings += 1
+    if (button.dataset.extend === 'branch') currentWorld.branches += 1
+    document.getElementById('timeline').innerHTML = currentWorld.events.map(event => `
+      <article class="event"><b>${event[0]}</b><span>${event[1]}</span></article>
+    `).join('')
+    document.getElementById('growthCount').textContent = `${currentWorld.settings} 个设定 · ${currentWorld.branches} 个分支`
+    document.getElementById('extendMask').classList.remove('on')
+    toast(button.dataset.extend === 'branch' ? '已创建平行分支' : '世界已经生长')
+    renderWorlds()
+    renderSaved()
+  })
+})
+
+function fillGenerated(){
+  const template = templates[createType]
+  const input = document.getElementById('seedText').value.trim()
+  const seed = input || ({
+    object:'我捡到一把打不开任何门的旧钥匙',
+    sentence:'所有没有说完的话，都会变成一扇门',
+    emotion:'一种无法被命名的焦虑',
+    poem:'月落乌啼霜满天',
+    city:'一座只在夜里出现的城市',
+    dream:'我走进一间没有出口的放映厅'
+  })[createType]
+  const suffix = createType === 'object' && input ? `：${input}` : ''
+  document.getElementById('generatedImage').src = createImages[createType]
+  document.getElementById('generatedName').textContent =
+    createType === 'object' && input ? '物件编号：未命名' : template.name
+  document.getElementById('generatedSeed').textContent = seed
+  document.getElementById('generatedRule').textContent = `世界规则：${template.rule}`
+  document.getElementById('generatedPlace').textContent = `主要地点：${template.place}`
+  document.getElementById('generatedCharacter').textContent = `角色：${template.character}。${template.note}`
+  document.getElementById('generatedQuestion').textContent = `未解问题：${template.question}${suffix}`
+}
+
+document.getElementById('createWorld').addEventListener('click',() => {
+  document.getElementById('generated').classList.remove('on')
+  document.getElementById('createLoading').classList.add('on')
+  setTimeout(() => {
+    fillGenerated()
+    document.getElementById('createLoading').classList.remove('on')
+    document.getElementById('generated').classList.add('on')
+    toast('世界种子已生成')
+    document.getElementById('appScroll').scrollTop = 9999
+  },850)
+})
+
+document.getElementById('regenerate').addEventListener('click',() => {
+  document.getElementById('createWorld').click()
+})
+
+document.getElementById('publishWorld').addEventListener('click',() => {
+  const name = document.getElementById('generatedName').textContent
+  const template = templates[createType]
+  worlds.unshift({
+    id:`world-${Date.now()}`,
+    pack:createType === 'object' ? '无名之物' : createType === 'poem' ? '古诗今画' : createType === 'dream' ? '梦境' : '用户共创',
+    name,
+    seed:document.getElementById('generatedSeed').textContent,
+    image:createImages[createType],
+    rule:template.rule,
+    place:template.place,
+    character:template.character,
+    characterNote:template.note,
+    question:template.question,
+    events:[['世界刚刚被创建','来自你的共创']],
+    branches:0,
+    settings:4
+  })
+  renderWorlds()
+  renderSaved()
+  switchPage('home')
+  toast('已发布到共创广场')
+})
+
+document.getElementById('resetPreview').addEventListener('click',() => {
+  switchPage('home')
+  toast('已返回世界首页')
+})
+
+let toastTimer
+function toast(message){
+  const element = document.getElementById('toast')
+  element.textContent = message
+  element.style.display = 'block'
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {element.style.display = 'none'},1500)
+}
+
+function fitPhone(){
+  const slot = document.getElementById('phoneSlot')
+  const phone = document.getElementById('phone')
+  const scale = Math.min(1,(window.innerWidth - 24) / 412,(window.innerHeight - 24) / 866)
+  phone.style.transform = `scale(${scale})`
+  slot.style.width = `${412 * scale}px`
+  slot.style.height = `${866 * scale}px`
+}
+
+function tickClock(){
+  const now = new Date()
+  document.getElementById('clock').textContent =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+}
+
+renderWorlds()
+renderSaved()
+fitPhone()
+tickClock()
+const previewParams = new URLSearchParams(window.location.search)
+if (previewParams.get('view') === 'detail') {
+  openWorld(previewParams.get('world') || 'ginkgo')
+}
+window.addEventListener('resize',fitPhone)
+setInterval(tickClock,30000)
+</script>
+</body>
+</html>

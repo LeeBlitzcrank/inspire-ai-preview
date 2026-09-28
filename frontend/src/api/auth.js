@@ -9,12 +9,12 @@
 import request from '@/utils/request.js'
 import axios from 'axios'
 import {
-  clearAllTokens,
-  getAccessToken,
-  getRefreshToken,
-  hasSession,
-  saveTokens,
-  syncLoginFlag
+    clearAllTokens,
+    getAccessToken,
+    getRefreshToken,
+    hasSession,
+    saveTokens,
+    syncLoginFlag
 } from '@/utils/tokenStorage.js'
 
 const API_BASE = import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE + '/api' : '/api'
@@ -117,4 +117,8 @@ export function logout() {
  */
 export function kickUser(userId) {
   return request.post(`/auth/admin/kick/${userId}`)
+}
+
+export function getIpLocation() {
+  return request.get('/auth/ip-location')
 }
