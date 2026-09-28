@@ -29,7 +29,7 @@ fi
 
 mkdir -p "$ROOT/log"
 echo "==> 启动前端 dev server …"
-nohup npm run dev -- --host 127.0.0.1 --port "$PORT" > "$LOG" 2>&1 &
+nohup npm run dev -- --host 127.0.0.1 --port "$PORT" </dev/null > "$LOG" 2>&1 &
 # 脱离当前 shell 的作业表，避免脚本退出时被连带回收
 disown 2>/dev/null || true
 

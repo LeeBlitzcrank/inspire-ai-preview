@@ -8,6 +8,7 @@ set -e
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${INSPIRE_ENV_FILE:-.env}"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/docker.sh"
 
 # 仅从项目 env 文件读取该密钥，避免旧 shell 导出值覆盖新配置。
 unset INSPIRE_UNSPLASH_ACCESS_KEY
@@ -20,6 +21,9 @@ if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
   echo "已取消。"
   exit 0
 fi
+
+# 0. 先确保 Docker daemon 可用，避免确认清库后才发现无法启动容器。
+ensure_docker_running
 
 # 1. 构建后端 JAR
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
@@ -35,9 +39,8 @@ echo "==> 删除数据卷 …"
 docker compose --env-file "$ENV_FILE" down -v
 
 # 3. 先起 MySQL 和 MinIO，保证种子生成前图片桶已就绪
-echo "==> 启动 MySQL/MinIO 并等待初始化（约 20 秒）…"
-docker compose --env-file "$ENV_FILE" up -d mysql minio
-sleep 20
+echo "==> 启动 MySQL/MinIO 并等待健康检查…"
+docker compose --env-file "$ENV_FILE" up -d --wait --wait-timeout 120 mysql minio
 
 # 4. 初始化 MinIO 存储桶
 echo "==> 初始化 MinIO 存储桶 …"
@@ -51,8 +54,7 @@ echo "==> 启动全部服务 …"
 # 打开演示数据开关：清库后会重新生成用户/灵感/评论/互动，以及 MinIO 里的演示图
 export INSPIRE_DEMO_SEED=true
 export INSPIRE_DEMO_SCALE="${INSPIRE_DEMO_SCALE:-small}"
-docker compose --env-file "$ENV_FILE" up -d --build
-sleep 5
+docker compose --env-file "$ENV_FILE" up -d --build --wait --wait-timeout 300
 
 bash "$ROOT_DIR/deploy/cloudflare/start-tunnel.sh"
 

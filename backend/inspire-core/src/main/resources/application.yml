@@ -14,6 +14,8 @@ spring:
     name: inspire-core
   profiles:
     active: dev
+  elasticsearch:
+    uris: http://${INSPIRE_ES_HOSTS:localhost:9200}
   sql:
     init:
       mode: never
