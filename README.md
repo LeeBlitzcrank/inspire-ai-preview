@@ -27,13 +27,18 @@
 │   ├── inspire-search/     # 搜索服务（端口 8086）
 │   ├── inspire-common/     # 公共模块
 │   └── inspire-mq/         # 消息队列
-├── docker/
-│   ├── init/
-│   │   └── init.sql        # Docker MySQL 初始化脚本（35 张表）
-│   └── Dockerfile          # 后端服务 Dockerfile
+├── database/
+│   ├── README.md           # SQL 与迁移职责说明
+│   └── init/
+│       └── init.sql        # MySQL 首次空库初始化（v2 基线）
+├── deploy/
+│   ├── cloudflare/         # Cloudflare Worker / Tunnel
+│   ├── docker/             # 后端镜像 Dockerfile
+│   └── minio/              # MinIO 策略与图片代理配置
+├── scripts/                # 启动、重置与前端开发脚本
 ├── docker-compose.yml       # 一键启动全部服务
-├── .env.example             # 环境变量文档
-└── projectWord/             # 项目文档目录
+├── .env.local.example       # 本地环境模板
+└── docs/                    # 当前文档、归档与预览
 ```
 
 ## 前置要求
@@ -60,11 +65,25 @@
 | `INSPIRE_JWT_SECRET` | JWT 密钥 | 默认 dev 密钥 |
 | `VITE_API_BASE` | 生产环境 API 地址 | — |
 
-完整列表见 `.env.example`。
+完整列表见 `.env.local.example` 和 `.env.public.example`。
 
 ## 快速开始
 
 ### 方式一：Docker Compose（推荐）
+
+日常完整启动、重建和前端重启可统一使用：
+
+```bash
+./scripts/start.sh
+```
+
+需要清空全部数据卷并按种子数据重新生成时：
+
+```bash
+./scripts/reset-data.sh
+```
+
+也可以按下面的 Compose 命令分步执行：
 
 ```bash
 # 1. 构建后端 JAR
@@ -82,7 +101,7 @@ docker compose logs --tail=5 inspire-core | grep "Started"
 docker compose ps
 ```
 
-MySQL 初次启动时会执行 `docker/init/init.sql` 创建全部 35 张表。
+MySQL 初次启动时会执行 `database/init/init.sql` 创建 v2 基线结构，后续结构变更统一由 Flyway `V*.sql` 迁移。
 
 ### 方式二：本地开发
 
@@ -125,28 +144,29 @@ npm run dev      # http://localhost:5173
 
 ### 表结构
 
-共 **45 张表**，按功能分组：
+空库基线共 **25 张表**；执行 Flyway 迁移后共 **32 张业务表**，另含 Flyway 元数据表。按功能分组：
 
 | 模块 | 表 | 数量 |
 |------|-----|------|
-| 灵感核心 | `inspire_main`, `inspire_content`, `inspire_version` | 3 |
-| 收藏（分表） | `collect_0` ~ `collect_9`, `collect_folder` | 11 |
-| 点赞（分表） | `user_like_0` ~ `user_like_9` | 10 |
+| 灵感核心 | `inspire_main`, `inspire_series`, `inspire_content`, `inspire_version` | 4 |
+| 收藏 | `collect`, `collect_folder` | 2 |
+| 点赞 | `user_like` | 1 |
 | 用户 | `user`, `password_reset` | 2 |
-| 评论（分表） | `inspire_comment_0` ~ `inspire_comment_9` | 10 |
-| 关注 | `user_follow` | 1 |
+| 评论与互动 | `inspire_comment`, `comment_mention`, `comment_like` | 3 |
+| 关注与收件流 | `user_follow`, `user_feed` | 2 |
 | 消息 | `message_conversation`, `conversation_member`, `message` | 3 |
-| 通知 | `user_notification` | 1 |
-| AI 调用 | `ai_call_log` | 1 |
+| 通知与指标 | `user_notification`, `inspire_metric`, `web_vital_metric` | 3 |
+| AI 调用与历史 | `ai_call_log`, `user_ai_history` | 2 |
 | 管理 | `admin_user`, `admin_config` | 2 |
-| 其他 | 同步/通知/配置相关 | 1 |
-| **合计** | | **35** |
+| 图片与分类 | `sys_upload_image`, `sys_category`, `sys_word_cloud` | 3 |
+| 归档表 | `user_notification_archive`, `web_vital_metric_archive`, `ai_call_log_archive`, `user_ai_history_archive`, `message_archive` | 5 |
+| **合计** | | **32** |
 
 ### 修改表结构
 
-**Docker 环境：** 修改 `docker/init/init.sql`，然后 `docker compose down -v && docker compose up -d mysql` 重新初始化。
+**Docker 环境：** 全新空库初始化修改 `database/init/init.sql`；已有数据库的结构变化必须新增 Flyway 迁移文件，不要直接修改历史迁移。
 
-**本地环境：** 当前采用 `docker/init/init.sql` 作为基线，修改结构后执行 `./reset-data.sh` 全量重建并重新生成演示数据。
+**本地环境：** `database/init/init.sql` 是 v2 基线，`backend/inspire-core/src/main/resources/db/migration/V*.sql` 是后续迁移。需要全量重建时才执行 `./scripts/reset-data.sh`。
 
 ## 部署
 
@@ -208,4 +228,4 @@ Docker 环境执行 `docker compose down -v` 清空数据卷，重新初始化�
 
 ---
 
-*文档更新时间：2026-07-07*
+*文档更新时间：2026-09-28*

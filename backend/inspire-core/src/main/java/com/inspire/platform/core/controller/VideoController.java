@@ -5,19 +5,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 视频后期处理：探测信息 / 压缩 / 裁剪。
  *
- * <p>依赖容器内已安装 ffmpeg/ffprobe（见 docker/Dockerfile.local）。
+ * <p>依赖容器内已安装 ffmpeg/ffprobe（见 deploy/docker/Dockerfile.local）。
  * 所有操作都是「读原文件 → 生成新文件」，不会覆盖用户已上传的原片，
  * 前端可以选择保留原片还是用处理后的结果替换。
  */

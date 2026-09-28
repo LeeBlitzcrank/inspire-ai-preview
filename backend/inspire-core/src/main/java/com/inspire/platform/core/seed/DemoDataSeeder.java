@@ -335,7 +335,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     /**
      * 准备 admin 账号并返回其密码 hash（演示账号统一用这个密码）。
      *
-     * <p>原来这里只「读取」admin 的密码：而 reset-data.sh 会清空整库，重置后库里根本没有 admin，
+     * <p>原来这里只「读取」admin 的密码：而 scripts/reset-data.sh 会清空整库，重置后库里根本没有 admin，
      * 种子就会整体跳过、什么都不生成（表现为 user 表 0 行）。
      * 现在改成：没有 admin 就自动建一个，保证一条 reset 命令就能得到可用系统。
      */
