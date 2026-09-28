@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>首页底部工具栏可操作预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#1d1d1f;
+    --muted:#8f959b;
+    --line:#e5ebf2;
+    --paper:#fbfcfe;
+    --card:#fff;
+    --blue:#409eff;
+    --blue-soft:#f4f7fd;
+    --green:#1f6d5c;
+    --green-soft:#edf6f3;
+  }
+  html,body{min-height:100%}
+  body{margin:0;color:var(--ink);background:#e9efec;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  button,input,textarea{font:inherit}
+  button{cursor:pointer}
+  .page{min-height:100dvh;padding:28px 26px 48px;display:flex;align-items:flex-start;justify-content:center;gap:50px}
+  .intro{width:min(390px,31vw);padding-top:22px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-weight:900;letter-spacing:.1em}
+  .eyebrow:before{content:"";width:23px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:12px 0 0;font-size:34px;line-height:1.12}
+  .intro>p{margin:14px 0 0;color:#62736e;font-size:13px;line-height:1.85}
+  .notes{display:grid;gap:8px;margin-top:22px}
+  .note{padding:12px 13px;border:1px solid rgba(31,109,92,.14);border-radius:14px;background:rgba(255,255,255,.66)}
+  .note b{display:block;font-size:12px}
+  .note span{display:block;margin-top:4px;color:#74847f;font-size:10.5px;line-height:1.55}
+  .summary{margin-top:20px;padding:14px;border-radius:16px;background:#173a32;color:#fff}
+  .summary small{color:#9ed8c9;font-size:9.5px;font-weight:850;letter-spacing:.07em}
+  .summary b{display:block;margin-top:8px;font-size:15px;line-height:1.5}
+  .summary span{display:block;margin-top:6px;color:rgba(255,255,255,.65);font-size:10.5px;line-height:1.6}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);transform-origin:top left}
+  .phone:before{content:"";position:absolute;z-index:99;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:#fff}
+  .statusbar{position:absolute;z-index:40;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#19352e;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:5px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:0}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .screen-view{display:none;padding:4px 16px 82px;min-height:100%;background:#fbfcfe}
+  .screen-view.on{display:block;animation:rise .2s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .top-nav{display:flex;align-items:center;justify-content:space-between;padding:2px 0 14px}
+  .nav-logo,.nav-icon{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.05);font-size:19px}
+  .nav-logo{width:40px;height:40px;font-size:25px}
+  .nav-icons{display:flex;gap:12px}
+  .nav-icon{position:relative}
+  .noti-badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#f56c6c;color:#fff;font-size:9px;line-height:16px;font-weight:700}
+  .tab-bar{display:flex;gap:8px;margin-bottom:12px;padding:4px;border-radius:12px;background:#f4f7fd}
+  .tab-item{flex:1;padding:8px 4px;border:0;border-radius:10px;background:transparent;color:#666;font-size:13px;text-align:center;transition:.22s}
+  .tab-item.active{background:#fff;color:var(--blue);font-weight:650;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .home-panel{display:none}
+  .home-panel.on{display:block}
+  .swipe-heading{text-align:center;margin-bottom:16px}
+  .swipe-heading h1{margin:0;font-size:27px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;color:transparent}
+  .swipe-heading p{margin:8px 0 0;color:#999;font-size:12.5px}
+  .swipe-container{position:relative;width:100%;max-width:360px;height:430px;margin:0 auto;overflow:hidden}
+  .card{position:absolute;inset:0;overflow:hidden;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.12);touch-action:none;user-select:none;transition:transform .24s ease,opacity .24s ease}
+  .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  .card:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 34%,rgba(8,17,25,.78))}
+  .card-texts{position:absolute;z-index:2;left:0;bottom:0;width:100%;padding:30px 20px;display:flex;flex-direction:column;justify-content:flex-end}
+  .card-word{margin-bottom:5px;color:#fff;font-size:27px;font-weight:650;line-height:1.3}
+  .card-tag{display:inline-block;width:fit-content;margin-bottom:8px;padding:4px 14px;border-radius:99px;background:#28c76f;color:#fff;font-size:12.5px}
+  .swipe-buttons{display:flex;justify-content:center;gap:30px;margin-top:36px}
+  .swipe-buttons button{width:60px;height:60px;border:0;border-radius:50%;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.1);font-size:24px}
+  .btn-left{color:#ff4d4f}.btn-right{color:#52c41a}
+  .category-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .category-card{min-height:126px;padding:18px 12px;border:1px solid #e5ecf3;border-radius:18px;background:#fff;text-align:center}
+  .category-card i{display:block;font-size:32px;font-style:normal}
+  .category-card b{display:block;margin-top:12px;font-size:15px}
+  .category-card span{display:block;margin-top:5px;color:#929ba4;font-size:10px}
+  .category-detail{display:none}
+  .category-detail.on{display:block}
+  .back-link{display:inline-flex;align-items:center;gap:5px;margin:0 0 14px;border:0;background:transparent;color:var(--blue);font-size:12px}
+  .simple-list{display:grid;gap:9px}
+  .simple-item{display:flex;gap:10px;padding:11px;border:1px solid #e5ecf3;border-radius:14px;background:#fff}
+  .simple-item img{width:66px;height:66px;flex:0 0 auto;border-radius:11px;object-fit:cover}
+  .simple-item b{display:block;font-size:12px;line-height:1.45}
+  .simple-item span{display:block;margin-top:5px;color:#929ba4;font-size:9.5px}
+  .page-head{display:flex;align-items:center;gap:10px;margin-bottom:15px}
+  .page-head b{min-width:0;flex:1;font-size:18px}
+  .search-box{height:44px;padding:0 13px;display:flex;align-items:center;gap:8px;border:1px solid #dfe8ef;border-radius:14px;background:#fff}
+  .search-box input{min-width:0;flex:1;border:0;outline:0;background:transparent;font-size:13px}
+  .search-box button{height:31px;padding:0 12px;border:0;border-radius:9px;background:var(--green);color:#fff;font-size:10.5px;font-weight:800}
+  .search-state{margin-top:15px}
+  .search-state h3{margin:0 0 10px;font-size:13px}
+  .chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
+  .chips button{flex:0 0 auto;height:29px;padding:0 10px;border:1px solid #dfe8ef;border-radius:999px;background:#fff;color:#6f7c85;font-size:10px}
+  .empty-state{margin-top:48px;text-align:center;color:#a0a9b1}
+  .empty-state i{display:block;font-size:38px;font-style:normal}
+  .empty-state b{display:block;margin-top:12px;color:#6f7c85;font-size:13px}
+  .form-grid{display:grid;gap:11px}
+  .form-field{display:block}
+  .form-field span{display:block;margin-bottom:6px;color:#5d6c75;font-size:11px;font-weight:800}
+  .form-field input,.form-field textarea{width:100%;border:1px solid #dfe8ef;border-radius:13px;background:#fff;outline:0;padding:11px 12px;font-size:12px}
+  .form-field textarea{min-height:120px;resize:vertical;line-height:1.6}
+  .primary-btn{height:44px;border:0;border-radius:13px;background:var(--green);color:#fff;font-size:12px;font-weight:850}
+  .world-card{position:relative;overflow:hidden;padding:16px;border-radius:18px;background:#173a32;color:#fff}
+  .world-card:after{content:"";position:absolute;right:-38px;bottom:-55px;width:145px;height:145px;border:22px solid rgba(255,255,255,.08);border-radius:50%}
+  .world-card small{color:#9ed8c9;font-size:9.5px;font-weight:850}
+  .world-card h3{position:relative;z-index:1;margin:10px 0 7px;font-size:19px}
+  .world-card p{position:relative;z-index:1;margin:0;color:rgba(255,255,255,.67);font-size:10.5px;line-height:1.6}
+  .world-card button{position:relative;z-index:1;height:35px;margin-top:14px;padding:0 13px;border:0;border-radius:10px;background:#f3c96f;color:#433610;font-size:10.5px;font-weight:850}
+  .profile-card{padding:16px;border:1px solid #e3ebf0;border-radius:17px;background:#fff;text-align:center}
+  .profile-avatar{width:58px;height:58px;margin:0 auto;display:grid;place-items:center;border-radius:50%;background:#dcece6;color:#286b5c;font-size:19px;font-weight:900}
+  .profile-card h3{margin:10px 0 0;font-size:16px}
+  .profile-card p{margin:5px 0 0;color:#8e99a1;font-size:10.5px}
+  .profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .profile-stats div{padding:10px 4px;border-radius:12px;background:#f7f9fb;text-align:center}
+  .profile-stats b{display:block;font-size:15px}
+  .profile-stats span{display:block;margin-top:4px;color:#97a1a8;font-size:9px}
+  .setting-list{margin-top:13px;border:1px solid #e3ebf0;border-radius:15px;background:#fff;overflow:hidden}
+  .setting-list button{width:100%;height:47px;padding:0 13px;display:flex;align-items:center;border:0;border-bottom:1px solid #edf2f5;background:#fff;color:#4e5c65;font-size:11.5px;text-align:left}
+  .setting-list button:last-child{border-bottom:0}
+  .setting-list span{margin-left:auto;color:#b0b8be}
+  .bottom-dock{position:absolute;z-index:50;left:14px;right:14px;bottom:12px;height:64px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;border:1px solid rgba(216,228,238,.96);border-radius:21px;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);box-shadow:0 12px 28px rgba(26,70,60,.14)}
+  .bottom-dock button{min-width:0;border:0;border-radius:15px;background:transparent;color:#929ba5;font-size:9px;font-weight:800}
+  .bottom-dock svg{display:block;width:19px;height:19px;margin:0 auto 3px}
+  .bottom-dock button.active{background:#edf6f3;color:var(--green)}
+  .bottom-dock button.compose{position:relative}
+  .bottom-dock button.compose:after{content:"";position:absolute;inset:5px 10px;border-radius:15px;background:var(--green);z-index:-1}
+  .bottom-dock button.compose svg,.bottom-dock button.compose{color:#fff}
+  .sheet-backdrop{position:absolute;z-index:80;inset:0;display:none;background:rgba(15,28,24,.34);backdrop-filter:blur(2px)}
+  .sheet-backdrop.on{display:block}
+  .sheet{position:absolute;z-index:90;left:10px;right:10px;bottom:10px;display:none;padding:16px;border-radius:22px;background:#fff;box-shadow:0 18px 46px rgba(20,55,47,.22)}
+  .sheet.on{display:block;animation:sheetUp .22s ease}
+  @keyframes sheetUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .sheet-head{display:flex;align-items:center;margin-bottom:12px}
+  .sheet-head b{font-size:15px}
+  .sheet-head button{margin-left:auto;border:0;background:transparent;color:#97a2aa;font-size:16px}
+  .sheet p{margin:0;color:#7f8b93;font-size:10.5px;line-height:1.6}
+  .sheet-actions{display:flex;gap:7px;margin-top:12px}
+  .sheet-actions button{flex:1;height:36px;border:1px solid #dce7e3;border-radius:11px;background:#fff;color:#56746b;font-size:10.5px;font-weight:800}
+  .sheet-actions button.main{border-color:var(--green);background:var(--green);color:#fff}
+  .notification-item{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #edf2f5}
+  .notification-item:last-child{border-bottom:0}
+  .notification-item i{width:30px;height:30px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:#eef6f3;font-style:normal}
+  .notification-item b{display:block;font-size:10.5px}
+  .notification-item span{display:block;margin-top:3px;color:#929da4;font-size:9px}
+  .toast{position:absolute;z-index:100;left:50%;top:74px;transform:translateX(-50%);display:none;max-width:290px;padding:9px 12px;border-radius:11px;background:rgba(20,45,38,.92);color:#fff;font-size:10.5px;text-align:center}
+  .toast.on{display:block;animation:rise .2s ease}
+  @media (max-width:980px){
+    .page{display:block;padding:18px 0 34px}
+    .intro{width:min(412px,calc(100vw - 24px));margin:0 auto 18px;padding-top:0}
+    .notes,.summary{display:none}
+    .intro h1{font-size:28px}
+    .intro>p{font-size:12px}
+    .phone-slot{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">INTERACTIVE PREVIEW</div>
+    <h1>首页底部工具栏可操作预览</h1>
+    <p>底部五个入口、首页标签、滑动卡片、搜索、发布、世界、我的、AI 探索和通知都可以实际点击。</p>
+    <div class="notes">
+      <div class="note"><b>首页</b><span>切换推荐卡片和灵感分类，卡片支持拖动、跳过和收藏。</span></div>
+      <div class="note"><b>底部导航</b><span>搜索、发布、世界、我的会切换为对应页面。</span></div>
+      <div class="note"><b>顶部入口</b><span>AI 探索和通知会打开底部操作面板。</span></div>
+    </div>
+    <div class="summary">
+      <small>可操作验证</small>
+      <b>先体验入口是否顺手，再决定正式改造</b>
+      <span>这里的操作仅用于预览，不会写入正式数据。</span>
+    </div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot">
+    <div class="phone" id="phone">
+      <div class="screen">
+        <div class="statusbar"><span id="clock">09:41</span><div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div></div>
+        <div class="app">
+          <div class="app-scroll" id="appScroll">
+            <section class="screen-view on" data-screen="home">
+              <nav class="top-nav">
+                <button class="nav-logo" type="button" data-go="home">🍎</button>
+                <div class="nav-icons">
+                  <button class="nav-icon" type="button" data-sheet="ai">🧠</button>
+                  <button class="nav-icon" type="button" data-sheet="notice">🔔<span class="noti-badge" id="noticeBadge">3</span></button>
+                </div>
+              </nav>
+              <div class="tab-bar">
+                <button class="tab-item active" type="button" data-home-tab="recommend">👇 推荐卡片</button>
+                <button class="tab-item" type="button" data-home-tab="category">📋 灵感分类</button>
+              </div>
+              <div class="home-panel on" data-home-panel="recommend">
+                <div class="swipe-heading"><h1>灵感推荐</h1><p>拖动卡片左右滑动，左滑跳过，右滑收藏</p></div>
+                <div class="swipe-container" id="swipeContainer"></div>
+                <div class="swipe-buttons"><button class="btn-left" type="button" id="skipBtn">✕</button><button class="btn-right" type="button" id="likeBtn">♥</button></div>
+              </div>
+              <div class="home-panel" data-home-panel="category">
+                <div id="categoryRoot">
+                  <div class="category-grid">
+                    <button class="category-card" type="button" data-category="家居灵感"><i>🏠</i><b>家居灵感</b><span>12 条内容</span></button>
+                    <button class="category-card" type="button" data-category="旅行清单"><i>🏕</i><b>旅行清单</b><span>8 条内容</span></button>
+                    <button class="category-card" type="button" data-category="美食收藏"><i>🍜</i><b>美食收藏</b><span>6 条内容</span></button>
+                    <button class="category-card" type="button" data-category="摄影参考"><i>📷</i><b>摄影参考</b><span>9 条内容</span></button>
+                  </div>
+                </div>
+                <div class="category-detail" id="categoryDetail">
+                  <button class="back-link" type="button" id="categoryBack">‹ 返回全部分类</button>
+                  <h3 id="categoryTitle" style="margin:0 0 11px;font-size:15px"></h3>
+                  <div class="simple-list" id="categoryList"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="screen-view" data-screen="search">
+              <div class="page-head"><button class="nav-icon" type="button" data-go="home">‹</button><b>搜索</b></div>
+              <div class="search-box"><span>⌕</span><input id="searchInput" placeholder="搜索灵感、地点或具体做法"><button type="button" id="searchBtn">搜索</button></div>
+              <div class="search-state" id="searchInitial">
+                <h3>热门搜索</h3>
+                <div class="chips"><button type="button" data-search="小户型改造">小户型改造</button><button type="button" data-search="城市慢游">城市慢游</button><button type="button" data-search="一人食">一人食</button><button type="button" data-search="胶片摄影">胶片摄影</button></div>
+              </div>
+              <div class="search-state" id="searchResults" style="display:none">
+                <h3 id="searchResultTitle">搜索结果</h3>
+                <div class="simple-list" id="searchResultList"></div>
+              </div>
+            </section>
+
+            <section class="screen-view" data-screen="create">
+              <div class="page-head"><button class="nav-icon" type="button" data-go="home">‹</button><b>发布灵感</b></div>
+              <div class="form-grid">
+                <label class="form-field"><span>标题</span><input id="createTitle" placeholder="给这次分享写一个标题"></label>
+                <label class="form-field"><span>内容</span><textarea id="createContent" placeholder="记录正在做的事、过程和结果"></textarea></label>
+                <button class="primary-btn" type="button" id="publishBtn">发布</button>
+              </div>
+            </section>
+
+            <section class="screen-view" data-screen="world">
+              <div class="page-head"><button class="nav-icon" type="button" data-go="home">‹</button><b>平行世界</b></div>
+              <article class="world-card"><small>公版共创</small><h3>水帘洞没有成为王座</h3><p>如果瀑布进入枯水期，石猴会先找到暗河，还是先成为猴群期待的王？</p><button type="button" id="worldContinue">继续这一章</button></article>
+              <div class="simple-list" style="margin-top:14px">
+                <article class="simple-item"><div style="width:66px;height:66px;border-radius:11px;background:#e9f5f1;display:grid;place-items:center;font-size:24px">📖</div><div><b>我的世界线 · 原线：石猴进入水帘洞</b><span>2 章 · 最近更新：潮声计数</span></div></article>
+              </div>
+            </section>
+
+            <section class="screen-view" data-screen="profile">
+              <div class="page-head"><button class="nav-icon" type="button" data-go="home">‹</button><b>我的</b></div>
+              <article class="profile-card"><div class="profile-avatar">满</div><h3>小满</h3><p>把日常过得具体一点</p><div class="profile-stats"><div><b>18</b><span>发布</span></div><div><b>42</b><span>收藏</span></div><div><b>86</b><span>关注</span></div></div></article>
+              <div class="setting-list"><button type="button" data-setting="收藏夹">收藏夹<span>›</span></button><button type="button" data-setting="浏览历史">浏览历史<span>›</span></button><button type="button" data-setting="草稿箱">草稿箱<span>›</span></button><button type="button" data-setting="设置">设置<span>›</span></button></div>
+            </section>
+          </div>
+
+          <nav class="bottom-dock">
+            <button class="active" type="button" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>首页</button>
+            <button type="button" data-nav="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</button>
+            <button class="compose" type="button" data-nav="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>发布</button>
+            <button type="button" data-nav="world"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>世界</button>
+            <button type="button" data-nav="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>我的</button>
+          </nav>
+
+          <div class="sheet-backdrop" id="sheetBackdrop"></div>
+          <section class="sheet" id="aiSheet"><div class="sheet-head"><b>AI 探索</b><button type="button" data-close-sheet>✕</button></div><p>输入一个方向，AI 会帮你把模糊想法拆成可执行的探索路径。</p><div class="chips" style="margin-top:12px"><button type="button">周末微改造</button><button type="button">城市慢游</button><button type="button">一个人吃饭</button></div><div class="sheet-actions"><button type="button" data-close-sheet>取消</button><button class="main" type="button" id="aiStart">开始探索</button></div></section>
+          <section class="sheet" id="noticeSheet"><div class="sheet-head"><b>通知</b><button type="button" data-close-sheet>✕</button></div><div class="notification-item"><i>❤</i><div><b>你的灵感收到了 12 个新收藏</b><span>刚刚</span></div></div><div class="notification-item"><i>💬</i><div><b>阿禾回复了你的评论</b><span>18 分钟前</span></div></div><div class="notification-item"><i>✦</i><div><b>本周世界线已更新 2 章</b><span>1 小时前</span></div></div><div class="sheet-actions"><button class="main" type="button" id="readAll">全部已读</button></div></section>
+          <div class="toast" id="toast"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const slot=document.getElementById('phoneSlot')
+const phone=document.getElementById('phone')
+const appScroll=document.getElementById('appScroll')
+const views=[...document.querySelectorAll('.screen-view')]
+const navButtons=[...document.querySelectorAll('[data-nav]')]
+const homeTabs=[...document.querySelectorAll('[data-home-tab]')]
+const homePanels=[...document.querySelectorAll('[data-home-panel]')]
+const cardData=[
+  {tag:'运动',title:'居家训练｜我的真实体验',color:'#a9528d',img:'https://picsum.photos/seed/toolbar-card-1/700/900'},
+  {tag:'摄影',title:'低饱和胶片感，日常照片也有电影感',color:'#476f8f',img:'https://picsum.photos/seed/toolbar-card-2/700/900'},
+  {tag:'旅行',title:'周末去山里住一晚，把节奏放慢',color:'#7c684f',img:'https://picsum.photos/seed/toolbar-card-3/700/900'}
+]
+let cardIndex=0
+let dragStart=0
+let dragging=false
+let currentCard=null
+
+function switchScreen(name){
+  views.forEach(view=>view.classList.toggle('on',view.dataset.screen===name))
+  navButtons.forEach(button=>button.classList.toggle('active',button.dataset.nav===name))
+  appScroll.scrollTop=0
+}
+
+function switchHomeTab(name){
+  homeTabs.forEach(tab=>tab.classList.toggle('active',tab.dataset.homeTab===name))
+  homePanels.forEach(panel=>panel.classList.toggle('on',panel.dataset.homePanel===name))
+}
+
+function renderCard(){
+  const data=cardData[cardIndex%cardData.length]
+  const card=document.createElement('article')
+  card.className='card'
+  card.innerHTML=`<img src="${data.img}" alt=""><div class="card-texts"><span class="card-tag" style="background:${data.color}">${data.tag}</span><div class="card-word">${data.title}</div></div>`
+  document.getElementById('swipeContainer').replaceChildren(card)
+  currentCard=card
+  card.addEventListener('pointerdown',startDrag)
+  card.addEventListener('pointermove',moveDrag)
+  card.addEventListener('pointerup',endDrag)
+  card.addEventListener('pointercancel',endDrag)
+}
+
+function startDrag(event){dragging=true;dragStart=event.clientX;currentCard.style.transition='none';currentCard.setPointerCapture?.(event.pointerId)}
+function moveDrag(event){if(!dragging||!currentCard)return;const offset=event.clientX-dragStart;currentCard.style.transform=`translateX(${offset}px) rotate(${offset/18}deg)`}
+function endDrag(event){
+  if(!dragging||!currentCard)return
+  dragging=false
+  const offset=event.clientX-dragStart
+  currentCard.style.transition='transform .22s ease,opacity .22s ease'
+  if(offset>80){currentCard.style.transform='translateX(420px) rotate(18deg)';setTimeout(nextCard,180);toast('已收藏这张灵感')}
+  else if(offset<-80){currentCard.style.transform='translateX(-420px) rotate(-18deg)';setTimeout(nextCard,180);toast('已跳过')}
+  else currentCard.style.transform=''
+}
+function nextCard(){cardIndex=(cardIndex+1)%cardData.length;renderCard()}
+
+function showSheet(id){document.getElementById('sheetBackdrop').classList.add('on');document.getElementById(id).classList.add('on')}
+function closeSheet(){document.getElementById('sheetBackdrop').classList.remove('on');document.querySelectorAll('.sheet').forEach(sheet=>sheet.classList.remove('on'))}
+
+function toast(message){const element=document.getElementById('toast');element.textContent=message;element.classList.add('on');clearTimeout(element._timer);element._timer=setTimeout(()=>element.classList.remove('on'),1500)}
+
+navButtons.forEach(button=>button.addEventListener('click',()=>switchScreen(button.dataset.nav)))
+homeTabs.forEach(tab=>tab.addEventListener('click',()=>switchHomeTab(tab.dataset.homeTab)))
+document.querySelectorAll('[data-go]').forEach(button=>button.addEventListener('click',()=>switchScreen(button.dataset.go)))
+document.querySelectorAll('[data-sheet]').forEach(button=>button.addEventListener('click',()=>showSheet(button.dataset.sheet==='ai'?'aiSheet':'noticeSheet')))
+document.querySelectorAll('[data-close-sheet]').forEach(button=>button.addEventListener('click',closeSheet))
+document.getElementById('sheetBackdrop').addEventListener('click',closeSheet)
+document.getElementById('skipBtn').addEventListener('click',()=>{if(currentCard){currentCard.style.transform='translateX(-420px) rotate(-18deg)';setTimeout(nextCard,180)}toast('已跳过')})
+document.getElementById('likeBtn').addEventListener('click',()=>{if(currentCard){currentCard.style.transform='translateX(420px) rotate(18deg)';setTimeout(nextCard,180)}toast('已收藏这张灵感')})
+document.getElementById('readAll').addEventListener('click',()=>{document.getElementById('noticeBadge').style.display='none';closeSheet();toast('通知已全部阅读')})
+document.getElementById('aiStart').addEventListener('click',()=>{closeSheet();toast('已生成一条探索路径')})
+document.getElementById('publishBtn').addEventListener('click',()=>{const title=document.getElementById('createTitle').value.trim();const content=document.getElementById('createContent').value.trim();if(!title||!content){toast('请先填写标题和内容');return}toast('发布成功');document.getElementById('createTitle').value='';document.getElementById('createContent').value='';switchScreen('home')})
+document.getElementById('searchBtn').addEventListener('click',runSearch)
+document.querySelectorAll('[data-search]').forEach(button=>button.addEventListener('click',()=>{document.getElementById('searchInput').value=button.dataset.search;runSearch()}))
+document.getElementById('categoryRoot').addEventListener('click',event=>{const target=event.target.closest('[data-category]');if(!target)return;document.getElementById('categoryTitle').textContent=target.dataset.category;document.getElementById('categoryList').innerHTML='<article class="simple-item"><img src="https://picsum.photos/seed/category-a/300/300"><div><b>用一个下午重新安排窗边</b><span>'+target.dataset.category+' · 521 人收藏</span></div></article><article class="simple-item"><img src="https://picsum.photos/seed/category-b/300/300"><div><b>低成本改造的三种搭配方式</b><span>'+target.dataset.category+' · 287 人收藏</span></div></article>';document.getElementById('categoryRoot').style.display='none';document.getElementById('categoryDetail').classList.add('on')})
+document.getElementById('categoryBack').addEventListener('click',()=>{document.getElementById('categoryRoot').style.display='block';document.getElementById('categoryDetail').classList.remove('on')})
+document.getElementById('worldContinue').addEventListener('click',()=>{document.getElementById('worldContinue').textContent='已进入第 3 章';document.getElementById('worldContinue').disabled=true;toast('已进入下一章')})
+document.querySelectorAll('[data-setting]').forEach(button=>button.addEventListener('click',()=>toast(button.dataset.setting)))
+
+function runSearch(){const keyword=document.getElementById('searchInput').value.trim()||'灵感';document.getElementById('searchInitial').style.display='none';document.getElementById('searchResults').style.display='block';document.getElementById('searchResultTitle').textContent=`“${keyword}”的结果`;document.getElementById('searchResultList').innerHTML=`<article class="simple-item"><img src="https://picsum.photos/seed/search-toolbar-1/300/300"><div><b>${keyword}：从一个小步骤开始</b><span>与你相关的实用做法</span></div></article><article class="simple-item"><img src="https://picsum.photos/seed/search-toolbar-2/300/300"><div><b>${keyword} 的低成本尝试记录</b><span>真实过程和踩坑复盘</span></div></article>`}
+
+function fitPhone(){const scale=Math.min(1,(window.innerWidth-24)/412,(window.innerHeight-40)/866);phone.style.transform=`scale(${scale})`;slot.style.width=`${412*scale}px`;slot.style.height=`${866*scale}px`}
+function tickClock(){const now=new Date();document.getElementById('clock').textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}
+
+renderCard();fitPhone();tickClock();window.addEventListener('resize',fitPhone);setInterval(tickClock,30000)
+</script>
+</body>
+</html>

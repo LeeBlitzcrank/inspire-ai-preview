@@ -31,11 +31,13 @@ const Forbidden = () => import('@/pages/Forbidden.vue')
 	const Collections = () => import('@/pages/Collections.vue')
 const Messages = () => import('@/pages/Messages.vue')
 const RagAssistant = () => import('@/pages/RagAssistant.vue')
+const WorldSeed = () => import('@/pages/WorldSeed.vue')
 
 const routes = [
   { path: '/', name: 'Index', component: Index },
   { path: '/search', name: 'Search', component: Search },
   { path: '/rag', name: 'RagAssistant', component: RagAssistant, meta: { needLogin: true } },
+  { path: '/world', name: 'WorldSeed', component: WorldSeed },
   { path: '/detail/:id', name: 'InspireDetail', component: InspireDetail },
   { path: '/series/manage', name: 'SeriesManage', component: () => import('@/pages/SeriesManage.vue'), meta: { needLogin: true } },
   { path: '/series/:id', name: 'Series', component: () => import('@/pages/Series.vue') },

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>分类内容列表改版预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--ink:#182823;--muted:#7c8a85;--line:#e0e9e6;--paper:#f5f8f6;--card:#fff;--green:#1f6d5c;--green-soft:#e9f5f1;--amber:#a76532;--amber-soft:#fff2e7;--blue:#466a9d;--blue-soft:#edf3fb}
+  html,body{min-height:100%}
+  body{margin:0;color:var(--ink);background:#e9efec;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  button{font:inherit;cursor:pointer}
+  .page{min-height:100dvh;padding:28px 26px 48px;display:flex;align-items:flex-start;justify-content:center;gap:50px}
+  .intro{width:min(390px,31vw);padding-top:22px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-weight:900;letter-spacing:.1em}
+  .eyebrow:before{content:"";width:23px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:12px 0 0;font-size:34px;line-height:1.12}
+  .intro>p{margin:14px 0 0;color:#62736e;font-size:13px;line-height:1.85}
+  .notes{display:grid;gap:8px;margin-top:22px}
+  .note{padding:12px 13px;border:1px solid rgba(31,109,92,.14);border-radius:14px;background:rgba(255,255,255,.66)}
+  .note b{display:block;font-size:12px}
+  .note span{display:block;margin-top:4px;color:#74847f;font-size:10.5px;line-height:1.55}
+  .variant-tabs{display:grid;gap:8px;margin-top:22px}
+  .variant-tabs button{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid #d9e5e1;border-radius:15px;background:#fff;color:#52635e;text-align:left}
+  .variant-tabs button.on{border-color:#7fb6a8;background:#eef7f4;box-shadow:0 8px 20px rgba(25,90,72,.08)}
+  .variant-tabs i{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;background:#edf3f1;color:var(--green);font-style:normal;font-size:11px;font-weight:900}
+  .variant-tabs b{display:block;font-size:12px}
+  .variant-tabs span{display:block;margin-top:3px;color:#86948f;font-size:10px;line-height:1.4}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);transform-origin:top left}
+  .phone:before{content:"";position:absolute;z-index:99;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:#fff}
+  .statusbar{position:absolute;z-index:30;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#19352e;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:5px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:0}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .variant{display:none;min-height:100%;padding:5px 14px 82px;background:#fbfcfe;animation:rise .2s ease}
+  .variant.on{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .top-nav{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 13px}
+  .logo,.icon{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.05);font-size:18px}
+  .logo{width:40px;height:40px;font-size:24px}
+  .back{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:transparent;color:#5f7770;font-size:11px}
+  .list-head{display:flex;align-items:flex-end;justify-content:space-between;margin:13px 1px 10px}
+  .list-head h2{margin:0;font-size:19px}
+  .list-head span{color:#94a29e;font-size:9.5px}
+  .chips{display:flex;gap:7px;overflow-x:auto;margin-bottom:11px;padding-bottom:1px}
+  .chips button{flex:0 0 auto;height:28px;padding:0 10px;border:1px solid #dfe9e5;border-radius:999px;background:#fff;color:#74827d;font-size:9.5px;font-weight:800}
+  .chips button.on{border-color:#9ccfc2;background:#e9f5f1;color:#1f6d5c}
+  .cards{display:grid;gap:10px}
+  .card{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:#fff;text-align:left}
+  .cover{position:relative;height:148px}
+  .cover img,.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,28,23,.58))}
+  .cover-tag{position:absolute;z-index:2;left:11px;bottom:10px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.85);color:#35685d;font-size:9px;font-weight:850;backdrop-filter:blur(8px)}
+  .card-copy{padding:11px 12px 12px}
+  .card h3{margin:0;font-size:14px;line-height:1.45}
+  .card p{display:-webkit-box;margin:6px 0 0;overflow:hidden;color:#7e8d88;font-size:10.5px;line-height:1.6;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+  .meta{display:flex;align-items:center;gap:10px;margin-top:10px;color:#98a39f;font-size:9px}
+  .meta .heat{color:#a76532;font-weight:850}
+  .meta .collect{margin-left:auto;color:#1f6d5c;font-weight:850}
+  .row-card{display:flex;gap:11px;padding:10px}
+  .thumb{width:92px;height:92px;flex:0 0 auto;overflow:hidden;border-radius:13px;background:#e4ece9}
+  .row-copy{min-width:0;flex:1;display:flex;flex-direction:column}
+  .row-copy h3{margin:0;font-size:13px;line-height:1.45}
+  .row-copy p{display:-webkit-box;margin:5px 0 0;overflow:hidden;color:#82918c;font-size:9.5px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+  .rank-card{display:flex;align-items:center;gap:10px;padding:10px 11px}
+  .rank{width:25px;flex:0 0 auto;color:#aeb8b4;font-size:16px;font-weight:900;text-align:center;font-style:italic}
+  .rank-card:nth-child(1) .rank{color:#d38a3c}
+  .rank-card:nth-child(2) .rank{color:#8b9aa2}
+  .rank-card:nth-child(3) .rank{color:#b98258}
+  .mini-thumb{width:65px;height:65px;flex:0 0 auto;overflow:hidden;border-radius:12px;background:#e4ece9}
+  .rank-copy{min-width:0;flex:1}
+  .rank-copy h3{margin:0;font-size:12px;line-height:1.45}
+  .rank-copy p{margin:5px 0 0;color:#8c9995;font-size:9px}
+  .rank-meta{flex:0 0 auto;text-align:right}
+  .rank-meta b{display:block;color:#a76532;font-size:11px}
+  .rank-meta span{display:block;margin-top:4px;color:#9aa5a1;font-size:8.5px}
+  .bottom-dock{position:absolute;z-index:50;left:14px;right:14px;bottom:12px;height:64px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;border:1px solid rgba(216,228,238,.96);border-radius:21px;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);box-shadow:0 12px 28px rgba(26,70,60,.14)}
+  .bottom-dock button{min-width:0;border:0;border-radius:15px;background:transparent;color:#929ba5;font-size:9px;font-weight:800}
+  .bottom-dock svg{display:block;width:19px;height:19px;margin:0 auto 3px}
+  .bottom-dock button.active{background:#edf6f3;color:var(--green)}
+  .toast{position:absolute;z-index:100;left:50%;top:74px;transform:translateX(-50%);display:none;padding:9px 12px;border-radius:11px;background:rgba(20,45,38,.92);color:#fff;font-size:10.5px}
+  .toast.on{display:block;animation:rise .2s ease}
+  @media (max-width:980px){.page{display:block;padding:18px 0 34px}.intro{width:min(412px,calc(100vw - 24px));margin:0 auto 18px;padding-top:0}.notes{display:none}.intro h1{font-size:28px}.intro>p{font-size:12px}.variant-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:16px}.variant-tabs button{gap:7px;padding:9px 8px;border-radius:12px}.variant-tabs i{width:25px;height:25px;border-radius:8px;font-size:10px}.variant-tabs b{font-size:10.5px}.variant-tabs span span{display:none}.phone-slot{margin:0 auto}}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">CONTENT LIST REDESIGN</div>
+    <h1>分类内容列表改版</h1>
+    <p>把现在的数据平铺改成更适合浏览和决策的内容卡片，突出图片、标题、摘要和关键互动。</p>
+    <div class="notes"><div class="note"><b>A 大图卡片</b><span>适合图片质量好的内容，更像内容流。</span></div><div class="note"><b>B 横向图文</b><span>信息密度高，一屏能看更多条。</span></div><div class="note"><b>C 精选排行</b><span>突出热度和排序，适合推荐型列表。</span></div></div>
+    <div class="variant-tabs"><button class="on" type="button" data-variant="a"><i>A</i><span><b>大图卡片</b><span>图片、标题、摘要</span></span></button><button type="button" data-variant="b"><i>B</i><span><b>横向图文</b><span>紧凑、高信息密度</span></span></button><button type="button" data-variant="c"><i>C</i><span><b>精选排行</b><span>热度排序、榜单感</span></span></button></div>
+  </section>
+  <div class="phone-slot" id="phoneSlot"><div class="phone" id="phone"><div class="screen">
+    <div class="statusbar"><span id="clock">09:41</span><div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div></div>
+    <div class="app"><div class="app-scroll">
+      <section class="variant on" data-view="a">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <button class="back" type="button">← 返回美食</button><div class="list-head"><h2>早餐搭配</h2><span>120 条灵感</span></div>
+        <div class="chips"><button class="on" type="button">推荐</button><button type="button">最新</button><button type="button">热度</button></div>
+        <div class="cards">
+          <button class="card" type="button" data-item><div class="cover"><img src="https://picsum.photos/seed/list-a-1/800/500"><span class="cover-tag">早餐搭配</span></div><div class="card-copy"><h3>坚持早餐搭配满一个月</h3><p>提前准备三种基础食材，早上十分钟就能组合出不同搭配。</p><div class="meta"><span class="heat">317 热度</span><span>257 浏览</span><span class="collect">收藏</span></div></div></button>
+          <button class="card" type="button" data-item><div class="cover"><img src="https://picsum.photos/seed/list-a-2/800/500"><span class="cover-tag">早餐搭配</span></div><div class="card-copy"><h3>工作日早餐准备的固定清单</h3><p>把采购、预处理和存放拆开，减少每天早上做决定的时间。</p><div class="meta"><span class="heat">286 热度</span><span>214 浏览</span><span class="collect">收藏</span></div></div></button>
+        </div>
+      </section>
+      <section class="variant" data-view="b">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <button class="back" type="button">← 返回美食</button><div class="list-head"><h2>早餐搭配</h2><span>按更新时间</span></div>
+        <div class="chips"><button class="on" type="button">推荐</button><button type="button">最新</button><button type="button">热度</button></div>
+        <div class="cards">
+          <button class="card row-card" type="button" data-item><div class="thumb"><img src="https://picsum.photos/seed/list-b-1/400/400"></div><div class="row-copy"><h3>坚持早餐搭配满一个月</h3><p>提前准备三种基础食材，早上十分钟就能组合出不同搭配。</p><div class="meta"><span class="heat">317 热度</span><span>1 收藏</span><span class="collect">收藏</span></div></div></button>
+          <button class="card row-card" type="button" data-item><div class="thumb"><img src="https://picsum.photos/seed/list-b-2/400/400"></div><div class="row-copy"><h3>早餐鸡蛋的四种快手做法</h3><p>水煮、煎蛋、蒸蛋和蛋卷，提前备好食材就可以快速切换。</p><div class="meta"><span class="heat">295 热度</span><span>2 收藏</span><span class="collect">收藏</span></div></div></button>
+          <button class="card row-card" type="button" data-item><div class="thumb"><img src="https://picsum.photos/seed/list-b-3/400/400"></div><div class="row-copy"><h3>不会出错的燕麦杯组合</h3><p>前一晚浸泡，早上直接带走，适合通勤和办公室早餐。</p><div class="meta"><span class="heat">273 热度</span><span>3 收藏</span><span class="collect">收藏</span></div></div></button>
+        </div>
+      </section>
+      <section class="variant" data-view="c">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <button class="back" type="button">← 返回美食</button><div class="list-head"><h2>早餐搭配热榜</h2><span>今日更新</span></div>
+        <div class="chips"><button class="on" type="button">热度榜</button><button type="button">收藏榜</button><button type="button">最新</button></div>
+        <div class="cards">
+          <button class="card rank-card" type="button" data-item><span class="rank">1</span><div class="mini-thumb"><img src="https://picsum.photos/seed/list-c-1/300/300"></div><div class="rank-copy"><h3>坚持早餐搭配满一个月</h3><p>食材组合与预处理流程</p></div><div class="rank-meta"><b>317</b><span>热度</span></div></button>
+          <button class="card rank-card" type="button" data-item><span class="rank">2</span><div class="mini-thumb"><img src="https://picsum.photos/seed/list-c-2/300/300"></div><div class="rank-copy"><h3>早餐鸡蛋的四种快手做法</h3><p>十分钟完成的日常选择</p></div><div class="rank-meta"><b>295</b><span>热度</span></div></button>
+          <button class="card rank-card" type="button" data-item><span class="rank">3</span><div class="mini-thumb"><img src="https://picsum.photos/seed/list-c-3/300/300"></div><div class="rank-copy"><h3>不会出错的燕麦杯组合</h3><p>适合前一晚准备</p></div><div class="rank-meta"><b>273</b><span>热度</span></div></button>
+          <button class="card rank-card" type="button" data-item><span class="rank">4</span><div class="mini-thumb"><img src="https://picsum.photos/seed/list-c-4/300/300"></div><div class="rank-copy"><h3>周末一次准备五天早餐</h3><p>采购、分装与保存经验</p></div><div class="rank-meta"><b>246</b><span>热度</span></div></button>
+        </div>
+      </section>
+    </div></div>
+    <nav class="bottom-dock"><button class="active" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>首页</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>发布</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>世界</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>我的</button></nav>
+    <div class="toast" id="toast"></div>
+  </div></div></div>
+</main>
+<script>
+const slot=document.getElementById('phoneSlot'),phone=document.getElementById('phone'),views=[...document.querySelectorAll('.variant')],tabs=[...document.querySelectorAll('[data-variant]')]
+function switchVariant(name){views.forEach(v=>v.classList.toggle('on',v.dataset.view===name));tabs.forEach(t=>t.classList.toggle('on',t.dataset.variant===name));document.querySelector('.app-scroll').scrollTop=0}
+function toast(text){const e=document.getElementById('toast');e.textContent=text;e.classList.add('on');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('on'),1200)}
+tabs.forEach(t=>t.addEventListener('click',()=>switchVariant(t.dataset.variant)))
+document.querySelectorAll('[data-item]').forEach(c=>c.addEventListener('click',()=>toast('进入灵感详情')))
+document.querySelectorAll('.chips button').forEach(c=>c.addEventListener('click',()=>{c.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));c.classList.add('on')}))
+function fitPhone(){const scale=Math.min(1,(window.innerWidth-24)/412,(window.innerHeight-40)/866);phone.style.transform=`scale(${scale})`;slot.style.width=`${412*scale}px`;slot.style.height=`${866*scale}px`}
+function tickClock(){const n=new Date();document.getElementById('clock').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`}
+fitPhone();tickClock();const initial=new URLSearchParams(location.search).get('variant');if(['a','b','c'].includes(initial))switchVariant(initial);window.addEventListener('resize',fitPhone);setInterval(tickClock,30000)
+</script>
+</body>
+</html>

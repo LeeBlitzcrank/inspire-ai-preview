@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>二级分类改版预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#182823;
+    --muted:#7a8984;
+    --line:#e0e9e6;
+    --paper:#f5f8f6;
+    --card:#fff;
+    --green:#1f6d5c;
+    --green-soft:#e9f5f1;
+    --blue:#466a9d;
+    --blue-soft:#edf3fb;
+    --amber:#a76532;
+    --amber-soft:#fff2e7;
+    --violet:#6a5a9d;
+    --violet-soft:#f0edff;
+    --rose:#985063;
+    --rose-soft:#fceff2;
+  }
+  html,body{min-height:100%}
+  body{margin:0;color:var(--ink);background:#e9efec;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  button{font:inherit;cursor:pointer}
+  .page{min-height:100dvh;padding:28px 26px 48px;display:flex;align-items:flex-start;justify-content:center;gap:50px}
+  .intro{width:min(390px,31vw);padding-top:22px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-weight:900;letter-spacing:.1em}
+  .eyebrow:before{content:"";width:23px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:12px 0 0;font-size:34px;line-height:1.12}
+  .intro>p{margin:14px 0 0;color:#62736e;font-size:13px;line-height:1.85}
+  .notes{display:grid;gap:8px;margin-top:22px}
+  .note{padding:12px 13px;border:1px solid rgba(31,109,92,.14);border-radius:14px;background:rgba(255,255,255,.66)}
+  .note b{display:block;font-size:12px}
+  .note span{display:block;margin-top:4px;color:#74847f;font-size:10.5px;line-height:1.55}
+  .variant-tabs{display:grid;gap:8px;margin-top:22px}
+  .variant-tabs button{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid #d9e5e1;border-radius:15px;background:#fff;color:#52635e;text-align:left}
+  .variant-tabs button.on{border-color:#7fb6a8;background:#eef7f4;box-shadow:0 8px 20px rgba(25,90,72,.08)}
+  .variant-tabs i{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;background:#edf3f1;color:var(--green);font-style:normal;font-size:11px;font-weight:900}
+  .variant-tabs b{display:block;font-size:12px}
+  .variant-tabs span{display:block;margin-top:3px;color:#86948f;font-size:10px;line-height:1.4}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);transform-origin:top left}
+  .phone:before{content:"";position:absolute;z-index:99;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:#fff}
+  .statusbar{position:absolute;z-index:30;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#19352e;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:5px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:var(--paper)}
+  .app-scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:0}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .variant{display:none;min-height:100%;padding:5px 14px 82px;background:#fbfcfe;animation:rise .2s ease}
+  .variant.on{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .top-nav{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 13px}
+  .logo,.icon{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.05);font-size:18px}
+  .logo{width:40px;height:40px;font-size:24px}
+  .tab-bar{display:flex;gap:8px;margin-bottom:12px;padding:4px;border-radius:12px;background:#f4f7fd}
+  .tab-item{flex:1;padding:8px 4px;border:0;border-radius:10px;background:transparent;color:#6d7783;font-size:13px}
+  .tab-item.active{background:#fff;color:#409eff;font-weight:650;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .back{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:transparent;color:#5f7770;font-size:11px}
+  .hero{margin-top:12px;padding:15px;border-radius:17px;background:#173a32;color:#fff}
+  .hero small{color:#9dd5c7;font-size:9px;font-weight:850;letter-spacing:.06em}
+  .hero h2{margin:7px 0 6px;font-size:21px}
+  .hero p{margin:0;color:rgba(255,255,255,.65);font-size:10.5px;line-height:1.6}
+  .hero-stats{display:flex;gap:14px;margin-top:12px;color:rgba(255,255,255,.7);font-size:9.5px}
+  .hero-stats b{color:#fff}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin:17px 1px 9px}
+  .section-head b{font-size:13.5px}
+  .section-head span{color:#95a39f;font-size:9.5px}
+  .two-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .topic-card{min-height:126px;padding:13px;border:1px solid var(--line);border-radius:16px;background:#fff;text-align:left}
+  .topic-card i{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--green-soft);color:var(--green);font-style:normal;font-size:17px}
+  .topic-card:nth-child(4n+2) i{background:var(--blue-soft);color:var(--blue)}
+  .topic-card:nth-child(4n+3) i{background:var(--amber-soft);color:var(--amber)}
+  .topic-card:nth-child(4n) i{background:var(--violet-soft);color:var(--violet)}
+  .topic-card b{display:block;margin-top:10px;font-size:13px}
+  .topic-card p{margin:5px 0 0;color:#8b9894;font-size:9.5px;line-height:1.45}
+  .topic-card footer{display:flex;align-items:center;margin-top:10px;color:#a0aaa6;font-size:8.5px}
+  .topic-card footer span:last-child{margin-left:auto;color:#1f6d5c;font-weight:850}
+  .group{margin-top:15px}
+  .group-title{display:flex;align-items:center;gap:7px;margin:0 1px 8px;color:#687b75;font-size:10.5px;font-weight:850}
+  .group-title:after{content:"";height:1px;flex:1;background:#e7eeeb}
+  .list-card{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff}
+  .topic-row{width:100%;display:flex;align-items:center;gap:11px;padding:11px 12px;border:0;border-bottom:1px solid #edf2f0;background:#fff;text-align:left}
+  .topic-row:last-child{border-bottom:0}
+  .topic-row i{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:#edf5f2;color:#3f7669;font-style:normal;font-size:17px}
+  .topic-row div{min-width:0;flex:1}
+  .topic-row b{display:block;font-size:12px}
+  .topic-row span{display:block;margin-top:4px;color:#91a09b;font-size:9px}
+  .topic-row em{color:#a0aba7;font-size:9px;font-style:normal}
+  .cloud-card{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:17px;background:#fff}
+  .tag-cloud{display:flex;flex-wrap:wrap;gap:8px}
+  .tag-cloud button{border:1px solid #dfe9e5;border-radius:999px;background:#f8fbfa;color:#59766e;font-size:10.5px;font-weight:800}
+  .tag-cloud button:nth-child(3n+1){padding:10px 14px;background:#edf6f3;border-color:#cfe5de}
+  .tag-cloud button:nth-child(3n+2){padding:8px 13px;background:#f2f4fb;border-color:#dde2f2;color:#59688d}
+  .tag-cloud button:nth-child(3n){padding:12px 15px;background:#fff6ed;border-color:#f0dfcc;color:#956b43}
+  .cloud-note{margin:12px 0 0;color:#8a9893;font-size:9.5px;line-height:1.6}
+  .bottom-dock{position:absolute;z-index:50;left:14px;right:14px;bottom:12px;height:64px;padding:7px 9px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;border:1px solid rgba(216,228,238,.96);border-radius:21px;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);box-shadow:0 12px 28px rgba(26,70,60,.14)}
+  .bottom-dock button{min-width:0;border:0;border-radius:15px;background:transparent;color:#929ba5;font-size:9px;font-weight:800}
+  .bottom-dock svg{display:block;width:19px;height:19px;margin:0 auto 3px}
+  .bottom-dock button.active{background:#edf6f3;color:var(--green)}
+  .toast{position:absolute;z-index:100;left:50%;top:74px;transform:translateX(-50%);display:none;max-width:280px;padding:9px 12px;border-radius:11px;background:rgba(20,45,38,.92);color:#fff;font-size:10.5px;text-align:center}
+  .toast.on{display:block;animation:rise .2s ease}
+  @media (max-width:980px){
+    .page{display:block;padding:18px 0 34px}
+    .intro{width:min(412px,calc(100vw - 24px));margin:0 auto 18px;padding-top:0}
+    .notes{display:none}
+    .intro h1{font-size:28px}
+    .intro>p{font-size:12px}
+    .variant-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:16px}
+    .variant-tabs button{gap:7px;padding:9px 8px;border-radius:12px}
+    .variant-tabs i{width:25px;height:25px;border-radius:8px;font-size:10px}
+    .variant-tabs b{font-size:10.5px}
+    .variant-tabs span span{display:none}
+    .phone-slot{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">SUBCATEGORY REDESIGN</div>
+    <h1>二级分类页改版</h1>
+    <p>当前页面只有名称卡片，改版后增加分组、数量、说明和更明确的浏览层级。</p>
+    <div class="notes">
+      <div class="note"><b>A 主题卡片</b><span>信息最完整，适合内容较多、希望突出分类个性的页面。</span></div>
+      <div class="note"><b>B 分组清单</b><span>更像目录，浏览速度快，适合子分类较多的场景。</span></div>
+      <div class="note"><b>C 标签云</b><span>最轻量，适合未来子分类数量较多、需要快速扫视的页面。</span></div>
+    </div>
+    <div class="variant-tabs"><button class="on" type="button" data-variant="a"><i>A</i><span><b>主题卡片</b><span>图标、说明、数量</span></span></button><button type="button" data-variant="b"><i>B</i><span><b>分组清单</b><span>按类型组织目录</span></span></button><button type="button" data-variant="c"><i>C</i><span><b>标签云</b><span>轻量快速扫视</span></span></button></div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot"><div class="phone" id="phone"><div class="screen">
+    <div class="statusbar"><span id="clock">09:41</span><div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div></div>
+    <div class="app"><div class="app-scroll">
+      <section class="variant on" data-view="a">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <div class="tab-bar"><button class="tab-item" type="button">👇 推荐卡片</button><button class="tab-item active" type="button">📋 灵感分类</button></div>
+        <button class="back" type="button" data-back>‹ 返回全部分类</button>
+        <article class="hero"><small>生活习惯</small><h2>把日常变轻一点</h2><p>8 个子分类，从时间管理到情绪整理，找到适合现在状态的一小步。</p><div class="hero-stats"><span><b>820</b> 条灵感</span><span><b>2.4万</b> 人收藏</span></div></article>
+        <div class="section-head"><b>选择一个方向</b><span>点击进入</span></div>
+        <div class="two-grid">
+          <button class="topic-card" type="button" data-topic="早起习惯"><i>☀</i><b>早起习惯</b><p>从起床时间到晨间安排</p><footer><span>118 条</span><span>进入 ›</span></footer></button>
+          <button class="topic-card" type="button" data-topic="记账复盘"><i>¥</i><b>记账复盘</b><p>看清消费，再做下一次决定</p><footer><span>96 条</span><span>进入 ›</span></footer></button>
+          <button class="topic-card" type="button" data-topic="桌面整理"><i>▦</i><b>桌面整理</b><p>让工作区先减少干扰</p><footer><span>104 条</span><span>进入 ›</span></footer></button>
+          <button class="topic-card" type="button" data-topic="情绪管理"><i>☁</i><b>情绪管理</b><p>记录波动，理解疲惫来源</p><footer><span>87 条</span><span>进入 ›</span></footer></button>
+          <button class="topic-card" type="button" data-topic="通勤时间"><i>↗</i><b>通勤时间</b><p>把路上时间变成可控时间</p><footer><span>73 条</span><span>进入 ›</span></footer></button>
+          <button class="topic-card" type="button" data-topic="周末计划"><i>◷</i><b>周末计划</b><p>给休息安排一点具体内容</p><footer><span>132 条</span><span>进入 ›</span></footer></button>
+        </div>
+      </section>
+
+      <section class="variant" data-view="b">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <div class="tab-bar"><button class="tab-item" type="button">👇 推荐卡片</button><button class="tab-item active" type="button">📋 灵感分类</button></div>
+        <button class="back" type="button" data-back>‹ 返回全部分类</button>
+        <div class="hero"><small>生活习惯</small><h2>按生活场景浏览</h2><p>先找到当前最需要改变的部分，再进入具体做法。</p><div class="hero-stats"><span><b>8</b> 个子分类</span><span><b>820</b> 条内容</span></div></div>
+        <div class="group"><div class="group-title">日常节奏</div><div class="list-card">
+          <button class="topic-row" type="button" data-topic="早起习惯"><i>☀</i><div><b>早起习惯</b><span>起床、晨间安排、作息调整</span></div><em>118 条 ›</em></button>
+          <button class="topic-row" type="button" data-topic="记账复盘"><i>¥</i><div><b>记账复盘</b><span>消费记录、预算和复盘方法</span></div><em>96 条 ›</em></button>
+          <button class="topic-row" type="button" data-topic="通勤时间"><i>↗</i><div><b>通勤时间</b><span>阅读、听播客和碎片时间利用</span></div><em>73 条 ›</em></button>
+        </div></div>
+        <div class="group"><div class="group-title">空间与状态</div><div class="list-card">
+          <button class="topic-row" type="button" data-topic="桌面整理"><i>▦</i><div><b>桌面整理</b><span>工作区、文件和收纳习惯</span></div><em>104 条 ›</em></button>
+          <button class="topic-row" type="button" data-topic="情绪管理"><i>☁</i><div><b>情绪管理</b><span>压力、疲惫和自我观察</span></div><em>87 条 ›</em></button>
+          <button class="topic-row" type="button" data-topic="独处时光"><i>◌</i><div><b>独处时光</b><span>一个人也能完成的安排</span></div><em>65 条 ›</em></button>
+        </div></div>
+      </section>
+
+      <section class="variant" data-view="c">
+        <nav class="top-nav"><button class="logo" type="button">🍎</button><div style="display:flex;gap:12px"><button class="icon" type="button">🧠</button><button class="icon" type="button">🔔</button></div></nav>
+        <div class="tab-bar"><button class="tab-item" type="button">👇 推荐卡片</button><button class="tab-item active" type="button">📋 灵感分类</button></div>
+        <button class="back" type="button" data-back>‹ 返回全部分类</button>
+        <div class="hero"><small>生活习惯</small><h2>今天想调整哪一件小事</h2><p>子分类越多，越适合用轻量标签快速浏览。</p></div>
+        <div class="section-head"><b>全部方向</b><span>820 条灵感</span></div>
+        <article class="cloud-card"><div class="tag-cloud">
+          <button type="button" data-topic="早起习惯">早起习惯</button><button type="button" data-topic="记账复盘">记账复盘</button><button type="button" data-topic="桌面整理">桌面整理</button><button type="button" data-topic="情绪管理">情绪管理</button><button type="button" data-topic="通勤时间">通勤时间</button><button type="button" data-topic="周末计划">周末计划</button><button type="button" data-topic="断舍离">断舍离</button><button type="button" data-topic="独处时光">独处时光</button>
+        </div><p class="cloud-note">标签大小代表当前内容热度。适合未来扩大到十几或几十个子分类。</p></article>
+      </section>
+    </div></div>
+    <nav class="bottom-dock"><button class="active" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>首页</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>发布</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>世界</button><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>我的</button></nav>
+    <div class="toast" id="toast"></div>
+  </div></div></div>
+</main>
+<script>
+const slot=document.getElementById('phoneSlot'),phone=document.getElementById('phone'),views=[...document.querySelectorAll('.variant')],tabs=[...document.querySelectorAll('[data-variant]')]
+function switchVariant(name){views.forEach(v=>v.classList.toggle('on',v.dataset.view===name));tabs.forEach(t=>t.classList.toggle('on',t.dataset.variant===name));document.querySelector('.app-scroll').scrollTop=0}
+function toast(text){const e=document.getElementById('toast');e.textContent=text;e.classList.add('on');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('on'),1300)}
+tabs.forEach(t=>t.addEventListener('click',()=>switchVariant(t.dataset.variant)))
+document.querySelectorAll('[data-topic]').forEach(b=>b.addEventListener('click',()=>toast(`进入「${b.dataset.topic}」`)))
+document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>toast('返回全部分类')))
+function fitPhone(){const scale=Math.min(1,(window.innerWidth-24)/412,(window.innerHeight-40)/866);phone.style.transform=`scale(${scale})`;slot.style.width=`${412*scale}px`;slot.style.height=`${866*scale}px`}
+function tickClock(){const n=new Date();document.getElementById('clock').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`}
+fitPhone();tickClock();const initial=new URLSearchParams(location.search).get('variant');if(['a','b','c'].includes(initial))switchVariant(initial);window.addEventListener('resize',fitPhone);setInterval(tickClock,30000)
+</script>
+</body>
+</html>

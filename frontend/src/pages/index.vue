@@ -1,13 +1,10 @@
 <template>
-  <div id="index-root" class="index-page">
+  <div id="index-root" class="index-page" :class="{ 'has-category-space': activeTab === 'category' }">
     <div id="index-top-nav" class="top-nav">
-      <div id="nav-logo" class="left-logo" @click="$router.push('/')">🍎</div>
+      <div id="nav-logo" class="left-logo" @click="goHome">🍎</div>
       <div id="nav-icon-group" class="right-icons">
-        <div id="icon-create" class="icon-item" @click="goCreate">✨</div>
-        <div id="icon-search" class="icon-item" @click="$router.push('/search')">🔍</div>
-        <div id="icon-rag" class="icon-item" @click="$router.push('/rag')">🧠</div>
+        <div id="icon-rag" class="icon-item" title="AI 探索" aria-label="AI 探索" @click="$router.push('/rag')">🧠</div>
         <div v-if="isLogin" id="icon-noti" class="icon-item" @click="goNotifications">🔔<span v-if="unreadCount > 0" class="noti-badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</span></div>
-        <div id="icon-user" class="icon-item" @click="goPersonal">👤</div>
       </div>
     </div>
     <!-- 选项卡 -->
@@ -35,9 +32,19 @@
     <transition name="slide-fade">
       <div id="sub-tag-wrap" v-if="activeCategory && !activeSubItem" class="sub-wrap">
         <div id="back-to-category" class="back-btn" @click="resetCategory">← 返回全部分类</div>
+        <article class="subcategory-hero">
+          <small>{{ activeCategoryInfo?.icon || '✦' }} 灵感分类</small>
+          <h2>{{ activeCategory }}</h2>
+          <p>{{ currentSubList.length }} 个具体方向，共 {{ activeCategoryInfo?.count || 0 }} 条灵感</p>
+        </article>
         <div id="sub-tag-list" class="sub-tag-list">
           <AppCard class="sub-tag" v-for="item in currentSubList" :key="item.id"
-            padding="32px 14px" clickable @click="selectSubItem(item)">{{ item.name }}</AppCard>
+            padding="13px" clickable @click="selectSubItem(item)">
+            <div class="sub-tag-icon">{{ subTagIcon(item.name) }}</div>
+            <div class="sub-tag-name">{{ item.name }}</div>
+            <div class="sub-tag-desc">{{ subTagDescription(item.name) }}</div>
+            <div class="sub-tag-foot"><span>查看灵感</span><b>›</b></div>
+          </AppCard>
         </div>
         <div id="sub-empty-tip" v-if="currentSubList.length === 0" class="empty-sub">暂无子分类</div>
       </div>
@@ -47,12 +54,16 @@
     <transition name="slide-fade">
       <div id="detail-inspire-wrap" v-if="activeSubItem" class="detail-wrap">
         <div id="back-to-subtag" class="back-btn" @click="resetSubItem">← 返回{{ activeCategory }}</div>
+        <div class="category-sort-bar">
+          <button type="button" :class="{active: categorySort === 'time'}" @click="changeCategorySort('time')">最新</button>
+          <button type="button" :class="{active: categorySort === 'heat'}" @click="changeCategorySort('heat')">热度</button>
+        </div>
         <AppState :state="listState" :rows="4" empty-icon="📭"
           empty-text="还没有灵感，去其他分类看看吧" error-text="灵感加载失败"
           @retry="loadInspireList">
         <div id="inspire-card-list" class="list-wrap">
-          <InspireCard v-for="item in inspireList" :key="item.id" :item="item"
-            :style="{'--idx': item.id}" @collect="handleCollect" @click-card="goDetail" />
+          <CategoryInspireCard v-for="item in inspireList" :key="item.id" :item="item"
+            :style="{'--idx': item.id}" @collect="handleCollect" />
         </div>
         <div v-if="loading && inspireList.length > 0" class="empty-sub" style="color:#409eff">加载更多...</div>
         <div v-if="!hasMore && inspireList.length > 0" class="empty-sub" style="color:#ccc">-- 没有更多了 --</div>
@@ -88,9 +99,9 @@
     </div>
   </div>
   <!-- 推荐卡片滑动（完全对照demo） -->
-  <div v-if="activeTab === 'recommend'" class="swipe-section" style="padding:10px 0 40px;">
-    <div style="text-align:center;margin-bottom:28px;">
-      <h1 style="font-size:28px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;color:transparent;margin-bottom:8px;">灵感推荐</h1>
+  <div v-if="activeTab === 'recommend'" class="swipe-section" style="padding:0 0 18px;">
+    <div style="text-align:center;margin-bottom:14px;">
+      <h1 style="font-size:28px;background:linear-gradient(90deg,#409eff,#a855f7);-webkit-background-clip:text;color:transparent;margin-bottom:4px;">灵感推荐</h1>
       <p class="tip" style="color:#999;font-size:14px;">拖动卡片左右滑动，左滑跳过，右滑收藏</p>
     </div>
     <div class="swipe-container" style="width:100%;max-width:360px;height:460px;margin:0 auto;position:relative;">
@@ -109,11 +120,44 @@
         <div class="mark pass-mark" :style="{opacity:passOpacity}">跳过</div>
       </div>
     </div>
-    <div class="btns" style="display:flex;gap:30px;margin-top:40px;justify-content:center;">
+    <div class="btns" style="display:flex;gap:30px;margin-top:16px;justify-content:center;">
       <button class="btn btn-left" @click="swipeLeft">✕</button>
       <button class="btn btn-right" @click="swipeRight">♥</button>
     </div>
   </div>
+
+  <nav class="home-bottom-dock" aria-label="首页底部导航">
+    <button type="button" class="dock-item active" aria-label="首页" @click="goHome">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
+      </svg>
+      <span>首页</span>
+    </button>
+    <button type="button" class="dock-item" aria-label="搜索" @click="$router.push('/search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+      <span>搜索</span>
+    </button>
+    <button type="button" class="dock-item dock-compose" aria-label="发布" @click="goCreate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      <span>发布</span>
+    </button>
+    <button type="button" class="dock-item" aria-label="平行世界" @click="$router.push('/world')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>
+      </svg>
+      <span>世界</span>
+    </button>
+    <button type="button" class="dock-item" aria-label="我的" @click="goPersonal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+      <span>我的</span>
+    </button>
+  </nav>
   </div>
 
   <CollectFolderDialog
@@ -127,6 +171,7 @@
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useAuthStore} from '@/stores/auth'
 import InspireCard from '@/components/InspireCard.vue'
+import CategoryInspireCard from '@/components/CategoryInspireCard.vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {
@@ -199,6 +244,9 @@ const goCreate = () => {
   if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录'); router.push('/login'); return }
   router.push('/create')
 }
+const goHome = () => {
+  document.querySelector('.device-canvas .app-page')?.scrollTo({ top: 0, behavior: 'smooth' })
+}
 const goPersonal = () => {
   if (!sessionStorage.getItem('isLogin')) { ElMessage.warning('请先登录账号'); router.push('/login'); return }
   router.push('/personal')
@@ -235,6 +283,29 @@ const loadCategories = async () => {
 const activeCategory = ref('')
 const activeSubItem = ref('')
 const currentSubList = ref([])
+const categorySort = ref('heat')
+const activeCategoryInfo = computed(() =>
+  categoryList.value.find(item => item.name === activeCategory.value) || null
+)
+const subTagIcon = (name) => {
+  const rules = [
+    [/咖啡|饮品/, '☕'], [/早餐/, '🍳'], [/甜点|烘焙/, '🥐'],
+    [/煲汤|快手菜|美食/, '🍲'], [/跑|训练|运动|拉伸/, '🏃'],
+    [/爬山|旅行|路线/, '⛰'], [/电影|片单|纪录片/, '🎬'],
+    [/穿搭|衣服/, '👗'], [/家居|整理|收纳/, '🏠'],
+    [/摄影|胶片/, '📷'], [/文案|写作|复盘/, '✍️'],
+    [/早起|计划|时间/, '◷'], [/情绪|独处/, '☁']
+  ]
+  return rules.find(([pattern]) => pattern.test(name))?.[1] || '✦'
+}
+const subTagDescription = (name) => {
+  if (/一人食|快手|早餐/.test(name)) return '简单、快速、容易坚持'
+  if (/路线|爬山|通勤/.test(name)) return '做法、经验和路线记录'
+  if (/训练|跑步|运动/.test(name)) return '可执行的运动与恢复方法'
+  if (/整理|收纳|改造/.test(name)) return '让空间更顺手的整理方式'
+  if (/复盘|记账|计划/.test(name)) return '把经验整理成下一步行动'
+  return `浏览${name}相关灵感和做法`
+}
 const inspireList = ref([])
 const loading = ref(false)
 const listError = ref('')
@@ -256,11 +327,17 @@ const selectSubItem = async (item) => {
   loading.value = true
   listError.value = ''
   try {
-    const res = await getInspireList({ tag: activeCategory.value, page: 1, size: 20 })
+    const res = await getInspireList({ tag: activeCategory.value, page: 1, size: 20, sort: categorySort.value })
     inspireList.value = res.data || []
     if (res.data && res.data.length < 20) hasMore.value = false
   } catch (e) { inspireList.value = []; listError.value = e?.message || 'load failed'
   } finally { loading.value = false }
+}
+
+const changeCategorySort = async (sort) => {
+  if (categorySort.value === sort) return
+  categorySort.value = sort
+  await selectSubItem({name: activeSubItem.value})
 }
 
 const loadInspireList = async () => {
@@ -280,7 +357,7 @@ const loadInspireList = async () => {
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
       if (!res.data || res.data.length < 10) hasMore.value = false
     } else if (activeSubItem.value) {
-      const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
+      const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10, sort: categorySort.value })
       if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
       if (!res.data || res.data.length < 10) hasMore.value = false
     } else {
@@ -295,7 +372,7 @@ const loadMore = async () => {
   currentPage.value++
   loading.value = true
   try {
-    const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10 })
+    const res = await getInspireList({ tag: activeCategory.value, page: currentPage.value, size: 10, sort: categorySort.value })
     if (res.data && res.data.length > 0) inspireList.value.push(...res.data)
     if (!res.data || res.data.length < 10) hasMore.value = false
   } catch (e) { console.error(e) }

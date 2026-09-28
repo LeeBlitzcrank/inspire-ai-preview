@@ -46,6 +46,7 @@ inspire:
       /api/admin/login,
       /api/file/poster-cover,
       /api/file/view,
+      /api/world/public/**,
       /uploads/**,
       /favicon.ico,
       /actuator/health/**,

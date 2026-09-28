@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>首页改版方案预览</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --ink:#17231f;
+    --muted:#71807b;
+    --line:#dde8e4;
+    --paper:#f5f7f5;
+    --card:#fff;
+    --green:#1f6d5c;
+    --green-soft:#e8f3ef;
+    --blue:#426999;
+    --blue-soft:#edf3fb;
+    --amber:#a7642d;
+    --amber-soft:#fff3e8;
+    --rose:#9a4d5d;
+    --rose-soft:#fceef1;
+  }
+  html,body{min-height:100%}
+  body{
+    margin:0;color:var(--ink);background:#e9efec;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .page{min-height:100dvh;padding:28px 26px 50px;display:flex;align-items:flex-start;justify-content:center;gap:48px}
+  .intro{width:min(390px,31vw);padding-top:24px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:11px;font-weight:900;letter-spacing:.1em}
+  .eyebrow:before{content:"";width:23px;height:2px;background:currentColor;border-radius:2px}
+  .intro h1{margin:12px 0 0;font-size:34px;line-height:1.12}
+  .intro>p{margin:14px 0 0;color:#62736e;font-size:13px;line-height:1.85}
+  .notes{display:grid;gap:8px;margin-top:22px}
+  .note{padding:12px 13px;border:1px solid rgba(31,109,92,.14);border-radius:14px;background:rgba(255,255,255,.66)}
+  .note b{display:block;font-size:12px}
+  .note span{display:block;margin-top:4px;color:#74847f;font-size:10.5px;line-height:1.55}
+  .variant-tabs{display:grid;gap:8px;margin-top:22px}
+  .variant-tabs button{
+    display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid #d9e5e1;
+    border-radius:15px;background:#fff;color:#52635e;text-align:left;transition:.18s ease;
+  }
+  .variant-tabs button:hover{transform:translateY(-1px);border-color:#a9cbc2;box-shadow:0 8px 20px rgba(25,70,60,.07)}
+  .variant-tabs button.on{border-color:#7fb6a8;background:#eef7f4;box-shadow:0 8px 20px rgba(25,90,72,.08)}
+  .variant-tabs i{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;background:#edf3f1;color:var(--green);font-style:normal;font-size:11px;font-weight:900}
+  .variant-tabs b{display:block;font-size:12px}
+  .variant-tabs span{display:block;margin-top:3px;color:#86948f;font-size:10px;line-height:1.4}
+  .phone-slot{position:relative;flex:0 0 auto}
+  .phone{
+    position:absolute;left:0;top:0;width:412px;height:866px;padding:11px;border-radius:47px;
+    background:#0c1518;box-shadow:0 34px 80px rgba(14,50,42,.24),inset 0 0 0 1px rgba(255,255,255,.08);
+    transform-origin:top left;
+  }
+  .phone:before{content:"";position:absolute;z-index:9;left:50%;top:9px;width:112px;height:26px;border-radius:999px;background:#0c1518;transform:translateX(-50%)}
+  .screen{position:absolute;inset:11px;overflow:hidden;border-radius:37px;background:var(--paper)}
+  .statusbar{position:absolute;z-index:20;inset:0 0 auto;height:31px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;color:#19352e;font-size:10.5px;font-weight:850}
+  .status-right{display:flex;gap:5px;font-size:9px}
+  .app{position:absolute;inset:31px 0 0;overflow:hidden;background:#f6f8f7}
+  .app-scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:91px}
+  .app-scroll::-webkit-scrollbar{display:none}
+  .variant{display:none;min-height:100%;animation:rise .22s ease}
+  .variant.on{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .bottom-nav{position:absolute;z-index:30;left:12px;right:12px;bottom:10px;height:61px;padding:7px 10px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;border:1px solid rgba(216,229,225,.94);border-radius:20px;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);box-shadow:0 10px 24px rgba(24,75,64,.11)}
+  .bottom-nav button{min-width:0;border:0;border-radius:14px;background:transparent;color:#8a9995;font-size:9px;font-weight:750}
+  .bottom-nav button svg{display:block;width:18px;height:18px;margin:0 auto 3px}
+  .bottom-nav button.on{background:#edf6f3;color:var(--green)}
+  .compose{position:relative}
+  .compose:after{content:"";position:absolute;inset:6px 9px;border-radius:14px;background:var(--green);z-index:-1}
+  .compose svg,.compose{color:#fff!important}
+  .icon-btn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #e0e9e6;border-radius:12px;background:#fff;color:#47665e}
+  .icon-btn svg{width:17px;height:17px}
+  .avatar{width:34px;height:34px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;background:#dcece6;color:#286b5c;font-size:12px;font-weight:900}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin:17px 2px 9px}
+  .section-head b{font-size:14px}
+  .section-head span{color:#91a09c;font-size:9.5px}
+  .image{display:block;width:100%;height:100%;object-fit:cover;background:#dce6e2}
+  .heart{display:inline-flex;align-items:center;gap:4px;color:#879590;font-size:9.5px}
+  .heart.on{color:var(--rose)}
+  .heart svg{width:13px;height:13px}
+  .tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;background:rgba(255,255,255,.82);color:#48665e;font-size:9px;font-weight:800;backdrop-filter:blur(8px)}
+
+  /* A 编辑精选 */
+  .a-head{padding:14px 15px 10px;background:#fff}
+  .a-head-top{display:flex;align-items:center;gap:10px}
+  .a-greet{min-width:0;flex:1}
+  .a-greet small{display:block;color:#8b9995;font-size:9.5px}
+  .a-greet b{display:block;margin-top:3px;font-size:19px}
+  .a-search{height:42px;margin-top:12px;padding:0 13px;display:flex;align-items:center;gap:9px;border:1px solid #e0e9e6;border-radius:14px;background:#f7f9f8;color:#92a09c;font-size:11px}
+  .a-search svg{width:16px;height:16px}
+  .a-quick{display:flex;gap:7px;overflow-x:auto;padding:12px 15px 2px;background:#fff;scrollbar-width:none}
+  .a-quick::-webkit-scrollbar{display:none}
+  .a-quick button{flex:0 0 auto;height:30px;padding:0 11px;border:1px solid #dce8e4;border-radius:999px;background:#fff;color:#57736b;font-size:10px;font-weight:750}
+  .a-hero{position:relative;height:228px;margin:0 14px;overflow:hidden;border-radius:20px;box-shadow:0 14px 28px rgba(23,61,53,.14)}
+  .a-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,24,20,.02) 30%,rgba(10,24,20,.82))}
+  .a-hero-copy{position:absolute;z-index:2;left:15px;right:15px;bottom:15px;color:#fff}
+  .a-hero-copy h2{margin:8px 0 6px;font-size:22px;line-height:1.3}
+  .a-hero-copy p{margin:0;color:rgba(255,255,255,.75);font-size:10.5px;line-height:1.5}
+  .a-feed{columns:2;column-gap:9px;padding:0 14px}
+  .a-card{display:inline-block;width:100%;margin:0 0 9px;overflow:hidden;border:1px solid #dfe9e5;border-radius:16px;background:#fff;break-inside:avoid}
+  .a-card-img{height:128px}
+  .a-card:nth-child(3n) .a-card-img{height:166px}
+  .a-card-copy{padding:10px}
+  .a-card h3{margin:0;font-size:12px;line-height:1.45}
+  .a-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:9px}
+
+  /* B 灵感流 */
+  .b-header{position:sticky;z-index:8;top:0;padding:12px 14px 9px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid #e7eeeb}
+  .b-title{display:flex;align-items:center;gap:10px}
+  .b-logo{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#183d34;color:#fff;font-weight:900}
+  .b-title b{min-width:0;flex:1;font-size:17px}
+  .b-tabs{display:flex;gap:16px;margin-top:13px;color:#91a09b;font-size:11px;font-weight:800}
+  .b-tabs span{position:relative;padding-bottom:7px}
+  .b-tabs span.on{color:#1f6d5c}
+  .b-tabs span.on:after{content:"";position:absolute;left:50%;bottom:0;width:16px;height:2px;border-radius:2px;background:#1f6d5c;transform:translateX(-50%)}
+  .b-continue{margin:12px 14px 0;padding:12px;display:flex;align-items:center;gap:11px;border:1px solid #d8e8e3;border-radius:16px;background:#eef7f4}
+  .b-continue i{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:#fff;color:#1f6d5c;font-style:normal}
+  .b-continue div{min-width:0;flex:1}
+  .b-continue b{display:block;font-size:11.5px}
+  .b-continue span{display:block;margin-top:3px;color:#758b84;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-feed{columns:2;column-gap:8px;padding:12px 13px 0}
+  .b-card{position:relative;display:inline-block;width:100%;margin-bottom:8px;overflow:hidden;border-radius:15px;background:#fff;break-inside:avoid;box-shadow:0 1px 0 rgba(24,60,52,.04)}
+  .b-card-img{height:150px}
+  .b-card:nth-child(2n) .b-card-img{height:205px}
+  .b-card:nth-child(5n) .b-card-img{height:118px}
+  .b-card-copy{padding:9px 10px 10px}
+  .b-card h3{margin:0;font-size:11.5px;line-height:1.5}
+  .b-card p{margin:5px 0 0;color:#85938f;font-size:9px}
+  .b-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:9px}
+  .b-author{display:flex;align-items:center;gap:5px;color:#87958f;font-size:8.5px}
+  .b-author i{width:17px;height:17px;display:grid;place-items:center;border-radius:50%;background:#e6efec;color:#4f756b;font-style:normal;font-size:8px}
+
+  /* C 场景探索 */
+  .c-top{padding:15px 15px 0}
+  .c-top-row{display:flex;align-items:center;gap:10px}
+  .c-top-row div{min-width:0;flex:1}
+  .c-top-row small{display:block;color:#8a9a95;font-size:9.5px}
+  .c-top-row b{display:block;margin-top:4px;font-size:20px}
+  .c-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .c-action{padding:11px 9px;border:1px solid #e1e9e6;border-radius:14px;background:#fff;text-align:left}
+  .c-action i{width:29px;height:29px;display:grid;place-items:center;border-radius:10px;background:var(--green-soft);color:var(--green);font-style:normal}
+  .c-action b{display:block;margin-top:8px;font-size:10.5px}
+  .c-action span{display:block;margin-top:3px;color:#93a19d;font-size:8.5px;line-height:1.35}
+  .c-scenes{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 15px}
+  .c-scene{position:relative;height:148px;overflow:hidden;border-radius:17px;color:#fff}
+  .c-scene:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(10,28,23,.8))}
+  .c-scene div{position:absolute;z-index:2;left:11px;right:11px;bottom:11px}
+  .c-scene b{display:block;font-size:15px}
+  .c-scene span{display:block;margin-top:4px;color:rgba(255,255,255,.72);font-size:9.5px}
+  .c-live{display:flex;gap:8px;overflow-x:auto;padding:0 15px;scrollbar-width:none}
+  .c-live::-webkit-scrollbar{display:none}
+  .c-world{position:relative;flex:0 0 176px;height:124px;overflow:hidden;border-radius:16px;background:#173a32;color:#fff}
+  .c-world::after{content:"";position:absolute;right:-29px;bottom:-47px;width:112px;height:112px;border:18px solid rgba(255,255,255,.08);border-radius:50%}
+  .c-world div{position:relative;z-index:2;padding:13px}
+  .c-world small{color:#9cd3c6;font-size:8.5px;font-weight:900}
+  .c-world b{display:block;margin-top:19px;font-size:13px;line-height:1.4}
+  .c-world span{display:block;margin-top:6px;color:rgba(255,255,255,.6);font-size:9px}
+  .c-list{padding:0 15px}
+  .c-item{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid #e5ece9}
+  .c-item img{width:58px;height:58px;flex:0 0 auto;border-radius:12px}
+  .c-item div{min-width:0;flex:1}
+  .c-item b{display:-webkit-box;overflow:hidden;font-size:11.5px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+  .c-item small{display:block;margin-top:6px;color:#8a9995;font-size:9px}
+  @media (max-width:980px){
+    .page{display:block;padding:18px 0 36px}
+    .intro{width:min(412px,calc(100vw - 24px));margin:0 auto 18px;padding-top:0}
+    .notes{display:none}
+    .intro h1{font-size:28px}
+    .intro>p{font-size:12px}
+    .variant-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:16px}
+    .variant-tabs button{gap:7px;padding:9px 8px;border-radius:12px}
+    .variant-tabs i{width:25px;height:25px;border-radius:8px;font-size:10px}
+    .variant-tabs b{font-size:10.5px}
+    .variant-tabs span span{display:none}
+    .phone-slot{margin:0 auto}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <div class="eyebrow">HOME REDESIGN</div>
+    <h1>首页改版三个方向</h1>
+    <p>保持灵感社区的内容能力，重新整理导航、推荐入口和浏览节奏。点击左侧方案，右侧手机内容会同步切换。</p>
+    <div class="notes">
+      <div class="note"><b>A 编辑精选</b><span>更重视图片质量和慢阅读，适合内容消费和收藏。</span></div>
+      <div class="note"><b>B 灵感流</b><span>信息密度更高，首屏能看到更多卡片，适合高频浏览。</span></div>
+      <div class="note"><b>C 场景探索</b><span>先选场景再进入内容，更适合 AI 探索和系列世界。</span></div>
+    </div>
+    <div class="variant-tabs">
+      <button class="on" type="button" data-variant="a"><i>A</i><span><b>编辑精选</b><span>大图策展、轻导航、慢阅读</span></span></button>
+      <button type="button" data-variant="b"><i>B</i><span><b>灵感流</b><span>双列瀑布流、高信息密度</span></span></button>
+      <button type="button" data-variant="c"><i>C</i><span><b>场景探索</b><span>场景频道、AI 与世界种子入口</span></span></button>
+    </div>
+  </section>
+
+  <div class="phone-slot" id="phoneSlot">
+    <div class="phone" id="phone">
+      <div class="screen">
+        <div class="statusbar"><span id="clock">09:41</span><div class="status-right"><span>5G</span><span>●●●</span><span>100%</span></div></div>
+        <div class="app">
+          <div class="app-scroll">
+            <section class="variant on" data-view="a">
+              <header class="a-head">
+                <div class="a-head-top">
+                  <div class="a-greet"><small>周六，适合慢慢看</small><b>早上好，小满</b></div>
+                  <button class="icon-btn" type="button" aria-label="通知">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                  </button>
+                  <span class="avatar">满</span>
+                </div>
+                <div class="a-search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  搜索灵感、地点或具体做法
+                </div>
+              </header>
+              <div class="a-quick">
+                <button type="button">小户型改造</button>
+                <button type="button">周末去处</button>
+                <button type="button">一人食</button>
+                <button type="button">胶片摄影</button>
+                <button type="button">手作礼物</button>
+              </div>
+              <article class="a-hero">
+                <img class="image" src="https://picsum.photos/seed/home-a-hero/900/700" alt="">
+                <div class="a-hero-copy">
+                  <span class="tag">今日精选</span>
+                  <h2>把窗边留给阅读，家里就多了一个可以呼吸的位置</h2>
+                  <p>一个单椅、一盏灯和窄边几，完成低成本的周末微改造</p>
+                </div>
+              </article>
+              <div class="section-head"><b>为你挑选</b><span>根据最近收藏更新</span></div>
+              <div class="a-feed">
+                <article class="a-card">
+                  <div class="a-card-img"><img class="image" src="https://picsum.photos/seed/home-a-1/600/700" alt=""></div>
+                  <div class="a-card-copy"><h3>减少高光、保留颗粒：日常照片的胶片感</h3><div class="a-card-foot"><span class="tag">摄影</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>642</button></div></div>
+                </article>
+                <article class="a-card">
+                  <div class="a-card-img"><img class="image" src="https://picsum.photos/seed/home-a-2/600/900" alt=""></div>
+                  <div class="a-card-copy"><h3>小户型也能拥有的安静阅读角</h3><div class="a-card-foot"><span class="tag">家居</span><button class="heart on" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>521</button></div></div>
+                </article>
+                <article class="a-card">
+                  <div class="a-card-img"><img class="image" src="https://picsum.photos/seed/home-a-3/600/800" alt=""></div>
+                  <div class="a-card-copy"><h3>周末去山里住一晚，把节奏放慢</h3><div class="a-card-foot"><span class="tag">旅行</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>438</button></div></div>
+                </article>
+                <article class="a-card">
+                  <div class="a-card-img"><img class="image" src="https://picsum.photos/seed/home-a-4/600/600" alt=""></div>
+                  <div class="a-card-copy"><h3>一周不重样的十分钟早餐</h3><div class="a-card-foot"><span class="tag">美食</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>392</button></div></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="variant" data-view="b">
+              <header class="b-header">
+                <div class="b-title">
+                  <div class="b-logo">灵</div>
+                  <b>灵感集</b>
+                  <button class="icon-btn" type="button" aria-label="搜索">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  </button>
+                </div>
+                <div class="b-tabs"><span class="on">推荐</span><span>关注</span><span>最新</span><span>附近</span></div>
+              </header>
+              <article class="b-continue">
+                <i>↗</i>
+                <div><b>继续上次的探索</b><span>城市里适合坐一下午的小众咖啡店</span></div>
+                <span>继续</span>
+              </article>
+              <div class="section-head"><b>正在流行</b><span>实时更新</span></div>
+              <div class="b-feed">
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-1/600/800" alt=""></div><div class="b-card-copy"><h3>低饱和胶片感随手拍</h3><div class="b-card-foot"><span class="b-author"><i>夏</i>夏末</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>642</button></div></div></article>
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-2/600/950" alt=""></div><div class="b-card-copy"><h3>把旧衬衫改成夏日帆布包</h3><p>保留纽扣和口袋，旧衣重新变得好用</p><div class="b-card-foot"><span class="b-author"><i>木</i>木白</span><button class="heart on" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>356</button></div></div></article>
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-3/600/700" alt=""></div><div class="b-card-copy"><h3>夏夜十分钟夜跑路线</h3><div class="b-card-foot"><span class="b-author"><i>林</i>林间</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>287</button></div></div></article>
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-4/600/900" alt=""></div><div class="b-card-copy"><h3>阳台改成迷你花园</h3><p>三平方米也能有高低层次</p><div class="b-card-foot"><span class="b-author"><i>禾</i>禾木</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>231</button></div></div></article>
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-5/600/620" alt=""></div><div class="b-card-copy"><h3>城市慢游：一条街逛一下午</h3><div class="b-card-foot"><span class="b-author"><i>北</i>北岛</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>198</button></div></div></article>
+                <article class="b-card"><div class="b-card-img"><img class="image" src="https://picsum.photos/seed/home-b-6/600/820" alt=""></div><div class="b-card-copy"><h3>一杯手冲咖啡的四个变量</h3><div class="b-card-foot"><span class="b-author"><i>野</i>野原</span><button class="heart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>176</button></div></div></article>
+              </div>
+            </section>
+
+            <section class="variant" data-view="c">
+              <div class="c-top">
+                <div class="c-top-row">
+                  <div><small>今天想去哪里</small><b>从场景开始探索</b></div>
+                  <span class="avatar">满</span>
+                </div>
+                <div class="c-actions">
+                  <button class="c-action" type="button"><i>✦</i><b>发灵感</b><span>记录正在做的事</span></button>
+                  <button class="c-action" type="button"><i>⌕</i><b>AI 探索</b><span>换个方向找答案</span></button>
+                  <button class="c-action" type="button"><i>▤</i><b>平行世界</b><span>把故事继续写下去</span></button>
+                </div>
+              </div>
+              <div class="section-head"><b>灵感场景</b><span>进入一个具体问题</span></div>
+              <div class="c-scenes">
+                <article class="c-scene"><img class="image" src="https://picsum.photos/seed/home-c-1/600/600" alt=""><div><b>周末微改造</b><span>用半天改变家里的一个角落</span></div></article>
+                <article class="c-scene"><img class="image" src="https://picsum.photos/seed/home-c-2/600/600" alt=""><div><b>城市慢游</b><span>一条街、一家店、一段路</span></div></article>
+                <article class="c-scene"><img class="image" src="https://picsum.photos/seed/home-c-3/600/600" alt=""><div><b>认真吃一顿</b><span>从食材到餐桌的简单记录</span></div></article>
+                <article class="c-scene"><img class="image" src="https://picsum.photos/seed/home-c-4/600/600" alt=""><div><b>独处清单</b><span>下班后也可以慢慢做的事</span></div></article>
+              </div>
+              <div class="section-head"><b>正在生长的世界</b><span>点击继续</span></div>
+              <div class="c-live">
+                <article class="c-world"><div><small>公版共创</small><b>水帘洞没有成为王座</b><span>5 条主题线 · 2 条用户分支</span></div></article>
+                <article class="c-world" style="background:#4d628c"><div><small>短篇平行线</small><b>桃花源记</b><span>如果渔人没有做标记</span></div></article>
+              </div>
+              <div class="section-head"><b>你可能也会喜欢</b><span>偏安静的内容</span></div>
+              <div class="c-list">
+                <article class="c-item"><img class="image" src="https://picsum.photos/seed/home-c-5/300/300" alt=""><div><b>小户型阅读角：用一个下午重新安排窗边</b><small>家居 · 521 人收藏</small></div></article>
+                <article class="c-item"><img class="image" src="https://picsum.photos/seed/home-c-6/300/300" alt=""><div><b>夏日低饱和穿搭，三种颜色就够了</b><small>穿搭 · 287 人收藏</small></div></article>
+                <article class="c-item"><img class="image" src="https://picsum.photos/seed/home-c-7/300/300" alt=""><div><b>适合一个人去的旧书店与河边路线</b><small>城市 · 198 人收藏</small></div></article>
+              </div>
+            </section>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="on" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>首页</button>
+          <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>发现</button>
+          <button class="compose" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>发布</button>
+          <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>消息</button>
+          <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>我的</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const slot=document.getElementById('phoneSlot')
+const phone=document.getElementById('phone')
+const views=[...document.querySelectorAll('.variant')]
+const tabs=[...document.querySelectorAll('[data-variant]')]
+
+function switchVariant(name){
+  views.forEach(view=>view.classList.toggle('on',view.dataset.view===name))
+  tabs.forEach(tab=>tab.classList.toggle('on',tab.dataset.variant===name))
+  document.querySelector('.app-scroll').scrollTop=0
+}
+
+tabs.forEach(tab=>tab.addEventListener('click',()=>switchVariant(tab.dataset.variant)))
+document.querySelectorAll('.heart').forEach(button=>button.addEventListener('click',()=>{
+  button.classList.toggle('on')
+  const active=button.classList.contains('on')
+  const svg=button.querySelector('svg')
+  if(active){svg.setAttribute('fill','currentColor');svg.setAttribute('stroke','none')}
+  else{svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor')}
+}))
+
+function fitPhone(){
+  const scale=Math.min(1,(window.innerWidth-24)/412,(window.innerHeight-40)/866)
+  phone.style.transform=`scale(${scale})`
+  slot.style.width=`${412*scale}px`
+  slot.style.height=`${866*scale}px`
+}
+
+function tickClock(){
+  const now=new Date()
+  document.getElementById('clock').textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+}
+
+fitPhone()
+tickClock()
+const initialVariant=new URLSearchParams(window.location.search).get('variant')
+if(['a','b','c'].includes(initialVariant)) switchVariant(initialVariant)
+window.addEventListener('resize',fitPhone)
+setInterval(tickClock,30000)
+</script>
+</body>
+</html>
