@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  文件：backend/inspire-rag/pom.xml
+  所属模块：多模态 RAG 模块，负责索引、向量检索、问答和同步
+  主要职责：XML 配置，定义 Maven 依赖或构建参数
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">

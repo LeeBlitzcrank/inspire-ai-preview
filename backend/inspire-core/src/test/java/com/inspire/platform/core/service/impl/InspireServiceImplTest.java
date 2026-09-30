@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-core/src/test/java/com/inspire/platform/core/service/impl/InspireServiceImplTest.java
+ * 所属模块：核心业务模块，负责灵感、评论、收藏、消息、系列、文件和通知
+ * 主要职责：自动化测试类，验证对应模块的边界行为和回归场景
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/WorldSeed.vue
+  所属模块：用户端页面和交互流程
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="world-page">
     <header class="world-topbar">
@@ -142,14 +149,18 @@
 
             <div v-if="chapters.length" class="chapter-list">
               <article v-for="chapter in chapters" :key="chapter.id" class="chapter-card">
-                <div class="chapter-meta">
-                  <span>第 {{ chapter.chapterNo }} 章</span>
-                  <small>{{ textLength(chapter.content) }} 字</small>
+                <button class="chapter-toggle" type="button" @click="toggleChapter(chapter.id)">
+                  <div class="chapter-meta">
+                    <span>第 {{ chapter.chapterNo }} 章</span>
+                    <small>{{ textLength(chapter.content) }} 字 · {{ isChapterExpanded(chapter.id) ? '收起' : '展开全文' }}</small>
+                  </div>
+                  <h3>{{ chapter.title }}</h3>
+                </button>
+                <div v-if="isChapterExpanded(chapter.id)" class="chapter-body">
+                  <p v-for="(paragraph, index) in paragraphs(chapter.content)" :key="index">
+                    {{ paragraph }}
+                  </p>
                 </div>
-                <h3>{{ chapter.title }}</h3>
-                <p v-for="(paragraph, index) in paragraphs(chapter.content)" :key="index">
-                  {{ paragraph }}
-                </p>
               </article>
               <button
                 v-if="chapterHasMore"
@@ -303,6 +314,8 @@ const {
   loadSeeds,
   loadDetail,
   loadChapters,
+  isChapterExpanded,
+  toggleChapter,
   openDetail,
   selectLine,
   selectBranch,

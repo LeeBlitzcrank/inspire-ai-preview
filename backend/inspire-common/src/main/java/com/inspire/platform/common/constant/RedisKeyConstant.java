@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-common/src/main/java/com/inspire/platform/common/constant/RedisKeyConstant.java
+ * 所属模块：公共基础模块，提供统一响应、异常、鉴权上下文和通用工具
+ * 主要职责：工程源码或配置文件
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.common.constant;
 
 /**

@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/ForgotPassword.vue
+  所属模块：用户端页面和交互流程
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="forgot-page">
     <div class="top-nav">
@@ -18,9 +25,10 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { forgotPassword } from '@/api/inspire.js'
+import {ref} from 'vue'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {forgotPassword} from '@/api/inspire.js'
+
 const email = ref(''); const loading = ref(false); const sent = ref(false)
 const handleSubmit = async () => {
   if (!email.value) return ElMessage.warning('请输入邮箱')

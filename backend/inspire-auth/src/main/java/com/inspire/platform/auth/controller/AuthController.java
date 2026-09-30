@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-auth/src/main/java/com/inspire/platform/auth/controller/AuthController.java
+ * 所属模块：用户认证模块，负责登录、令牌、会话、密码和登录风控
+ * 主要职责：HTTP 接口控制器，负责参数接收、权限上下文和响应返回
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.auth.controller;
 
 import com.inspire.platform.auth.dto.*;

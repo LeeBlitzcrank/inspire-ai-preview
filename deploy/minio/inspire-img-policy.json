@@ -2,12 +2,14 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "AllowPublicReadUnderUpload",
       "Effect": "Allow",
       "Principal": { "AWS": ["*"] },
       "Action": ["s3:GetObject"],
       "Resource": ["arn:aws:s3:::inspire-img/upload/*"]
     },
     {
+      "Sid": "DenyPrivatePrefix",
       "Effect": "Deny",
       "Principal": { "AWS": ["*"] },
       "Action": ["s3:GetObject"],

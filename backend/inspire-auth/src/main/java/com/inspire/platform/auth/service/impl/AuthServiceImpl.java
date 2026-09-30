@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-auth/src/main/java/com/inspire/platform/auth/service/impl/AuthServiceImpl.java
+ * 所属模块：用户认证模块，负责登录、令牌、会话、密码和登录风控
+ * 主要职责：业务服务实现，承载核心业务流程、事务和依赖编排
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

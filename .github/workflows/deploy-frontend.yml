@@ -1,3 +1,9 @@
+#
+# 文件：.github/workflows/deploy-frontend.yml
+# 所属模块：GitHub Actions 自动化流程
+# 主要职责：YAML 配置，定义服务、运行参数或自动化流程
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 name: Deploy Frontend to GitHub Pages
 
 on:

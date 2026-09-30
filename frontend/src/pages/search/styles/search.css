@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/search/styles/search.css
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：样式文件，定义该页面或组件的视觉规则
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 .search-page {
   --ink: #17201d;
   --muted: #84918c;

@@ -1,15 +1,21 @@
+/**
+ * 文件：backend/inspire-auth/src/main/java/com/inspire/platform/auth/util/RedisSessionUtil.java
+ * 所属模块：用户认证模块，负责登录、令牌、会话、密码和登录风控
+ * 主要职责：通用工具类，提供可复用且无业务状态的静态能力
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.auth.util;
 
 import com.inspire.platform.common.constant.RedisKeyConstant;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.TimeUnit;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Redis 会话操作工具类

@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/detail/components/DetailComments.vue
+  所属模块：用户端页面和交互流程
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
 <button v-if="!isLogin" class="comment-gate" type="button" @click="requireLogin">
         <span class="comment-gate-title">登录后显示评论</span>

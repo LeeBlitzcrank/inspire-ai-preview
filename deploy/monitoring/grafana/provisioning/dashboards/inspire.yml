@@ -1,0 +1,18 @@
+#
+# 文件：deploy/monitoring/grafana/provisioning/dashboards/inspire.yml
+# 所属模块：Prometheus 和 Grafana 监控配置
+# 主要职责：YAML 配置，定义服务、运行参数或自动化流程
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
+apiVersion: 1
+
+providers:
+  - name: Inspire AI
+    orgId: 1
+    folder: Inspire AI
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

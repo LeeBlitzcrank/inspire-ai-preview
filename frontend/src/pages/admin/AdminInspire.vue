@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/admin/AdminInspire.vue
+  所属模块：后台管理前端页面
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div>
     <h2 style="margin:0 0 20px">灵感管理</h2>
@@ -68,10 +75,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { adminInspireList, adminBlockInspire, adminUnblockInspire,
-         adminPendingList, adminApproveInspire, adminRejectInspire } from '@/api/inspire.js'
+import {onMounted, ref} from 'vue'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {
+  adminApproveInspire,
+  adminBlockInspire,
+  adminInspireList,
+  adminPendingList,
+  adminRejectInspire,
+  adminUnblockInspire
+} from '@/api/inspire.js'
 
 const activeTab = ref('all')
 const tags = ['美食','运动','电影','穿搭','文案','旅游','摄影','其他']

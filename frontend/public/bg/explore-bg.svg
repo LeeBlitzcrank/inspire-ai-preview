@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/public/bg/explore-bg.svg
+  所属模块：项目工程配置
+  主要职责：SVG 矢量资源
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="500" viewBox="0 0 1240 500" preserveAspectRatio="xMidYMid slice">
   <!--
     AI 探索词云 · 薄荷绿底图（程序化 SVG，无外部依赖）

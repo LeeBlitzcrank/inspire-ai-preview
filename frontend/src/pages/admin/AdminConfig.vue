@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/admin/AdminConfig.vue
+  所属模块：后台管理前端页面
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="config-page">
     <div class="section"><h3>推荐权重配置</h3>
@@ -16,9 +23,10 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { adminConfigList, adminUpdateConfig, adminManualPush } from '@/api/inspire.js'
+import {onMounted, ref} from 'vue'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {adminConfigList, adminManualPush, adminUpdateConfig} from '@/api/inspire.js'
+
 const configs = ref([]); const pushing = ref(false)
 const push = ref({ title: '', content: '', city: '' })
 onMounted(async () => {

@@ -1,4 +1,11 @@
 /**
+ * 文件：frontend/src/utils/tokenStorage.js
+ * 所属模块：前端通用工具和基础能力
+ * 主要职责：前端工具模块，提供可复用基础函数
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
+/**
  * 双Token安全存储（文档 4.1.3 节）
  * - accessToken：内存存储，防止 XSS
  * - refreshToken：sessionStorage（当前标签页独立）

@@ -1,0 +1,69 @@
+{
+  "annotations": {"list": []},
+  "description": "Inspire AI 后端服务在线状态、HTTP 延迟、JVM 内存和缓存操作总览。",
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "服务在线",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "sum(up{job=~\"inspire-.*\"})", "legendFormat": "在线实例", "refId": "A"}
+      ],
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP 请求速率",
+      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"inspire-.*\"}[5m]))", "legendFormat": "{{job}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "HTTP P95 延迟",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket{job=~\"inspire-.*\"}[5m])))", "legendFormat": "{{job}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "JVM 堆内存",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\",job=~\"inspire-.*\"})", "legendFormat": "{{job}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "缓存操作速率",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (job, cache, result) (rate(cache_gets_total{job=~\"inspire-.*\"}[5m]))", "legendFormat": "{{job}} {{cache}} {{result}}", "refId": "A"}
+      ]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["inspire-ai", "spring-boot"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "Inspire AI Overview",
+  "uid": "inspire-overview",
+  "version": 1
+}

@@ -1,3 +1,9 @@
+#
+# 文件：deploy/docker/Dockerfile
+# 所属模块：Docker 镜像构建配置
+# 主要职责：Docker 镜像构建文件，定义运行环境和启动方式
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 # 多阶段构建：编译 + 运行
 # 通过 BUILD_MODULE 构建参数指定模块名称
 ARG BUILD_MODULE

@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-search/src/main/java/com/inspire/platform/search/controller/SearchController.java
+ * 所属模块：搜索服务模块，负责 MySQL/Elasticsearch 搜索及降级
+ * 主要职责：HTTP 接口控制器，负责参数接收、权限上下文和响应返回
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.search.controller;
 
 import com.inspire.platform.common.result.Result;

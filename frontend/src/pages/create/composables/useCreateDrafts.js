@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/create/composables/useCreateDrafts.js
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：Vue Composable，集中管理页面状态、异步流程和生命周期
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 import {onUnmounted, ref} from 'vue'
 
 export function useCreateDrafts({form, editId, coverImage, quoteSource, clampTitle, setContent}) {

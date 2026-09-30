@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/ResetPassword.vue
+  所属模块：用户端页面和交互流程
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="reset-page">
     <div class="top-nav">
@@ -19,12 +26,13 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { resetPassword } from '@/api/inspire.js'
-import { saveTokens } from '@/utils/tokenStorage.js'
-import { useAuthStore } from '@/stores/auth'
+import {onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {resetPassword} from '@/api/inspire.js'
+import {saveTokens} from '@/utils/tokenStorage.js'
+import {useAuthStore} from '@/stores/auth'
+
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()

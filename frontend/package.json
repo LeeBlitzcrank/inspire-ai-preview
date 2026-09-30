@@ -1,6 +1,7 @@
 {
   "name": "inspire-ai-preview",
   "version": "1.0.0",
+  "description": "Inspire AI Preview 用户端与后台管理前端，负责页面交互、状态管理和后端 API 调用。",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

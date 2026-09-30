@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/personal/styles/personal.css
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：样式文件，定义该页面或组件的视觉规则
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 /* ============ 方案 D：通栏 Banner + 薄荷绿 + 卡片（与「灵感录入」页统一） ============ */
 .personal-page { width:94%; max-width:620px; margin:0 auto; padding:16px 0 80px; background:#f7fbfa; min-height:100vh; }
 

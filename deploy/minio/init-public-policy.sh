@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# 文件：deploy/minio/init-public-policy.sh
+# 所属模块：MinIO、Nginx 和对象存储策略
+# 主要职责：Shell 脚本，封装本地开发或运维命令
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 set -e
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"

@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-admin/src/main/java/com/inspire/platform/admin/service/impl/AdminDashboardServiceImpl.java
+ * 所属模块：后台管理模块，负责管理员鉴权、内容审核和运营配置
+ * 主要职责：业务服务实现，承载核心业务流程、事务和依赖编排
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.admin.service.impl;
 
 import com.inspire.platform.admin.dto.DashboardVO;

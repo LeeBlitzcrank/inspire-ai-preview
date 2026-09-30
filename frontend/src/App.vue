@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/App.vue
+  所属模块：项目工程配置
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <DeviceShell :enabled="$route.meta.deviceShell !== false">
   <div class="app-design">
@@ -20,8 +27,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import DeviceShell from '@/components/layout/DeviceShell.vue'
+
 const showTop = ref(false)
 const isOnline = ref(navigator.onLine)
 

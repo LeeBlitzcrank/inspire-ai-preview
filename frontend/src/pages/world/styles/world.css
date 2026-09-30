@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/world/styles/world.css
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：样式文件，定义该页面或组件的视觉规则
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 .world-page {
   width: 94%;
   max-width: 620px;
@@ -67,9 +74,11 @@
 .fact-grid b { display:block; margin-top:5px; font-size:10.5px; line-height:1.5; }
 .chapter-list { display:grid; gap:10px; margin-top:14px; }
 .chapter-card { padding:13px; border:1px solid #e2ebe8; border-radius:14px; background:#fcfdfd; }
+.chapter-toggle { width:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
 .chapter-meta { display:flex; align-items:center; color:#2d7463; font-size:10px; font-weight:850; }
 .chapter-meta small { margin-left:auto; color:#98a7a3; font-weight:500; }
 .chapter-card h3 { margin:8px 0; font-size:15px; }
+.chapter-body { padding-top:2px; }
 .chapter-card p { margin:0 0 8px; color:#5f746e; font-size:11.5px; line-height:1.82; }
 .chapter-load-more { width:100%; height:36px; margin-top:10px; border:1px solid #dce8e4; border-radius:11px; background:#fff; color:#55776f; font:inherit; font-size:10.5px; cursor:pointer; }
 .empty-chapter { margin-top:14px; padding:14px; border-radius:14px; background:#f4f8f7; }

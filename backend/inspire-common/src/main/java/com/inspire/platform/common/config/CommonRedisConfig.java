@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-common/src/main/java/com/inspire/platform/common/config/CommonRedisConfig.java
+ * 所属模块：公共基础模块，提供统一响应、异常、鉴权上下文和通用工具
+ * 主要职责：Spring 配置类，负责基础设施或框架能力装配
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.common.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

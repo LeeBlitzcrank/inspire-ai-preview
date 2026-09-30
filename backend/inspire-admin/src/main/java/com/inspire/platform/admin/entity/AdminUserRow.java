@@ -1,9 +1,19 @@
+/**
+ * 文件：backend/inspire-admin/src/main/java/com/inspire/platform/admin/entity/AdminUserRow.java
+ * 所属模块：后台管理模块，负责管理员鉴权、内容审核和运营配置
+ * 主要职责：接口或查询数据传输模型，定义字段结构
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.admin.entity;
-import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 @Data @TableName("user") @Schema(description = "用户信息（管理员视角）")
 public class AdminUserRow {

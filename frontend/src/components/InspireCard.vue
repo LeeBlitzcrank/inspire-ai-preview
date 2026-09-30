@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/components/InspireCard.vue
+  所属模块：可复用 Vue 组件
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <AppCard class="inspire-card" padding="16px" clickable @click="goDetail">
     <div class="card-header">
@@ -14,7 +21,8 @@
 </template>
 <script setup>
 import AppCard from '@/components/base/AppCard.vue'
-import { useRouter } from 'vue-router'
+import {useRouter} from 'vue-router'
+
 const props = defineProps(['item'])
 const emit = defineEmits(['collect'])
 const router = useRouter()

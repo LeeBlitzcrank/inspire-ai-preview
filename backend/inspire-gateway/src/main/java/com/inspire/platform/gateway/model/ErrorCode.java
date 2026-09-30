@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-gateway/src/main/java/com/inspire/platform/gateway/model/ErrorCode.java
+ * 所属模块：API 网关模块，负责路由、CORS、限流、JWT 校验和可信身份透传
+ * 主要职责：工程源码或配置文件
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.gateway.model;
 
 /**

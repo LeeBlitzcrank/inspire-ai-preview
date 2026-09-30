@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/home/styles/home.css
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：样式文件，定义该页面或组件的视觉规则
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 .index-page { width:94%; max-width:620px; margin:0 auto; padding:6px 0 74px; background:#fbfcfe; min-height:100vh; }
 /* 首页已有固定底部工具栏，覆盖全局手机页面额外追加的 96px 底部安全区。 */
 #app .app-page > .index-page { min-height:100%; padding-bottom:0; }

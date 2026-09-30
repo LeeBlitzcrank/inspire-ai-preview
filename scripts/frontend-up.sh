@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# 文件：scripts/frontend-up.sh
+# 所属模块：本地开发和运维脚本
+# 主要职责：Shell 脚本，封装本地开发或运维命令
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 # =============================================
 # 前端：重新打包 + 重启开发服务（被 scripts/start.sh / scripts/reset-data.sh 调用）
 # 可用 SKIP_FRONTEND=1 跳过；改端口用 FRONTEND_PORT=xxxx

@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-mq/src/main/java/com/inspire/platform/mq/producer/MqProducer.java
+ * 所属模块：消息队列公共模块，负责生产者、消费者和积压指标
+ * 主要职责：工程源码或配置文件
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.mq.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/api/world.js
+ * 所属模块：前端接口请求封装
+ * 主要职责：前端 API 模块，统一封装后端接口调用
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 import request, {cachedGet, clearGetCache} from '@/utils/request.js'
 
 export const getWorldSeeds = () => cachedGet('/world/public/seeds', undefined, 60 * 1000)

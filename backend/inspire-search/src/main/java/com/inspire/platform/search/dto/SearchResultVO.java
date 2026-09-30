@@ -1,6 +1,15 @@
+/**
+ * 文件：backend/inspire-search/src/main/java/com/inspire/platform/search/dto/SearchResultVO.java
+ * 所属模块：搜索服务模块，负责 MySQL/Elasticsearch 搜索及降级
+ * 主要职责：接口或查询数据传输模型，定义字段结构
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.search.dto;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data @Schema(description = "搜索结果项")

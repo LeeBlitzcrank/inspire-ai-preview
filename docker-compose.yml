@@ -1,3 +1,9 @@
+#
+# 文件：docker-compose.yml
+# 所属模块：项目工程配置
+# 主要职责：YAML 配置，定义服务、运行参数或自动化流程
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 # ==================== 共享配置 ====================
 x-common-env: &common-env
   SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
@@ -343,8 +349,44 @@ services:
       minio: { condition: service_started }
     restart: unless-stopped
 
+  # -------- 可选监控栈：docker compose --profile monitoring up -d --------
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: inspire-prometheus
+    profiles: [ "monitoring" ]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: inspire-grafana
+    profiles: [ "monitoring" ]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus: { condition: service_started }
+    restart: unless-stopped
+
 volumes:
   mysql-data:
   es-data:
   minio-data:
   nginx-cache:
+  prometheus-data:
+  grafana-data:

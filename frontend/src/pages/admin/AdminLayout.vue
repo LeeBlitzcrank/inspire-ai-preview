@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/admin/AdminLayout.vue
+  所属模块：后台管理前端页面
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="admin-wrap">
     <div class="mobile-bar">
@@ -22,9 +29,9 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+
 const router = useRouter()
 const adminName = ref(sessionStorage.getItem('adminUser') || '管理员')
 const showSidebar = ref(window.innerWidth > 768)

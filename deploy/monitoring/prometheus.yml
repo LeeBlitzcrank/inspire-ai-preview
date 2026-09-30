@@ -1,0 +1,45 @@
+#
+# 文件：deploy/monitoring/prometheus.yml
+# 所属模块：Prometheus 和 Grafana 监控配置
+# 主要职责：YAML 配置，定义服务、运行参数或自动化流程
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: inspire-gateway
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-gateway:8080"]
+
+  - job_name: inspire-auth
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-auth:8081"]
+
+  - job_name: inspire-ai
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-ai:8082"]
+
+  - job_name: inspire-core
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-core:8083"]
+
+  - job_name: inspire-admin
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-admin:8085"]
+
+  - job_name: inspire-search
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-search:8086"]
+
+  - job_name: inspire-rag
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["inspire-rag:8087"]

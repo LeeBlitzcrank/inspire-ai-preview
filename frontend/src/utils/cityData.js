@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/utils/cityData.js
+ * 所属模块：前端通用工具和基础能力
+ * 主要职责：前端工具模块，提供可复用基础函数
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 // 中国城市数据（全部地级市覆盖）
 export const cityOptions = [
   { value: '北京', label: '北京', children: [{ value: '北京', label: '北京' }] },

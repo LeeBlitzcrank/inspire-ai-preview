@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/pages/world/composables/useWorldSeed.js
+ * 所属模块：用户端页面和交互流程
+ * 主要职责：Vue Composable，集中管理页面状态、异步流程和生命周期
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 import {computed, onBeforeUnmount, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useAuthStore} from '@/stores/auth'
@@ -34,6 +41,7 @@ export function useWorldSeed() {
   const selectedChoiceKey = ref('')
   const customChoice = ref('')
   const chapters = ref([])
+  const expandedChapterIds = ref(new Set())
   const chapterCursor = ref(null)
   const chapterHasMore = ref(false)
   const chapterLoading = ref(false)
@@ -169,6 +177,8 @@ export function useWorldSeed() {
       const incoming = [...(res.data?.items || [])].reverse()
       if (reset) {
         chapters.value = incoming
+        const latest = incoming[incoming.length - 1]
+        expandedChapterIds.value = new Set(latest ? [latest.id] : [])
       } else {
         const existing = new Set(chapters.value.map(item => item.id))
         chapters.value = [...incoming.filter(item => !existing.has(item.id)), ...chapters.value]
@@ -180,6 +190,15 @@ export function useWorldSeed() {
     } finally {
       chapterLoading.value = false
     }
+  }
+
+  const isChapterExpanded = (chapterId) => expandedChapterIds.value.has(chapterId)
+
+  const toggleChapter = (chapterId) => {
+    const next = new Set(expandedChapterIds.value)
+    if (next.has(chapterId)) next.delete(chapterId)
+    else next.add(chapterId)
+    expandedChapterIds.value = next
   }
 
   const openDetail = async (seed) => {
@@ -358,6 +377,8 @@ export function useWorldSeed() {
     branchVoteTotal,
     loadSeeds,
     loadChapters,
+    isChapterExpanded,
+    toggleChapter,
     openDetail,
     selectLine,
     selectBranch,

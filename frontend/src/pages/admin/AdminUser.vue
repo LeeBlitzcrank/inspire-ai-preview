@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/admin/AdminUser.vue
+  所属模块：后台管理前端页面
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div>
     <h2 style="margin:0 0 20px">用户查询</h2>

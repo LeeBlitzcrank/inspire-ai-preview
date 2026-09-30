@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/admin/AdminDashboard.vue
+  所属模块：后台管理前端页面
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div>
     <h2 style="margin:0 0 20px">数据看板</h2>
@@ -39,8 +46,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getAdminDashboard } from '@/api/inspire.js'
+import {onMounted, ref} from 'vue'
+import {getAdminDashboard} from '@/api/inspire.js'
+
 const d = ref({})
 onMounted(async () => {
   try { const res = await getAdminDashboard(); d.value = res.data || {} } catch (e) { console.error(e) }

@@ -1,3 +1,10 @@
+/**
+ * 文件：backend/inspire-search/src/main/java/com/inspire/platform/search/service/impl/SearchServiceManager.java
+ * 所属模块：搜索服务模块，负责 MySQL/Elasticsearch 搜索及降级
+ * 主要职责：工程源码或配置文件
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 package com.inspire.platform.search.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;

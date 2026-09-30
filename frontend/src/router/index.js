@@ -1,3 +1,10 @@
+/**
+ * 文件：frontend/src/router/index.js
+ * 所属模块：前端路由配置
+ * 主要职责：前端路由表，定义页面路径和访问守卫
+ * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+ * INSPIRE_FILE_HEADER
+ */
 import {createRouter, createWebHashHistory} from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'

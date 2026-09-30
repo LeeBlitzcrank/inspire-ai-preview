@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# 文件：scripts/lib/docker.sh
+# 所属模块：本地开发和运维脚本
+# 主要职责：Shell 脚本，封装本地开发或运维命令
+# 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+# INSPIRE_FILE_HEADER
 
 ensure_docker_running() {
   if docker info >/dev/null 2>&1; then

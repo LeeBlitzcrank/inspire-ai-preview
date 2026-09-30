@@ -1,3 +1,10 @@
+<!--
+  文件：frontend/src/pages/Register.vue
+  所属模块：用户端页面和交互流程
+  主要职责：Vue 页面或组件，负责界面渲染、交互事件和页面状态衔接
+  维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
+  INSPIRE_FILE_HEADER
+-->
 <template>
   <div class="register-page">
     <!-- 品牌头条区（薄荷清新） -->
@@ -74,12 +81,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from '@/utils/uiFeedback.js'
-import { register } from '@/api/auth.js'
-import { randomNickname } from '@/utils/nickname.js'
-import { useAuthStore } from '@/stores/auth'
+import {ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from '@/utils/uiFeedback.js'
+import {register} from '@/api/auth.js'
+import {randomNickname} from '@/utils/nickname.js'
+import {useAuthStore} from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
