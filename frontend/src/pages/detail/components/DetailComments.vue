@@ -6,7 +6,7 @@
   INSPIRE_FILE_HEADER
 -->
 <template>
-<button v-if="!isLogin" class="comment-gate" type="button" @click="requireLogin">
+<button v-if="!isLogin" class="comment-gate" type="button" @click="emit('require-login')">
         <span class="comment-gate-title">登录后显示评论</span>
         <span class="comment-gate-desc">登录即可查看全部评论、回复与点赞</span>
         <span class="comment-gate-btn">去登录</span>

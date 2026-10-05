@@ -1672,3 +1672,226 @@ rustFS和minIo
 
 我想增加一个功能，就是本地rag，类似客服可以解答这个项目。
 这个怎么实现呢？
+
+在未登陆情况下，从灵感详情点击去登陆没有跳转到登陆页面
+这个功能可以直接复用现有 RAG 基础设施，但要把“灵感内容索引”和“项目知识索引”分开。现有 RAG 主要索引 `inspire_main`，不能直接拿来做项目客服。
+
+**整体架构**
+```text
+项目文档 / README / API 文档 / SQL 说明 / 部署说明
+        ↓
+文档解析与分块
+        ↓
+Ollama embeddinggemma:300m 生成向量
+        ↓
+Elasticsearch 项目知识索引
+        ↓
+向量召回 + 关键词召回 + RRF 融合
+        ↓
+DeepSeek API 或本地 DeepSeek-R1 生成回答
+        ↓
+项目客服页面
+```
+
+**1. 建立独立知识库**
+不要把项目代码和用户灵感混在一个索引里，建议新增：
+
+```text
+project_knowledge_document
+project_knowledge_chunk
+```
+
+`project_knowledge_document` 保存文档级信息：
+
+```text
+id
+title
+source_path
+category
+version
+content_hash
+status
+update_time
+```
+
+`project_knowledge_chunk` 只保存分块后的文本和元数据，向量放在独立 ES 索引 `project_rag_index`。
+
+首批建议索引：
+
+```text
+README.md
+AGENTS.md
+docs/00-index.md
+docs/current 下有效主文档
+启动、重置、监控、数据库、鉴权说明
+API 接口说明
+```
+
+不建议直接把全部 Java、Vue 源码丢进去。源码噪音太大，回答容易变成代码片段，而不是用户能执行的步骤。代码可以作为第二阶段加入，并给每个 chunk 标记 `source_type=code`。
+
+**2. 文档解析与分块**
+Markdown 按标题层级切：
+
+```text
+文档标题
+二级标题
+三级标题
+正文
+```
+
+每个 chunk 建议：
+
+```text
+500 到 800 个中文字符
+相邻块重叠 80 字
+chunk 保留来源路径和章节标题
+```
+
+这样回答可以引用：
+
+```text
+来源：docs/current/世界种子功能说明.md
+章节：5. 异步任务流程
+```
+
+**3. 复用现有检索链路**
+现有项目已经有：
+
+- Elasticsearch `dense_vector`
+- Ollama `embeddinggemma:300m`
+- 关键词 + 向量双路召回
+- RRF 融合
+- DeepSeek 回答
+
+可以复用这些能力，但新增一个独立的：
+
+```text
+ProjectKnowledgeIndexService
+ProjectKnowledgeSearchService
+ProjectSupportAnswerService
+```
+
+接口建议：
+
+```http
+POST /api/support/ask
+{
+  "query": "视频上传失败怎么办？",
+  "topK": 6
+}
+```
+
+和现有 `/rag/ask` 分开，避免用户问“咖啡怎么做”时命中项目部署文档。
+
+**4. 本地模型选择**
+Embedding 继续使用：
+
+```text
+embeddinggemma:300m
+```
+
+回答模型有两种方案：
+
+```text
+优先：DeepSeek API，速度快，质量稳定
+本地：Ollama 中的 DeepSeek-R1，适合离线，但 CPU 推理较慢
+```
+
+建议做成配置：
+
+```text
+INSPIRE_SUPPORT_ANSWER_PROVIDER=deepseek
+INSPIRE_SUPPORT_ANSWER_PROVIDER=ollama
+INSPIRE_SUPPORT_OLLAMA_MODEL=deepseek-r1:7b
+```
+
+如果本地 R1 太慢，可以只用于离线模式，正常客服仍走 DeepSeek API。
+
+**5. 客服回答规则**
+Prompt 必须严格限制：
+
+```text
+只能依据检索到的项目文档回答
+必须给出操作步骤
+必须标注来源文档和章节
+找不到答案时明确说不知道
+不得编造不存在的接口、配置或命令
+不得输出密钥、Token、密码
+```
+
+回答示例：
+
+```text
+视频上传一直卡在 99%，通常是前端分片上传完成后，
+后端仍在做文件合并或转码处理。
+
+处理步骤：
+1. 查看 log/inspire-core/app.log
+2. 确认 8083 端口服务健康
+3. 检查 data/uploads 是否有空间
+4. 如仍失败，重新执行上传
+
+来源：视频上传说明.md
+```
+
+**6. 前端入口**
+可以新增 `/support` 页面，或者把现有 `/rag` 页面拆成两个模式：
+
+```text
+灵感问答：检索用户灵感
+项目客服：检索项目文档和操作说明
+```
+
+项目客服页面建议支持：
+
+```text
+快捷问题
+纯文本问答
+回答来源
+相关文档链接
+复制命令
+加载状态
+无命中兜底
+```
+
+**7. 同步与重建**
+项目知识不需要每次 `reset-data` 全量重建。建议：
+
+```text
+文档内容 SHA-256 未变化 -> 跳过
+文档变化 -> 只重建对应文档
+新增文档 -> 增量索引
+首次启动或手动触发 -> 全量索引
+```
+
+可增加脚本：
+
+```bash
+bash scripts/knowledge-reindex.sh
+```
+
+**8. 安全边界**
+项目客服不能检索：
+
+```text
+.env
+.bash_profile
+真实密钥
+JWT Secret
+SMTP 授权码
+MinIO、MySQL、Redis 密码
+用户私有数据和消息
+```
+
+只索引公开文档和明确标记为 `support` 的内容。接口建议加登录限流，管理员可以查看未命中问题和高频问题，用于后续补充文档。
+
+**推荐落地顺序**
+1. 新增项目知识表和独立 ES 索引。
+2. 编写 Markdown 导入和增量索引任务。
+3. 复用现有向量检索和 RRF，新增项目客服问答服务。
+4. 新增 `/api/support/ask` 和前端项目客服页面。
+5. 接入 DeepSeek API，本地 Ollama R1 作为备用。
+6. 增加来源引用、无答案兜底和未命中日志。
+7. 最后再加入代码级问答和工具调用，例如查询真实服务状态、读取日志和重新执行索引。
+
+这个方案能复用当前大约 `60%` 的 RAG 基础能力，不需要重新引入新的向量数据库。第一阶段建议只索引项目文档，不要直接索引全项目源码。
