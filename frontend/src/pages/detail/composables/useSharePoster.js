@@ -382,6 +382,8 @@ export function useSharePoster({detail, imageList, isVideo, tagList, publishText
     posterUrl,
     posterBuilding,
     posterTemplatePickerVisible,
+    posterTemplates,
+    selectedPosterTemplate,
     makePoster
   }
 }

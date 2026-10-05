@@ -202,13 +202,13 @@
           >
         </form>
         <div class="mini-action-group">
-          <button class="mini-action" type="button" title="引用再创作" @click="quoteCreate">
+          <button class="mini-action" type="button" title="引用再创作" @click="emit('quote')">
             <span>❝</span><small>引用</small>
           </button>
-          <button class="mini-action" :class="{ active: liked }" type="button" title="点赞" @click="handleLike">
+          <button class="mini-action" :class="{ active: liked }" type="button" title="点赞" @click="emit('like')">
             <span>{{ liked ? '♥' : '♡' }}</span><small>{{ detail.likeCount ?? 0 }}</small>
           </button>
-          <button class="mini-action" :class="{ active: collected }" type="button" title="收藏" @click="toggleCollect">
+          <button class="mini-action" :class="{ active: collected }" type="button" title="收藏" @click="emit('collect')">
             <span>{{ collected ? '★' : '☆' }}</span><small>{{ detail.collectCount ?? 0 }}</small>
           </button>
         </div>

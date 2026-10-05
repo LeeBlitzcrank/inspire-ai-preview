@@ -44,6 +44,8 @@ function walk(path, files = []) {
   if (!existsSync(path)) return files
   const normalized = path.replaceAll('\\', '/')
   if (EXCLUDED.some(part => normalized.includes(part))) return files
+  // Flyway 已执行迁移文件不可修改，修改内容会导致 checksum 校验失败。
+  if (normalized.includes('/db/migration/')) return files
   const stat = statSync(path)
   if (stat.isDirectory()) {
     for (const entry of readdirSync(path)) walk(join(path, entry), files)

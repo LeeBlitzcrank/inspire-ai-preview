@@ -8,6 +8,8 @@
 # =============================================
 # 启动全部服务 —— 保留已有数据库与缓存
 # 用途：日常重启，MySQL / Elasticsearch / MinIO 图片 / Redis 数据都保留
+# 默认：复用已有服务镜像，Maven 构建后把最新 JAR 同步到容器
+# REBUILD_IMAGES=1：完整重新构建 Docker 镜像（依赖基础镜像可访问）
 # =============================================
 set -e
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -32,8 +34,76 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
       -am -DskipTests)
 fi
 
+SERVICES=(
+  inspire-auth
+  inspire-ai
+  inspire-core
+  inspire-admin
+  inspire-search
+  inspire-gateway
+  inspire-rag
+)
+
+module_for_service() {
+  case "$1" in
+    inspire-auth|inspire-ai|inspire-core|inspire-admin|inspire-search|inspire-gateway|inspire-rag)
+      echo "$1"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+sync_runtime_jars() {
+  local service module jar
+  for service in "${SERVICES[@]}"; do
+    module="$(module_for_service "$service")"
+    jar="backend/${module}/target/${module}-1.0.0.jar"
+    if [[ -f "$jar" ]] && docker inspect "$service" >/dev/null 2>&1; then
+      echo "==> 同步 JAR: ${service}"
+      docker cp "$jar" "${service}:/app/app.jar"
+    fi
+  done
+  docker compose --env-file "$ENV_FILE" restart "${SERVICES[@]}"
+}
+
+wait_for_runtime() {
+  local waited=0 timeout="${RUNTIME_WAIT_TIMEOUT:-180}" service state
+  while (( waited < timeout )); do
+    local ready=1
+    for service in "${SERVICES[@]}"; do
+      state="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$service" 2>/dev/null || echo missing)"
+      if [[ "$state" != "healthy" && "$state" != "running" ]]; then
+        ready=0
+        break
+      fi
+    done
+    if (( ready == 1 )); then
+      echo "==> 后端容器已就绪"
+      return 0
+    fi
+    sleep 3
+    waited=$((waited + 3))
+  done
+  echo "错误：后端容器未在 ${timeout}s 内就绪。"
+  docker compose --env-file "$ENV_FILE" ps
+  return 1
+}
+
 echo "==> 启动容器（保留数据卷）…"
-docker compose --env-file "$ENV_FILE" up -d --build --wait --wait-timeout 240
+if [[ "${REBUILD_IMAGES:-0}" == "1" ]]; then
+  echo "==> REBUILD_IMAGES=1，重新构建服务镜像…"
+  docker compose --env-file "$ENV_FILE" up -d --build --wait --wait-timeout 240
+else
+  if ! docker compose --env-file "$ENV_FILE" up -d --no-build --wait --wait-timeout 240; then
+    echo "==> 已有镜像不可用，回退到完整镜像构建…"
+    docker compose --env-file "$ENV_FILE" up -d --build --wait --wait-timeout 240
+  else
+    sync_runtime_jars
+    wait_for_runtime
+  fi
+fi
 bash "$ROOT_DIR/deploy/minio/init-public-policy.sh"
 bash "$ROOT_DIR/deploy/cloudflare/start-tunnel.sh"
 docker compose --env-file "$ENV_FILE" ps

@@ -337,6 +337,8 @@ const {
   posterUrl,
   posterBuilding,
   posterTemplatePickerVisible,
+  posterTemplates,
+  selectedPosterTemplate,
   makePoster
 } = useSharePoster({detail, imageList, isVideo, tagList, publishText, showSharePanel, DEFAULT_DESC})
 
@@ -448,15 +450,23 @@ const handleLike = async () => {
       if (res.code === 200) {
         liked.value = false
         detail.value.likeCount = Math.max(0, (detail.value.likeCount ?? 0) - 1)
+        ElMessage.success('已取消点赞')
+      } else {
+        ElMessage.error(res.msg || '取消点赞失败')
       }
     } else {
       const res = await likeInspire(detail.value.id)
       if (res.code === 200) {
         liked.value = true
         detail.value.likeCount = (detail.value.likeCount ?? 0) + 1
+        ElMessage.success('点赞成功')
+      } else {
+        ElMessage.error(res.msg || '点赞失败')
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '点赞失败')
+  }
 }
 
 const toggleCollect = async () => {
@@ -467,11 +477,16 @@ const toggleCollect = async () => {
       if (res.code === 200) {
         collected.value = false
         detail.value.collectCount = Math.max(0, (detail.value.collectCount ?? 0) - 1)
+        ElMessage.success('已取消收藏')
+      } else {
+        ElMessage.error(res.msg || '取消收藏失败')
       }
     } else {
       collectDialogVisible.value = true
     }
-  } catch (e) {}
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '取消收藏失败')
+  }
 }
 
 const handleCollected = () => {
@@ -479,6 +494,7 @@ const handleCollected = () => {
     collected.value = true
     detail.value.collectCount = (detail.value.collectCount ?? 0) + 1
   }
+  ElMessage.success('收藏成功')
 }
 
 const handleShare = async () => {
