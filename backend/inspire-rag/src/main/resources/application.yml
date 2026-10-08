@@ -12,6 +12,10 @@ spring:
     name: inspire-rag
   profiles:
     active: dev
+  task:
+    scheduling:
+      pool:
+        size: 2
   elasticsearch:
     uris: http://${INSPIRE_ES_HOSTS:localhost:9200}
   sql:
@@ -66,6 +70,21 @@ inspire:
     deepseek-api-key: ${INSPIRE_DEEPSEEK_API_KEY:}
     deepseek-api-url: ${INSPIRE_DEEPSEEK_API_URL:https://api.deepseek.com/v1/chat/completions}
     deepseek-model: ${INSPIRE_RAG_ANSWER_MODEL:deepseek-chat}
+  support-rag:
+    enabled: ${INSPIRE_SUPPORT_RAG_ENABLED:true}
+    index-name: ${INSPIRE_SUPPORT_RAG_INDEX_NAME:support_knowledge_index}
+    root-dir: ${INSPIRE_SUPPORT_RAG_ROOT_DIR:.}
+    knowledge-file: ${INSPIRE_SUPPORT_RAG_KNOWLEDGE_FILE:docs/current/项目客服知识库.md}
+    chunk-size: ${INSPIRE_SUPPORT_RAG_CHUNK_SIZE:1200}
+    chunk-overlap: ${INSPIRE_SUPPORT_RAG_CHUNK_OVERLAP:150}
+    default-top-k: ${INSPIRE_SUPPORT_RAG_DEFAULT_TOP_K:6}
+    candidate-k: ${INSPIRE_SUPPORT_RAG_CANDIDATE_K:30}
+    scan-delay-ms: ${INSPIRE_SUPPORT_RAG_SCAN_DELAY_MS:600000}
+    max-file-bytes: ${INSPIRE_SUPPORT_RAG_MAX_FILE_BYTES:2000000}
+    answer-provider: ${INSPIRE_SUPPORT_RAG_ANSWER_PROVIDER:fallback}
+    ollama-url: ${INSPIRE_RAG_OLLAMA_URL:http://localhost:11434}
+    ollama-model: ${INSPIRE_SUPPORT_RAG_OLLAMA_MODEL:deepseek-r1:8b}
+    ollama-timeout-seconds: ${INSPIRE_SUPPORT_RAG_OLLAMA_TIMEOUT_SECONDS:120}
 
 logging:
   level:

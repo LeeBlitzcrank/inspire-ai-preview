@@ -82,3 +82,25 @@ test('手机号验证码可以完成登录或自动注册', async ({request}) =>
   expect(loginBody.data.accessToken).toBeTruthy()
   expect(loginBody.data.passwordUpgradeRequired).toBe(false)
 })
+
+test('短信冷却期间按钮实时倒计时并保持禁用', async ({page, request}) => {
+  const phone = `136${String(Date.now()).slice(-8)}`
+  const first = await request.post(`${API_BASE}/auth/sms/send`, {
+    data: {phone, purpose: 'login'}
+  })
+  expect((await first.json()).code).toBe(200)
+
+  await page.goto('/#/login')
+  await page.getByRole('button', {name: '手机号验证码'}).click()
+  await page.locator('input[placeholder="请输入11位手机号"]').fill(phone)
+  const sendButton = page.locator('.sms-send-button')
+  await sendButton.click()
+
+  await expect(sendButton).toContainText('后重发')
+  await expect(sendButton).toBeDisabled()
+  await expect(page.locator('.el-message--error')).toHaveCount(0)
+
+  await page.reload()
+  await expect(page.locator('.sms-send-button')).toContainText('后重发')
+  await expect(page.locator('.sms-send-button')).toBeDisabled()
+})

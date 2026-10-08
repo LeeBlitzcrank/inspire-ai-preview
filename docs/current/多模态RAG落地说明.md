@@ -344,3 +344,54 @@ provider：ollama:embeddinggemma:300m
 返回来源：5 条
 耗时：约 473ms
 ```
+
+## 15. 独立项目客服 RAG
+
+当前 `inspire_rag_index` 只索引用户灵感，不适合直接回答“这个网站怎么用”。项目客服应使用独立索引和独立接口，避免灵感内容与产品文档互相污染。
+
+建议结构：
+
+```text
+用户问题
+  -> /api/support/ask
+  -> support_knowledge_index
+  -> 项目文档语义召回 + 标题关键词召回
+  -> RRF 融合 Top 5-8
+  -> Ollama deepseek-r1 或 DeepSeek API
+  -> 返回答案 + 文档引用 + 原始链接
+```
+
+知识库来源：
+
+```text
+README.md
+AGENTS.md
+docs/current/*.md
+API 说明
+部署说明
+常见问题
+错误排查
+```
+
+禁止进入知识库：
+
+```text
+.env
+密钥、Token、授权码
+服务器内部地址和运维凭证
+数据库账号密码
+管理员专属审计信息
+```
+
+实现步骤：
+
+1. 新增 `support_knowledge_index`，不要写入 `inspire_rag_index`。
+2. Markdown 按标题层级切片，每片 400-800 字，保留 `file`、`section`、`version`、`updatedAt`。
+3. 继续复用 Ollama `embeddinggemma:300m` 生成向量。
+4. 查询时同时执行向量召回和标题/正文关键词召回，使用 RRF 融合。
+5. 回答模型优先使用本地 Ollama `/api/chat`，模型可配置为 `deepseek-r1`；也允许回退 DeepSeek API。
+6. 系统提示词固定为“只依据项目文档回答，无法确认时明确说明，不得编造功能”。
+7. 返回结构必须包含 `answer`、`sources`、`updatedAt`、`tookMs`。
+8. 前端增加右下角客服窗口，支持推荐问题、流式输出、来源跳转和有用/无用反馈。
+9. 文档变更后按文件增量重建索引，不触发灵感索引全量重建。
+10. 增加问答日志、命中率、无答案率、用户反馈和 P95 延迟监控。

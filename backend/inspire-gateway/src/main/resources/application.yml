@@ -50,6 +50,21 @@ spring:
             - StripPrefix=1
             - RemoveResponseHeader=Vary
 
+        # 客服附件允许匿名上传，单独做 IP 限流，避免被当成通用上传接口滥用。
+        - id: inspire-support-upload
+          uri: ${routes.core-service:http://localhost:8083}
+          order: -8
+          predicates:
+            - Path=/api/file/support/upload
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: ${INSPIRE_SUPPORT_UPLOAD_RATE_LIMIT_REPLENISH:1}
+                redis-rate-limiter.burstCapacity: ${INSPIRE_SUPPORT_UPLOAD_RATE_LIMIT_BURST:3}
+                redis-rate-limiter.requestedTokens: 1
+
         - id: inspire-auth
           uri: ${routes.auth-service:http://localhost:8081}
           predicates:
@@ -134,6 +149,18 @@ spring:
           filters:
             - StripPrefix=1
         # RAG 需要登录，且不把内部重建接口暴露到公网网关。
+        - id: inspire-support-rag
+          uri: ${routes.rag-service:http://localhost:8087}
+          predicates:
+            - Path=/api/rag/support/ask,/api/rag/support/search,/api/rag/support/status,/api/rag/support/handoff,/api/rag/support/ticket/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userKeyResolver}"
+                redis-rate-limiter.replenishRate: ${INSPIRE_SUPPORT_RAG_RATE_LIMIT_REPLENISH:3}
+                redis-rate-limiter.burstCapacity: ${INSPIRE_SUPPORT_RAG_RATE_LIMIT_BURST:6}
+                redis-rate-limiter.requestedTokens: 1
         - id: inspire-rag-ask
           uri: ${routes.rag-service:http://localhost:8087}
           predicates:
@@ -209,7 +236,7 @@ inspire:
     # 6. 文档          /swagger-ui/**, /v3/api-docs/**
     # 7. 匿名公开接口   /api/inspire/public/**, /api/search/public/**, /api/admin/public/**
     # ====================================================================
-    white-list: /api/auth/captcha,/api/auth/login,/api/auth/register,/api/auth/refresh,/api/auth/logout,/api/auth/forgot-password,/api/auth/reset-password,/api/auth/sms/send,/api/auth/sms/login,/api/admin/login,/api/file/poster-cover,/api/file/view,/api/world/public/**,/uploads/**,/favicon.ico,/actuator/health/**,/actuator/info,/swagger-ui/**,/v3/api-docs/**,/api/inspire/public/**,/api/search/public/**,/api/admin/public/**
+    white-list: /api/auth/captcha,/api/auth/login,/api/auth/register,/api/auth/refresh,/api/auth/logout,/api/auth/forgot-password,/api/auth/reset-password,/api/auth/sms/send,/api/auth/sms/login,/api/admin/login,/api/file/poster-cover,/api/file/support/upload,/api/file/view,/api/world/public/**,/uploads/**,/favicon.ico,/actuator/health/**,/actuator/info,/swagger-ui/**,/v3/api-docs/**,/api/inspire/public/**,/api/search/public/**,/api/admin/public/**,/api/rag/support/ask,/api/rag/support/search,/api/rag/support/status,/api/rag/support/handoff,/api/rag/support/ticket/**
 
 logging:
   level:

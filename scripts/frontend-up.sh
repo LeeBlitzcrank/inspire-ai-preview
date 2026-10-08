@@ -14,16 +14,22 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${FRONTEND_PORT:-5173}"
 LOG="$ROOT/log/frontend-dev.log"
+NPM_BIN="$(command -v npm 2>/dev/null || true)"
+
+if [[ -z "$NPM_BIN" ]]; then
+  echo "错误：未找到 npm，请先安装 Node.js 或加载 nvm。" >&2
+  exit 1
+fi
 
 cd "$ROOT/frontend"
 
 if [ ! -d node_modules ]; then
   echo "==> 安装前端依赖（首次较慢）…"
-  npm install
+  "$NPM_BIN" install
 fi
 
 echo "==> 构建前端 …"
-npm run build
+"$NPM_BIN" run build
 
 # 关掉旧的 dev server，保证跑的是刚构建的代码
 OLD_PID="$(lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
@@ -33,9 +39,14 @@ if [ -n "$OLD_PID" ]; then
   sleep 1
 fi
 
+if [ "$(uname -s)" = "Darwin" ] && command -v launchctl >/dev/null 2>&1; then
+  bash "$ROOT/scripts/install-frontend-launch-agent.sh"
+  exit 0
+fi
+
 mkdir -p "$ROOT/log"
 echo "==> 启动前端 dev server …"
-nohup npm run dev -- --host 127.0.0.1 --port "$PORT" </dev/null > "$LOG" 2>&1 &
+nohup "$NPM_BIN" run dev -- --host 127.0.0.1 --port "$PORT" </dev/null > "$LOG" 2>&1 &
 # 脱离当前 shell 的作业表，避免脚本退出时被连带回收
 disown 2>/dev/null || true
 

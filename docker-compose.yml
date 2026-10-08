@@ -175,6 +175,7 @@ services:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
       rocketmq-broker: { condition: service_healthy }
+      inspire-core: { condition: service_healthy }
     environment:
       <<: *common-env
       INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
@@ -244,7 +245,17 @@ services:
       INSPIRE_RAG_IMAGE_BASE_URL: https://img.20sherry.com
       INSPIRE_DEEPSEEK_API_KEY: ${INSPIRE_DEEPSEEK_API_KEY:-}
       INSPIRE_DEEPSEEK_API_URL: ${INSPIRE_DEEPSEEK_API_URL:-https://api.deepseek.com/v1/chat/completions}
-    volumes: [ ./log/inspire-rag:/logs ]
+      INSPIRE_SUPPORT_RAG_ENABLED: ${INSPIRE_SUPPORT_RAG_ENABLED:-true}
+      INSPIRE_SUPPORT_RAG_INDEX_NAME: ${INSPIRE_SUPPORT_RAG_INDEX_NAME:-support_knowledge_index}
+      INSPIRE_SUPPORT_RAG_ROOT_DIR: /knowledge
+      INSPIRE_SUPPORT_RAG_KNOWLEDGE_FILE: ${INSPIRE_SUPPORT_RAG_KNOWLEDGE_FILE:-docs/current/项目客服知识库.md}
+      INSPIRE_SUPPORT_RAG_ANSWER_PROVIDER: ${INSPIRE_SUPPORT_RAG_ANSWER_PROVIDER:-fallback}
+      INSPIRE_SUPPORT_RAG_OLLAMA_MODEL: ${INSPIRE_SUPPORT_RAG_OLLAMA_MODEL:-deepseek-r1:8b}
+    volumes:
+      - ./log/inspire-rag:/logs
+      - ./README.md:/knowledge/README.md:ro
+      - ./AGENTS.md:/knowledge/AGENTS.md:ro
+      - ./docs:/knowledge/docs:ro
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health | grep -q '\"status\":\"UP\"'" ]
       interval: 5s

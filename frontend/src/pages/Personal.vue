@@ -289,7 +289,7 @@
                 class="phone-code-button"
                 :disabled="smsCodeSending || smsCountdown > 0"
                 @click="handleSendBindCode"
-              >{{ smsCountdown > 0 ? `${smsCountdown}s` : (smsCodeSending ? '发送中' : '获取验证码') }}</button>
+              >{{ smsCountdown > 0 ? `${smsCountdown}s后重发` : (smsCodeSending ? '发送中' : '获取验证码') }}</button>
             </div>
             <el-button
               class="phone-bind-button"

@@ -256,8 +256,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号，唯一不可重复',
   `password` VARCHAR(100) NOT NULL COMMENT 'BCrypt加密密码',
   `email` VARCHAR(254) DEFAULT NULL COMMENT '用户邮箱（用于找回密码）',
-  `phone` VARCHAR(20) DEFAULT NULL COMMENT '绑定手机号',
-  `phone_verified` TINYINT DEFAULT 0 COMMENT '手机号是否已验证',
+  -- phone / phone_verified / uk_phone 由 Flyway V10__sms_login.sql 统一补充
   `avatar` VARCHAR(2048) DEFAULT '' COMMENT '用户头像URL',
   `nickname` VARCHAR(50) DEFAULT '' COMMENT '用户昵称',
   `role` VARCHAR(20) DEFAULT 'user' COMMENT '角色: admin/core/user',
@@ -270,8 +269,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
   UNIQUE KEY `uk_nickname` (`nickname`),
-  UNIQUE KEY `uk_email` (`email`),
-  UNIQUE KEY `uk_phone` (`phone`)
+  UNIQUE KEY `uk_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户主表';
 CREATE TABLE IF NOT EXISTS `password_reset` (
   `id` BIGINT NOT NULL COMMENT '雪花ID',
@@ -321,6 +319,18 @@ CREATE TABLE IF NOT EXISTS `admin_audit_log` (
   KEY `idx_admin_time` (`admin_user_id`, `create_time`),
   KEY `idx_path_time` (`path`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='后台操作审计日志';
+
+CREATE TABLE IF NOT EXISTS `support_rag_state` (
+  `id` TINYINT NOT NULL,
+  `fingerprint` VARCHAR(64) DEFAULT NULL,
+  `document_count` INT NOT NULL DEFAULT 0,
+  `chunk_count` INT NOT NULL DEFAULT 0,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'idle',
+  `error_message` VARCHAR(500) DEFAULT NULL,
+  `indexed_at` DATETIME DEFAULT NULL,
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目客服RAG索引状态';
 
 -- ========== 以下表由应用代码创建，Docker 初始化时补充 ==========
 

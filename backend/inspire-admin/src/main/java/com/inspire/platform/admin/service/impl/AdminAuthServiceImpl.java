@@ -53,6 +53,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Value("${inspire.admin-mfa.lock-seconds:1800}")
     private long lockSeconds;
 
+    @Value("${inspire.admin-mfa.enabled:false}")
+    private boolean mfaEnabled;
+
     public AdminAuthServiceImpl(AdminUserMapper adminUserMapper,
                                 StringRedisTemplate redisTemplate,
                                 @Value("${inspire.jwt.secret}") String secret,
@@ -90,6 +93,11 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         if (user == null || !PASSWORD_ENCODER.matches(password, user.getPassword())) {
             recordFailure(key);
             throw new BusinessException(400, "管理员账号或密码错误");
+        }
+
+        if (!mfaEnabled) {
+            clearFailures(key);
+            return tokenResponse(user);
         }
 
         boolean enabled = Integer.valueOf(1).equals(user.getTotpEnabled());

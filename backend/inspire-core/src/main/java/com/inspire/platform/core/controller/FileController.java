@@ -127,6 +127,16 @@ public class FileController {
     }
 
     /**
+     * 客服报错附件上传：复用标准上传校验，但允许匿名用户提交截图或短视频。
+     * 网关仅为该路径开放访问并配置独立限流。
+     */
+    @Operation(summary = "上传客服附件", description = "支持问题截图和短视频，供人工工单使用")
+    @PostMapping("/support/upload")
+    public Result<Map<String, String>> supportUpload(@RequestParam("file") MultipartFile file) {
+        return upload(file);
+    }
+
+    /**
      * 视频上传：大小 / MIME / 魔数 三层校验，落盘后尝试用 ffmpeg 截首帧做封面。
      * 不做转码，保持原始画质，压缩/裁剪由用户在上传后按需触发。
      */

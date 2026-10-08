@@ -29,7 +29,7 @@ ensure_ollama_ready "$ENV_FILE"
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   echo "==> 构建后端 JAR …"
   export JAVA_HOME="${JAVA_HOME:-/Users/lee/Library/Java/JavaVirtualMachines/jbr-21.0.8-1/Contents/Home}"
-  (cd backend && mvn package \
+  (cd backend && mvn clean package \
       -pl inspire-common,inspire-mq,inspire-gateway,inspire-auth,inspire-core,inspire-admin,inspire-ai,inspire-search,inspire-rag \
       -am -DskipTests)
 fi

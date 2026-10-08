@@ -147,14 +147,20 @@
 </template>
 
 <script setup>
-import {computed, onBeforeUnmount, ref} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {getLoginCaptcha, login, loginBySms, sendSmsCode} from '@/api/auth.js'
 import {clearAllTokens, setRememberMe} from '@/utils/tokenStorage.js'
 import {useAuthStore} from '@/stores/auth'
 import {changePassword} from '@/api/inspire.js'
-import {validatePassword} from '@/utils/validation.js'
+import {
+  clearSmsCooldown,
+  getSmsCooldown,
+  saveSmsCooldown,
+  smsCooldownFromError,
+  validatePassword
+} from '@/utils/validation.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -180,10 +186,11 @@ const forcePasswordDialog = ref(false)
 const forcePwdLoading = ref(false)
 const forcePwdForm = ref({ newPassword: '', confirmPassword: '' })
 let smsTimer = null
+let activeSmsPhone = ''
 
 const smsButtonText = computed(() => {
   if (smsSending.value) return '发送中'
-  if (smsCountdown.value > 0) return `${smsCountdown.value}s`
+  if (smsCountdown.value > 0) return `${smsCountdown.value}s后重发`
   return '获取验证码'
 })
 
@@ -192,14 +199,50 @@ const switchLoginMode = (mode) => {
   if (mode === 'password' && captchaRequired.value && !captchaImage.value) loadCaptcha()
 }
 
-const startSmsCountdown = (seconds = 60) => {
+const stopSmsCountdown = () => {
+  clearInterval(smsTimer)
+  smsTimer = null
+  smsCountdown.value = 0
+  activeSmsPhone = ''
+}
+
+const startSmsCountdown = (seconds = 60, phone = form.value.phone, persist = true) => {
+  const targetPhone = String(phone || '').trim()
   smsCountdown.value = Math.max(1, Number(seconds) || 60)
+  activeSmsPhone = targetPhone
+  if (persist && targetPhone) saveSmsCooldown('login', targetPhone, smsCountdown.value)
   clearInterval(smsTimer)
   smsTimer = setInterval(() => {
     smsCountdown.value -= 1
-    if (smsCountdown.value <= 0) clearInterval(smsTimer)
+    if (smsCountdown.value <= 0) {
+      clearSmsCooldown('login')
+      stopSmsCountdown()
+    }
   }, 1000)
 }
+
+const restoreSmsCooldown = (phone = form.value.phone) => {
+  const state = getSmsCooldown('login', phone)
+  if (!state) return false
+  form.value.phone = state.phone
+  loginMode.value = 'sms'
+  startSmsCountdown(state.remainingSeconds, state.phone, false)
+  return true
+}
+
+watch(() => form.value.phone, (phone) => {
+  const normalized = String(phone || '').trim()
+  if (smsCountdown.value > 0 && activeSmsPhone && normalized !== activeSmsPhone) {
+    stopSmsCountdown()
+  }
+  if (loginMode.value === 'sms' && normalized) {
+    restoreSmsCooldown(normalized)
+  }
+})
+
+onMounted(() => {
+  restoreSmsCooldown()
+})
 
 onBeforeUnmount(() => clearInterval(smsTimer))
 
@@ -225,6 +268,11 @@ const handleSendSms = async () => {
   try {
     const res = await sendSmsCode(phone, 'login')
     if (res?.code !== 200) {
+      const seconds = smsCooldownFromError(res)
+      if (seconds > 0) {
+        startSmsCountdown(seconds, phone)
+        return
+      }
       return ElMessage.error(res?.msg || '验证码发送失败')
     }
     const devCode = res.data?.devCode
@@ -234,9 +282,10 @@ const handleSendSms = async () => {
     } else {
       ElMessage.success('验证码已发送')
     }
-    startSmsCountdown(res.data?.cooldownSeconds)
+    startSmsCountdown(res.data?.cooldownSeconds, phone)
   } catch (e) {
-    // request 拦截器已提示
+    const seconds = smsCooldownFromError(e)
+    if (seconds > 0) startSmsCountdown(seconds, phone)
   } finally {
     smsSending.value = false
   }

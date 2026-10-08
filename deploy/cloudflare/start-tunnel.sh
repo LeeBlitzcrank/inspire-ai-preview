@@ -21,6 +21,11 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 0
 fi
 
+if launchctl print "gui/$(id -u)/com.inspire.cloudflared" >/dev/null 2>&1; then
+  echo "==> cloudflared LaunchAgent 已托管"
+  exit 0
+fi
+
 if pgrep -f 'cloudflared tunnel' >/dev/null 2>&1; then
   echo "==> cloudflared 隧道已在运行"
   exit 0

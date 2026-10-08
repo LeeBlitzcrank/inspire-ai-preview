@@ -34,6 +34,8 @@ inspire:
   jwt:
     secret: ${INSPIRE_ADMIN_JWT_SECRET}
     expiration: ${INSPIRE_ADMIN_JWT_EXPIRATION:315360000000}
+  admin-mfa:
+    enabled: ${INSPIRE_ADMIN_MFA_ENABLED:false}
 logging:
   level:
     com.inspire: debug

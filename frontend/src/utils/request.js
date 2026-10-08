@@ -67,7 +67,9 @@ service.interceptors.request.use(async config => {
   // 否则长时间未操作后第一次点登录会被先清空会话并跳回登录页
   const AUTH_FREE_PATHS = [
     '/auth/login', '/auth/register', '/auth/refresh',
-    '/auth/forgot-password', '/auth/reset-password'
+    '/auth/forgot-password', '/auth/reset-password',
+    '/rag/support/ask', '/rag/support/search', '/rag/support/status',
+    '/rag/support/handoff', '/rag/support/ticket', '/file/support/upload'
   ]
   const isAuthRequest = AUTH_FREE_PATHS.some(p => reqUrl.startsWith(p))
 
@@ -127,12 +129,18 @@ service.interceptors.response.use(
   },
   async err => {
     const cfg = err.config || {}
-    // GET 是幂等的：网络抖动或服务端 5xx 时自动重试一次，避免偶发失败直接弹错误
+    // GET 是幂等的：网络抖动、Tunnel 重连或服务端 5xx 时做有限退避重试
     const status = err.response?.status
     const isGet = String(cfg.method || '').toLowerCase() === 'get'
-    if (isGet && !cfg.__retried && (!err.response || status >= 500)) {
-      cfg.__retried = true
-      await new Promise(resolve => setTimeout(resolve, 600))
+    const retryableStatus = !err.response || status >= 500
+    const retryCount = Number(cfg.__retryCount || 0)
+    const maxRetries = status === 530 ? 3 : 1
+    if (isGet && retryableStatus && retryCount < maxRetries) {
+      cfg.__retryCount = retryCount + 1
+      const delay = status === 530
+        ? Math.min(8000, 1000 * Math.pow(2, retryCount))
+        : 600
+      await new Promise(resolve => setTimeout(resolve, delay))
       return service(cfg)
     }
 
@@ -205,6 +213,11 @@ service.interceptors.response.use(
       clearAllTokens()
       ElMessage.error(data.msg || '请先修改弱密码后再继续使用')
       redirectToLogin(path)
+      return Promise.reject(err)
+    }
+
+    // 短信冷却属于可预期的业务状态，由发送按钮自行倒计时，不弹全局错误提示。
+    if (path.startsWith('/auth/sms/send') && code === 429) {
       return Promise.reject(err)
     }
 

@@ -78,3 +78,54 @@ export function validateNickname(value) {
 export function maxLengthMessage(label, max) {
   return `${label}不能超过${max}个字符`
 }
+
+export function smsCooldownFromError(error, fallback = 60) {
+  const message = error?.response?.data?.msg
+    || error?.data?.msg
+    || error?.msg
+    || error?.message
+    || ''
+  const match = String(message).match(/(\d+)\s*秒/)
+  if (match) {
+    const seconds = Number(match[1])
+    return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0
+  }
+  return Number(error?.response?.status) === 429 ? fallback : 0
+}
+
+const SMS_COOLDOWN_PREFIX = 'inspire:sms-cooldown:'
+
+const smsCooldownKey = (scope) => `${SMS_COOLDOWN_PREFIX}${scope}`
+
+export function saveSmsCooldown(scope, phone, seconds) {
+  const until = Date.now() + Math.max(1, Number(seconds) || 60) * 1000
+  localStorage.setItem(smsCooldownKey(scope), JSON.stringify({
+    phone: String(phone || '').trim(),
+    until
+  }))
+}
+
+export function getSmsCooldown(scope, phone = '') {
+  try {
+    const raw = localStorage.getItem(smsCooldownKey(scope))
+    if (!raw) return null
+    const state = JSON.parse(raw)
+    const remainingSeconds = Math.ceil((Number(state.until) - Date.now()) / 1000)
+    const expectedPhone = String(phone || '').trim()
+    if (remainingSeconds <= 0 || (expectedPhone && state.phone !== expectedPhone)) {
+      if (remainingSeconds <= 0) localStorage.removeItem(smsCooldownKey(scope))
+      return null
+    }
+    return {
+      phone: state.phone,
+      remainingSeconds
+    }
+  } catch {
+    localStorage.removeItem(smsCooldownKey(scope))
+    return null
+  }
+}
+
+export function clearSmsCooldown(scope) {
+  localStorage.removeItem(smsCooldownKey(scope))
+}

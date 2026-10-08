@@ -26,6 +26,9 @@ inspire:
       api-key: ${INSPIRE_DEEPSEEK_API_KEY:}
       api-url: ${INSPIRE_DEEPSEEK_API_URL:https://api.deepseek.com/v1/chat/completions}
       model: deepseek-chat
+    world:
+      recovery-initial-delay-ms: ${INSPIRE_WORLD_RECOVERY_INITIAL_DELAY_MS:15000}
+      recovery-delay-ms: ${INSPIRE_WORLD_RECOVERY_DELAY_MS:30000}
 logging:
   level:
     com.inspire: debug

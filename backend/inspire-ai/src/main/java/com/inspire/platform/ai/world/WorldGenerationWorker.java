@@ -18,8 +18,7 @@ import com.inspire.platform.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -62,10 +61,17 @@ public class WorldGenerationWorker {
         }
     }
 
-    @EventListener(ApplicationReadyEvent.class)
+    @Scheduled(
+            initialDelayString = "${inspire.ai.world.recovery-initial-delay-ms:15000}",
+            fixedDelayString = "${inspire.ai.world.recovery-delay-ms:30000}"
+    )
     public void recoverPendingTasks() {
-        for (Long taskId : taskService.findRecoverableTaskIds()) {
-            submit(taskId);
+        try {
+            for (Long taskId : taskService.findRecoverableTaskIds()) {
+                submit(taskId);
+            }
+        } catch (Exception e) {
+            log.warn("世界生成任务恢复检查暂不可用，将在下一轮重试: {}", e.getMessage());
         }
     }
 

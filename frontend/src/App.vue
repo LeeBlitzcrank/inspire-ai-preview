@@ -22,28 +22,50 @@
   </div>
   <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
   <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
+  <SupportAssistant v-if="!$route.path.startsWith('/admin')" />
   </DeviceShell>
   <AppErrorDialog />
 </template>
 
 <script setup>
-import {onBeforeUnmount, onMounted, ref} from 'vue'
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRoute} from 'vue-router'
 import DeviceShell from '@/components/layout/DeviceShell.vue'
+import SupportAssistant from '@/components/SupportAssistant.vue'
 
 const showTop = ref(false)
 const isOnline = ref(navigator.onLine)
+const route = useRoute()
 
-const onScroll = () => { showTop.value = window.scrollY > 400 }
-const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }) }
+const currentScrollTop = (event) => {
+  const target = event?.target
+  if (target === document || target === window || !target?.classList) {
+    return window.scrollY || document.documentElement.scrollTop || 0
+  }
+  if (target.classList.contains('app-page')) {
+    return target.scrollTop || 0
+  }
+  return 0
+}
+
+const onScroll = (event) => { showTop.value = currentScrollTop(event) > 400 }
+const scrollToTop = () => {
+  document.querySelectorAll('.app-page').forEach(page => {
+    if (page.scrollTop > 0) page.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  showTop.value = false
+}
 
 onMounted(() => {
-  window.addEventListener('scroll', onScroll)
+  window.addEventListener('scroll', onScroll, true)
   window.addEventListener('online', () => isOnline.value = true)
   window.addEventListener('offline', () => isOnline.value = false)
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('scroll', onScroll, true)
 })
+watch(() => route.fullPath, () => { showTop.value = false })
 </script>
 
 <style scoped>

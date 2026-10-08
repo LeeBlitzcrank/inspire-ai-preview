@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.HexFormat;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +50,9 @@ public class SmsCodeService {
         Boolean accepted = redisTemplate.opsForValue()
                 .setIfAbsent(cooldownKey, "1", Duration.ofSeconds(cooldownSeconds));
         if (!Boolean.TRUE.equals(accepted)) {
-            throw new BusinessException(429, "验证码发送过于频繁，请稍后再试");
+            Long remaining = redisTemplate.getExpire(cooldownKey, TimeUnit.SECONDS);
+            long seconds = remaining == null || remaining <= 0 ? cooldownSeconds : remaining;
+            throw new BusinessException(429, "验证码发送过于频繁，请 " + seconds + " 秒后再试");
         }
 
         String dailyKey = DAILY_PREFIX + LocalDate.now() + ":" + hash(phone);

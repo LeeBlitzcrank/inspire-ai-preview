@@ -10,7 +10,14 @@ import {ElMessage} from '@/utils/uiFeedback.js'
 import {changePassword, updateUserInfo} from '@/api/inspire.js'
 import {bindPhone, getIpLocation, sendSmsCode} from '@/api/auth.js'
 import {findCityPath} from '@/utils/cityData.js'
-import {validateNickname, validatePassword} from '@/utils/validation.js'
+import {
+    clearSmsCooldown,
+    getSmsCooldown,
+    saveSmsCooldown,
+    smsCooldownFromError,
+    validateNickname,
+    validatePassword
+} from '@/utils/validation.js'
 import {clearAllTokens} from '@/utils/tokenStorage.js'
 
 export function usePersonalProfile(userInfo) {
@@ -28,6 +35,7 @@ export function usePersonalProfile(userInfo) {
       const existingPath = findCityPath(userInfo.value.city)
       cityPath.value = existingPath
       detectLocation()
+      restoreSmsCooldown()
       // 96 个头像要滚动，打开时主动定位到当前选中的那个（没有选中就回到顶部）
       nextTick(() => {
         const grid = document.querySelector('.avatar-grid')
@@ -127,15 +135,45 @@ export function usePersonalProfile(userInfo) {
   const smsCodeSending = ref(false)
   const smsCountdown = ref(0)
   let smsTimer = null
+  let activeSmsPhone = ''
 
-  const startSmsCountdown = (seconds = 60) => {
+  const stopSmsCountdown = () => {
+    clearInterval(smsTimer)
+    smsTimer = null
+    smsCountdown.value = 0
+    activeSmsPhone = ''
+  }
+
+  const startSmsCountdown = (seconds = 60, phone = bindForm.value.phone, persist = true) => {
+    const targetPhone = String(phone || '').trim()
     smsCountdown.value = Math.max(1, Number(seconds) || 60)
+    activeSmsPhone = targetPhone
+    if (persist && targetPhone) saveSmsCooldown('bind', targetPhone, smsCountdown.value)
     clearInterval(smsTimer)
     smsTimer = setInterval(() => {
       smsCountdown.value -= 1
-      if (smsCountdown.value <= 0) clearInterval(smsTimer)
+      if (smsCountdown.value <= 0) {
+        clearSmsCooldown('bind')
+        stopSmsCountdown()
+      }
     }, 1000)
   }
+
+  const restoreSmsCooldown = (phone = bindForm.value.phone) => {
+    const state = getSmsCooldown('bind', phone)
+    if (!state) return false
+    bindForm.value.phone = state.phone
+    startSmsCountdown(state.remainingSeconds, state.phone, false)
+    return true
+  }
+
+  watch(() => bindForm.value.phone, (phone) => {
+    const normalized = String(phone || '').trim()
+    if (smsCountdown.value > 0 && activeSmsPhone && normalized !== activeSmsPhone) {
+      stopSmsCountdown()
+    }
+    if (normalized) restoreSmsCooldown(normalized)
+  })
 
   onBeforeUnmount(() => clearInterval(smsTimer))
 
@@ -146,16 +184,24 @@ export function usePersonalProfile(userInfo) {
     smsCodeSending.value = true
     try {
       const res = await sendSmsCode(bindForm.value.phone.trim(), 'bind')
-      if (res.code !== 200) return ElMessage.error(res.msg || '验证码发送失败')
+      if (res.code !== 200) {
+        const seconds = smsCooldownFromError(res)
+        if (seconds > 0) {
+          startSmsCountdown(seconds, bindForm.value.phone)
+          return
+        }
+        return ElMessage.error(res.msg || '验证码发送失败')
+      }
       if (res.data?.devCode) {
         bindForm.value.code = res.data.devCode
         ElMessage.success(`开发验证码 ${res.data.devCode} 已自动填入`)
       } else {
         ElMessage.success('验证码已发送')
       }
-      startSmsCountdown(res.data?.cooldownSeconds)
+      startSmsCountdown(res.data?.cooldownSeconds, bindForm.value.phone)
     } catch (e) {
-      // 请求层已提示
+      const seconds = smsCooldownFromError(e)
+      if (seconds > 0) startSmsCountdown(seconds, bindForm.value.phone)
     } finally {
       smsCodeSending.value = false
     }
