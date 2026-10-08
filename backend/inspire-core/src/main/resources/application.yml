@@ -63,6 +63,14 @@ logging:
 rocketmq:
   name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
 inspire:
+  recommend:
+    vector-index: ${INSPIRE_RECOMMEND_VECTOR_INDEX:inspire_recommend_vector}
+    embedding-dims: ${INSPIRE_RAG_EMBEDDING_DIMS:768}
+    redis-profile-ttl-seconds: ${INSPIRE_RECOMMEND_PROFILE_TTL_SECONDS:604800}
+    redis-vector-ttl-seconds: ${INSPIRE_RECOMMEND_VECTOR_TTL_SECONDS:1800}
+    experiment-id: ${INSPIRE_RECOMMEND_EXPERIMENT_ID:recommend_v2}
+    experiment-enabled: ${INSPIRE_RECOMMEND_EXPERIMENT_ENABLED:true}
+    experiment-treatment-percent: ${INSPIRE_RECOMMEND_TREATMENT_PERCENT:50}
   upload:
     dir: /tmp/inspire-uploads
   redis:

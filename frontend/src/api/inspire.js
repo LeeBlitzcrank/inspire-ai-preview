@@ -116,7 +116,9 @@ export const adminPendingList = (params) => request.get('/admin/inspire/pending'
 export const adminApproveInspire = (id) => request.put(`/admin/inspire/${id}/approve`)
 export const adminRejectInspire = (id) => request.put(`/admin/inspire/${id}/reject`)
 
-export const getRecommendList = (params) => cachedGet('/inspire/public/recommend', params, 60 * 1000)
+// 推荐结果对登录用户是私有的，不能走跨用户共享的前端 GET 缓存。
+export const getRecommendList = (params) => request.get('/inspire/public/recommend', { params })
+export const recordRecommendEvent = (data) => request.post('/inspire/recommend/event', data)
 
 // ===== 关注 =====
 export const followUser = (userId) => request.post(`/inspire/follow/${userId}`)

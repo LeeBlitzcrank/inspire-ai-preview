@@ -50,6 +50,7 @@ public class InspireServiceImpl implements InspireService {
     private final NotificationService notificationService;
     private final ContentCacheService contentCacheService;
     private final FeedService feedService;
+    private final RecommendationService recommendationService;
     private final ApplicationEventPublisher eventPublisher;
     private final ViewCountService viewCountService;
     private final MqProducer mqProducer;
@@ -835,11 +836,22 @@ public class InspireServiceImpl implements InspireService {
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "recommend", key = "#page + ':' + #size", unless = "#userId != null")
     public List<InspireVO> recommend(Long userId, int page, int size) {
-        LambdaQueryWrapper<InspireMain> w = Wrappers.lambdaQuery();
-        w.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
-        w.orderByDesc(InspireMain::getHeat, InspireMain::getCreateTime);
-        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, size), w);
-        return toVOList(mpPage.getRecords(), userId);
+        RecommendationService.RecommendationResult result =
+                recommendationService.recommend(userId, page, size);
+        List<RecommendationService.Scored> ranked = result.items() == null
+                ? List.of()
+                : result.items();
+        List<InspireMain> records = ranked.stream()
+                .map(RecommendationService.Scored::item)
+                .toList();
+        List<InspireVO> resultList = toVOList(records, userId);
+        for (int i = 0; i < resultList.size(); i++) {
+            resultList.get(i).setRecommendReason(ranked.get(i).reason());
+            resultList.get(i).setRecommendExperiment(result.experimentId());
+            resultList.get(i).setRecommendVariant(result.variant());
+            resultList.get(i).setRecommendPushId(ranked.get(i).pushId());
+        }
+        return resultList;
     }
 
     @Override

@@ -10,23 +10,14 @@ package com.inspire.platform.rag.controller;
 import com.inspire.platform.common.result.Result;
 import com.inspire.platform.rag.config.RagProperties;
 import com.inspire.platform.rag.model.RagModels.RagResponse;
-import com.inspire.platform.rag.service.ElasticsearchRagStore;
-import com.inspire.platform.rag.service.EmbeddingService;
-import com.inspire.platform.rag.service.RagAnswerService;
-import com.inspire.platform.rag.service.RagIndexService;
+import com.inspire.platform.rag.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/rag")
@@ -37,17 +28,20 @@ public class RagController {
     private final ElasticsearchRagStore store;
     private final EmbeddingService embeddingService;
     private final RagProperties properties;
+    private final RecommendationVectorIndexService recommendationVectorIndexService;
 
     public RagController(RagAnswerService answerService,
                          RagIndexService indexService,
                          ElasticsearchRagStore store,
                          EmbeddingService embeddingService,
-                         RagProperties properties) {
+                         RagProperties properties,
+                         RecommendationVectorIndexService recommendationVectorIndexService) {
         this.answerService = answerService;
         this.indexService = indexService;
         this.store = store;
         this.embeddingService = embeddingService;
         this.properties = properties;
+        this.recommendationVectorIndexService = recommendationVectorIndexService;
     }
 
     @Operation(summary = "多模态 RAG 问答")
@@ -100,6 +94,34 @@ public class RagController {
         }
         int indexed = indexService.indexAll(limit);
         return Result.success(Map.of("indexed", indexed, "indexedTotal", indexService.indexedCount()));
+    }
+
+    @Operation(summary = "内部重建推荐向量索引")
+    @PostMapping("/admin/recommend-vector/reindex")
+    public Result<Map<String, Object>> recommendVectorReindex(
+            @RequestParam(defaultValue = "5000") int limit,
+            @RequestHeader(value = "X-Rag-Token", required = false) String token) {
+        if (properties.getAdminToken().isBlank() || !properties.getAdminToken().equals(token)) {
+            return Result.forbidden();
+        }
+        int indexed = recommendationVectorIndexService.reindex(limit);
+        return Result.success(Map.of(
+                "indexed", indexed,
+                "indexedTotal", recommendationVectorIndexService.indexedCount()));
+    }
+
+    @Operation(summary = "内部查询推荐向量索引状态")
+    @GetMapping("/admin/recommend-vector/status")
+    public Result<Map<String, Object>> recommendVectorStatus(
+            @RequestHeader(value = "X-Rag-Token", required = false) String token) {
+        if (properties.getAdminToken().isBlank() || !properties.getAdminToken().equals(token)) {
+            return Result.forbidden();
+        }
+        return Result.success(Map.of(
+                "indexName", properties.getRecommendVectorIndex(),
+                "published", recommendationVectorIndexService.publishedCount(),
+                "indexed", recommendationVectorIndexService.indexedCount()
+        ));
     }
 
     @Operation(summary = "内部查询 RAG 重建进度")

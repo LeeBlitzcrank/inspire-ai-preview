@@ -92,6 +92,17 @@
 }
 .word-text{font-size:28px;font-weight:500;color:#fff;margin-bottom:8px}
 .tag-label{font-size:14px;padding:4px 12px;border-radius:99px;display:inline-block;width:fit-content;color:#fff}
+.recommend-reason{
+  display:inline-block;
+  width:fit-content;
+  margin-bottom:8px;
+  padding:4px 9px;
+  border-radius:8px;
+  background:rgba(255,255,255,.18);
+  color:#fff;
+  font-size:11px;
+  backdrop-filter:blur(8px);
+}
 .food{background:#ff6b35}
 .sport{background:#28c76f}
 .movie{background:#0097e6}

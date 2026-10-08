@@ -15,7 +15,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 2
+        size: 4
   elasticsearch:
     uris: http://${INSPIRE_ES_HOSTS:localhost:9200}
   sql:
@@ -51,11 +51,13 @@ inspire:
   rag:
     enabled: ${INSPIRE_RAG_ENABLED:true}
     index-name: ${INSPIRE_RAG_INDEX_NAME:inspire_rag_index}
+    recommend-vector-index: ${INSPIRE_RECOMMEND_VECTOR_INDEX:inspire_recommend_vector}
     embedding-dims: ${INSPIRE_RAG_EMBEDDING_DIMS:768}
     embedding-batch-size: ${INSPIRE_RAG_EMBEDDING_BATCH_SIZE:32}
     default-top-k: ${INSPIRE_RAG_DEFAULT_TOP_K:8}
     candidate-k: ${INSPIRE_RAG_CANDIDATE_K:30}
     sync-batch-size: ${INSPIRE_RAG_SYNC_BATCH_SIZE:50}
+    recommend-vector-sync-batch-size: ${INSPIRE_RECOMMEND_VECTOR_SYNC_BATCH_SIZE:80}
     sync-delay-ms: ${INSPIRE_RAG_SYNC_DELAY_MS:30000}
     elasticsearch-host: ${INSPIRE_ES_HOSTS:localhost:9200}
     core-base-url: ${INSPIRE_RAG_CORE_BASE_URL:http://localhost:8083}

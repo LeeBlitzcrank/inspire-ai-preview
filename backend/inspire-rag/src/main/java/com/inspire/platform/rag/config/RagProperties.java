@@ -16,11 +16,13 @@ public class RagProperties {
 
     private boolean enabled = true;
     private String indexName = "inspire_rag_index";
+    private String recommendVectorIndex = "inspire_recommend_vector";
     private int embeddingDims = 768;
     private int embeddingBatchSize = 32;
     private int defaultTopK = 8;
     private int candidateK = 30;
     private int syncBatchSize = 50;
+    private int recommendVectorSyncBatchSize = 80;
     private long syncDelayMs = 30_000;
     private String elasticsearchHost = "localhost:9200";
     private String coreBaseUrl = "http://localhost:8083";

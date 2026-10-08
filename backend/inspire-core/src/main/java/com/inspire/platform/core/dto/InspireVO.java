@@ -53,4 +53,8 @@ public class InspireVO {
     @Schema(description = "当前用户是否已收藏") private Boolean collected = false;
     @Schema(description = "当前用户是否已点赞") private Boolean liked = false;
     @Schema(description = "当前登录用户是否已关注作者") private Boolean following = false;
+    @Schema(description = "推荐理由") private String recommendReason;
+    @Schema(description = "推荐实验ID") private String recommendExperiment;
+    @Schema(description = "推荐实验分组") private String recommendVariant;
+    @Schema(description = "人工推送ID") private Long recommendPushId;
 }

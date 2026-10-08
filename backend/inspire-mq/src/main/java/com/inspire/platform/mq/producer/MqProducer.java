@@ -54,11 +54,11 @@ public class MqProducer {
         }
     }
 
-    public void send(String topic, Object data) {
+    public boolean send(String topic, Object data) {
         if (!available) {
             meterRegistry.counter("inspire.mq.send.skipped", "topic", topic).increment();
             log.info("【MQ消息】topic={}, data={}", topic, safeJson(data));
-            return;
+            return false;
         }
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
@@ -68,10 +68,12 @@ public class MqProducer {
             producer.getClass().getMethod("send", msgClz).invoke(producer, msg);
             meterRegistry.counter("inspire.mq.send.total", "topic", topic, "result", "success").increment();
             log.debug("MQ发送成功: topic={}", topic);
+            return true;
         } catch (Exception e) {
             meterRegistry.counter("inspire.mq.send.total", "topic", topic, "result", "failed").increment();
             log.warn("MQ发送失败: {} - {}", e.getClass().getSimpleName(),
                     e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            return false;
         } finally {
             sample.stop(Timer.builder("inspire.mq.send.latency")
                     .tag("topic", topic)

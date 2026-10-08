@@ -10,7 +10,11 @@ import {expect, test} from '@playwright/test'
 const API_BASE = process.env.E2E_API_BASE || 'http://127.0.0.1:8080/api'
 
 test('客服输入人工后打开转人工提交面板', async ({page}) => {
+  await page.goto('/#/login')
+  await expect(page.getByRole('button', {name: '打开AI客服'})).toBeVisible()
   await page.goto('/#/')
+  await expect(page.getByRole('button', {name: '打开AI客服'})).toHaveCount(0)
+  await page.goto('/#/login')
   const launcher = page.getByRole('button', {name: '打开AI客服'})
   await expect(launcher.locator('.launcher-copy')).toBeHidden()
   await launcher.hover()
@@ -26,7 +30,7 @@ test('客服输入人工后打开转人工提交面板', async ({page}) => {
 })
 
 test('AI客服可以拖动并记住位置', async ({page}) => {
-  await page.goto('/#/')
+  await page.goto('/#/login')
   const launcher = page.getByRole('button', {name: '打开AI客服'})
   const before = await launcher.boundingBox()
   expect(before).toBeTruthy()
@@ -42,7 +46,7 @@ test('AI客服可以拖动并记住位置', async ({page}) => {
 
   await page.reload()
   const restored = await page.getByRole('button', {name: '打开AI客服'}).boundingBox()
-  expect(Math.abs(restored.x - after.x)).toBeLessThan(3)
+  expect(Math.abs((restored.x + restored.width) - (after.x + after.width))).toBeLessThan(3)
   expect(Math.abs(restored.y - after.y)).toBeLessThan(3)
 })
 

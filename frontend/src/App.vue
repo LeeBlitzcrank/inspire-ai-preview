@@ -22,7 +22,7 @@
   </div>
   <div v-if="!isOnline" class="offline-bar">📡 网络已断开，请检查网络连接</div>
   <div v-if="showTop" class="back-top" @click="scrollToTop">↑</div>
-  <SupportAssistant v-if="!$route.path.startsWith('/admin')" />
+  <SupportAssistant v-if="$route.path === '/login' || $route.path === '/personal'" />
   </DeviceShell>
   <AppErrorDialog />
 </template>

@@ -213,16 +213,19 @@
 </template>
 
 <script setup>
-import {computed, nextTick, onBeforeUnmount, onMounted, ref} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRoute} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {askSupport, createSupportHandoff, getSupportTicket, uploadSupportAttachment} from '@/api/support.js'
 
 const open = ref(false)
+const route = useRoute()
 const input = ref('')
 const loading = ref(false)
 const scrollRef = ref(null)
 const rootRef = ref(null)
 const panelRef = ref(null)
+const viewportSize = ref({ width: 390, height: 844 })
 const supportX = ref(0)
 const supportY = ref(0)
 const panelLeft = ref(0)
@@ -241,7 +244,7 @@ const selectedTicket = ref(null)
 const TICKET_STORAGE_KEY = 'inspire_support_tickets'
 const LAUNCHER_POSITION_KEY = 'inspire_support_launcher_position'
 const LAUNCHER_SIZE = 54
-const EDGE_GAP = 12
+const EDGE_GAP = 0
 const messages = ref([
   {
     role: 'assistant',
@@ -284,7 +287,7 @@ const saveStoredTickets = (list) => {
 }
 
 const launcherStyle = computed(() => ({
-  left: `${supportX.value}px`,
+  right: `${Math.max(0, viewportSize.value.width - supportX.value - LAUNCHER_SIZE)}px`,
   top: `${supportY.value}px`
 }))
 
@@ -311,9 +314,10 @@ const clampLauncherPosition = (x, y) => {
 
 const setDefaultLauncherPosition = () => {
   const bounds = deviceBounds()
+  const bottomOffset = route.path === '/login' ? 18 : 88
   const position = clampLauncherPosition(
     bounds.right - LAUNCHER_SIZE - EDGE_GAP,
-    bounds.bottom - LAUNCHER_SIZE - 88
+    bounds.bottom - LAUNCHER_SIZE - bottomOffset
   )
   supportX.value = position.x
   supportY.value = position.y
@@ -343,6 +347,8 @@ const saveLauncherPosition = () => {
 }
 
 const syncLauncherPosition = () => {
+  const bounds = deviceBounds()
+  viewportSize.value = { width: bounds.width, height: bounds.height }
   if (userPositioned.value) {
     const position = clampLauncherPosition(supportX.value, supportY.value)
     supportX.value = position.x
@@ -683,6 +689,10 @@ onMounted(() => {
   }
   window.addEventListener('resize', handleLayoutChange)
   window.visualViewport?.addEventListener('resize', handleLayoutChange)
+  watch(() => route.fullPath, () => {
+    if (!userPositioned.value) setDefaultLauncherPosition()
+    if (open.value) nextTick(positionPanel)
+  })
 })
 
 onBeforeUnmount(() => {

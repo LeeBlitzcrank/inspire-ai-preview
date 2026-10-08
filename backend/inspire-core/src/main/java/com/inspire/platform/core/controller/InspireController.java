@@ -15,6 +15,7 @@ import com.inspire.platform.core.entity.CollectFolder;
 import com.inspire.platform.core.entity.InspireMain;
 import com.inspire.platform.core.service.ImageVariantService;
 import com.inspire.platform.core.service.InspireService;
+import com.inspire.platform.core.service.RecommendationService;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
@@ -45,6 +46,7 @@ import java.util.Objects;
 public class InspireController {
 
     private final InspireService inspireService;
+    private final RecommendationService recommendationService;
     private final ImageVariantService imageVariantService;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
@@ -258,6 +260,26 @@ public class InspireController {
             response.setHeader("Cache-Control", "private, no-store");
         }
         return Result.success(inspireService.recommend(userId, page, size));
+    }
+
+    @Operation(summary = "记录推荐反馈", description = "记录曝光、点击、收藏和跳过等推荐行为")
+    @PostMapping("/recommend/event")
+    public Result<Void> recommendEvent(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody RecommendEventRequest request) {
+        recommendationService.recordEvent(
+                userId, request.inspireId(), request.eventType(), request.reasonCode(),
+                request.experimentId(), request.variant(), request.durationMs(), request.pushId());
+        return Result.success();
+    }
+
+    @Operation(summary = "推荐实验指标", description = "按实验分组查看曝光、点击、收藏、跳过和停留指标")
+    @GetMapping("/admin/recommend/metrics")
+    public Result<List<Map<String, Object>>> recommendMetrics(
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestParam(defaultValue = "7") int days) {
+        if (!"admin".equals(role)) return Result.forbidden();
+        return Result.success(recommendationService.metrics(days));
     }
 
     @Operation(summary = "取消点赞", description = "取消后点赞数-1")

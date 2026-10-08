@@ -32,6 +32,7 @@ const AdminConfig = () => import('@/pages/admin/AdminConfig.vue')
 const AdminCategory = () => import('@/pages/admin/AdminCategory.vue')
 const AdminWordCloud = () => import('@/pages/admin/AdminWordCloud.vue')
 const AdminSupportTicket = () => import('@/pages/admin/AdminSupportTicket.vue')
+const AdminRecommend = () => import('@/pages/admin/AdminRecommend.vue')
 const NotFound = () => import('@/pages/NotFound.vue')
 const Notifications = () => import("@/pages/Notifications.vue")
 const Forbidden = () => import('@/pages/Forbidden.vue')
@@ -73,6 +74,7 @@ const routes = [
       { path: 'category', component: AdminCategory },
       { path: 'word-cloud', component: AdminWordCloud },
       { path: 'support-ticket', component: AdminSupportTicket },
+      { path: 'recommend', component: AdminRecommend },
       { path: 'config', component: AdminConfig },
     ]
   },

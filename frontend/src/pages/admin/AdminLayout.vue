@@ -42,6 +42,7 @@ const navs = [
   { path: '/admin/category', label: '分类管理', icon: '🗂' },
   { path: '/admin/word-cloud', label: '词云管理', icon: '☁️' },
   { path: '/admin/support-ticket', label: '人工工单', icon: '🎫' },
+  { path: '/admin/recommend', label: '推荐管理', icon: '✨' },
   { path: '/admin/config', label: '推送配置', icon: '⚙️' },
 ]
 const go = (path) => { router.push(path); if (window.innerWidth <= 768) showSidebar.value = false }

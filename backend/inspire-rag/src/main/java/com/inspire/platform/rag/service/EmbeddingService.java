@@ -19,11 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.function.IntConsumer;
 
 @Slf4j
@@ -105,7 +101,11 @@ public class EmbeddingService {
                 if (progressCallback != null) progressCallback.accept(end);
             } catch (Exception e) {
                 ollamaAvailable = false;
-                throw new IllegalStateException("Ollama 批量 embedding 失败: " + e.getMessage(), e);
+                log.warn("Ollama 批量 embedding 失败，降级本地哈希向量: {}", e.getMessage());
+                for (String text : batch) {
+                    results.add(new EmbeddingResult(hashEmbedding(text), "local-hash"));
+                }
+                if (progressCallback != null) progressCallback.accept(end);
             }
         }
         return results;

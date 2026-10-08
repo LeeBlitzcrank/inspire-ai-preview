@@ -80,6 +80,7 @@ frontend/tests/e2e/
 | AI 创作与素材 | [AI创作增强与素材管理说明.md](current/AI创作增强与素材管理说明.md) |
 | 多模态 RAG | [多模态RAG落地说明.md](current/多模态RAG落地说明.md) |
 | 独立客服 RAG | [独立客服RAG落地说明.md](current/独立客服RAG落地说明.md) |
+| 推荐系统 | [推荐系统落地说明.md](current/推荐系统落地说明.md) |
 | 客服回答知识库 | [项目客服知识库.md](current/项目客服知识库.md) |
 | 世界种子与平行剧情 | [世界种子功能说明.md](current/世界种子功能说明.md) |
 | 互动与私信 | [互动增强与私信功能说明.md](current/互动增强与私信功能说明.md) |

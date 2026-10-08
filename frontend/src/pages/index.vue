@@ -120,6 +120,9 @@
         <img v-if="currentCard && currentCard.img" :src="thumbOf(currentCard.img)" class="card-bg">
         <div v-else class="card-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div>
         <div class="card-mask">
+          <div v-if="currentCard.recommendReason" class="recommend-reason">
+            {{ currentCard.recommendReason }}
+          </div>
           <span class="tag-label" :class="currentCard.type">{{ currentCard.tag }}</span>
           <div class="word-text">{{ currentCard.word }}</div>
         </div>
@@ -187,7 +190,8 @@ import {
   getFollowingFeed,
   getInspireList,
   getRecommendList,
-  getUnreadCount
+  getUnreadCount,
+  recordRecommendEvent
 } from '@/api/inspire.js'
 import {startConversation} from '@/api/message.js'
 import {thumbOf} from '@/utils/media.js'
@@ -423,6 +427,9 @@ const handleCollect = async (targetId) => {
   folderDialogVisible.value = true
 }
 const handleCollected = () => {
+  if (advanceAfterCollect.value && pendingCollectId.value) {
+    sendRecommendEvent('COLLECT', currentCard.value, Date.now() - dwellStartedAt)
+  }
   pendingCollectId.value = null
   if (advanceAfterCollect.value) {
     advanceAfterCollect.value = false
@@ -480,8 +487,36 @@ const advanceAfterCollect = ref(false)
     type: typeFromTag(i.tag),
     tag: i.tag,
     inspireId: i.id,
-    img: i.img || (i.images && i.images.length > 0 ? i.images[0] : '') || ''
+    img: i.img || (i.images && i.images.length > 0 ? i.images[0] : '') || '',
+    recommendReason: i.recommendReason || '',
+    recommendExperiment: i.recommendExperiment || '',
+    recommendVariant: i.recommendVariant || '',
+    recommendPushId: i.recommendPushId || null
   })
+
+  let dwellStartedAt = Date.now()
+  const sendRecommendEvent = (eventType, card = currentCard.value, durationMs = 0) => {
+    if (!auth.isLogin || !card?.inspireId) return
+    recordRecommendEvent({
+      inspireId: card.inspireId,
+      eventType,
+      reasonCode: card.recommendReason || '',
+      experimentId: card.recommendExperiment || '',
+      variant: card.recommendVariant || '',
+      durationMs,
+      pushId: card.recommendPushId || null
+    }).catch(() => {})
+  }
+
+  let lastImpressionKey = ''
+  watch(currentCard, (card) => {
+    if (!card?.inspireId) return
+    const key = `${card.inspireId}:${card.recommendReason || ''}`
+    if (key === lastImpressionKey) return
+    lastImpressionKey = key
+    dwellStartedAt = Date.now()
+    sendRecommendEvent('IMPRESSION', card)
+  }, {immediate: true})
 
   async function loadSwipeCards(reset = true) {
     if (recommendLoading.value) return
@@ -559,6 +594,7 @@ const advanceAfterCollect = ref(false)
   }
   const goDetailSwipe = () => {
   if (!wasSwiped.value && currentCard.value) {
+    sendRecommendEvent('CLICK', currentCard.value, Date.now() - dwellStartedAt)
     router.push({ name: 'InspireDetail', params: { id: String(currentCard.value.inspireId) } })
   }
   wasSwiped.value = false
@@ -605,6 +641,7 @@ const nextCard = async () => {
   }
   const swipeLeft = () => {
     stopAutoAdvance()
+    sendRecommendEvent('SKIP', currentCard.value, Date.now() - dwellStartedAt)
     cardTransition.value = 'transform 0.3s ease'
     offsetX.value = -450
     setTimeout(nextCard, 300)
