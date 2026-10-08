@@ -8,6 +8,7 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.common.validation.InputValidation;
 import com.inspire.platform.core.config.MinioConfig;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.CollectFolder;
@@ -67,7 +68,7 @@ public class InspireController {
 
     @Operation(summary = "公开灵感列表", description = "分页+分类筛选，支持按时间/热度排序")
     @GetMapping("/public/list")
-    public Result<List<InspireVO>> listPublic(InspirePageQuery query,
+    public Result<List<InspireVO>> listPublic(@Valid InspirePageQuery query,
             @RequestHeader(value = "X-User-Id", required = false) Long loginUserId,
             HttpServletResponse response) {
         if (loginUserId == null) {
@@ -208,7 +209,7 @@ public class InspireController {
     @PutMapping("/{id}")
     public Result<InspireMain> update(@PathVariable Long id,
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @RequestBody InspireUpdateRequest req) {
+            @Valid @RequestBody InspireUpdateRequest req) {
         return Result.success("修改成功", inspireService.update(id, req, userId));
     }
 
@@ -289,14 +290,14 @@ public class InspireController {
 
     @PostMapping("/collect/folder")
     @Operation(summary = "创建收藏文件夹")
-    public Result<CollectFolder> createFolder(@RequestBody Map<String, String> body,
+    public Result<CollectFolder> createFolder(@Valid @RequestBody CollectFolderCreateRequest body,
                                                HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        String name = body.get("name");
-        String icon = body.get("icon");
+        String name = InputValidation.normalizeRequiredText(body.getName(), "收藏夹名称", 20);
+        String icon = InputValidation.normalizeOptionalText(body.getIcon(), "收藏夹图标", 20);
         return Result.success(inspireService.createCollectFolder(userId, name, icon));
     }
 
@@ -323,13 +324,14 @@ public class InspireController {
 
     @PutMapping("/collect/folder/{id}")
     @Operation(summary = "重命名收藏文件夹")
-    public Result<Void> renameFolder(@PathVariable("id") Long id, @RequestBody Map<String, String> body,
+    public Result<Void> renameFolder(@PathVariable("id") Long id,
+                                      @Valid @RequestBody CollectFolderRenameRequest body,
                                       HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        String name = body.get("name");
+        String name = InputValidation.normalizeRequiredText(body.getName(), "收藏夹名称", 20);
         inspireService.renameCollectFolder(userId, id, name);
         return Result.success();
     }
@@ -337,13 +339,13 @@ public class InspireController {
     @PostMapping("/collect/{id}/folder")
     @Operation(summary = "收藏到指定文件夹")
     public Result<Void> collectToFolder(@PathVariable("id") Long inspireId,
-                                         @RequestBody Map<String, Object> body,
+                                         @Valid @RequestBody CollectFolderMoveRequest body,
                                          HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
+        Long folderId = body.getFolderId();
         inspireService.collectToFolder(userId, inspireId, folderId);
         return Result.success();
     }
@@ -372,13 +374,13 @@ public class InspireController {
     @PutMapping("/collect/{id}/move")
     @Operation(summary = "移动收藏到文件夹")
     public Result<Void> moveCollect(@PathVariable("id") Long inspireId,
-                                     @RequestBody Map<String, Object> body,
+                                     @Valid @RequestBody CollectFolderMoveRequest body,
                                      HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        Long folderId = body.get("folderId") != null ? Long.valueOf(body.get("folderId").toString()) : null;
+        Long folderId = body.getFolderId();
         inspireService.moveCollectToFolder(userId, inspireId, folderId);
         return Result.success();
     }
@@ -394,17 +396,12 @@ public class InspireController {
     @PostMapping("/public/suggest-images")
     @org.springframework.cache.annotation.Cacheable(
             value = "suggestImages",
-            key = "#body['keyword'] + ':' + #body['page']")
+            key = "#body.keyword + ':' + #body.page")
     @Operation(summary = "AI 配图建议", description = "配置了 Unsplash Access Key 则搜索真实图片，否则回退到 picsum 随机占位图")
-    public Result<java.util.List<String>> suggestImages(@RequestBody Map<String, String> body) {
-        String keyword = body.getOrDefault("keyword", "");
-        // 换一批靠翻页实现：page 由前端递增，默认第一页
-        int page = 1;
-        try {
-            page = Math.max(1, Integer.parseInt(body.getOrDefault("page", "1").trim()));
-        } catch (Exception ignore) {
-            page = 1;
-        }
+    public Result<java.util.List<String>> suggestImages(@Valid @RequestBody ImageSuggestRequest body) {
+        String keyword = InputValidation.normalizeRequiredText(
+                body.getKeyword(), "配图关键词", 100);
+        int page = body.getPage() == null ? 1 : body.getPage();
         java.util.List<String> urls = new java.util.ArrayList<>();
         
         // 尝试 Unsplash API

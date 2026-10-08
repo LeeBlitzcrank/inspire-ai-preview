@@ -170,10 +170,10 @@ export const adminDeleteWord = (id) => request.delete(`/admin/word-cloud/${id}`)
 // ===== 视频处理（ffmpeg） =====
 export const probeVideo = (url) => request.post('/file/video/probe', { url })
 export const compressVideo = (url, crf, keepOriginal = true) =>
-  request.post('/file/video/compress', { url, crf, keepOriginal: String(keepOriginal) })
+  request.post('/file/video/compress', { url, crf, keepOriginal: Boolean(keepOriginal) })
 export const trimVideo = (url, start, duration, keepOriginal = true) => request.post('/file/video/trim', {
   url,
   start: String(start),
   duration: String(duration),
-  keepOriginal: String(keepOriginal)
+  keepOriginal: Boolean(keepOriginal)
 })

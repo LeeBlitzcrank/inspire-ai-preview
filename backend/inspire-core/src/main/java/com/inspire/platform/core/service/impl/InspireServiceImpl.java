@@ -14,7 +14,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.util.TextFilter;
-import com.inspire.platform.common.util.TitleUtil;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import com.inspire.platform.core.dto.*;
 import com.inspire.platform.core.entity.*;
 import com.inspire.platform.core.mapper.*;
@@ -67,6 +68,15 @@ public class InspireServiceImpl implements InspireService {
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "publicList", key = "#query.page + ':' + #query.size + ':' + #query.tag + ':' + #query.sort", unless = "#loginUserId != null")
     public List<InspireVO> listPublic(InspirePageQuery query, Long loginUserId) {
+        int page = query.getPage() == null ? 1 : query.getPage();
+        int size = query.getSize() == null ? 20 : query.getSize();
+        InputValidation.requirePage(page, size);
+        String sort = query.getSort() == null ? "time" : query.getSort();
+        if (!"time".equals(sort) && !"heat".equals(sort)) {
+            throw new BusinessException(400, "排序参数不正确");
+        }
+        query.setTag(InputValidation.normalizeOptionalText(
+                query.getTag(), "分类", ValidationConstants.TAG_MAX));
         LambdaQueryWrapper<InspireMain> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(InspireMain::getStatus, 1).eq(InspireMain::getDeleted, 0);
         if (query.getTag() != null && !query.getTag().isEmpty()) {
@@ -77,7 +87,7 @@ public class InspireServiceImpl implements InspireService {
         } else {
             wrapper.orderByDesc(InspireMain::getCreateTime);
         }
-        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(query.getPage(), query.getSize()), wrapper);
+        Page<InspireMain> mpPage = mainMapper.selectPage(new Page<>(page, size), wrapper);
         return toVOList(mpPage.getRecords(), loginUserId);
     }
 
@@ -488,10 +498,29 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public InspireMain create(InspireCreateRequest req, Long userId) {
         checkUserExists(userId);
-        String title = TitleUtil.truncate(req.getTitle());
+        String title = InputValidation.normalizeRequiredText(
+                req.getTitle(), "标题", ValidationConstants.TITLE_MAX);
+        String content = InputValidation.normalizeRequiredText(
+                req.getContent(), "正文", ValidationConstants.CONTENT_MAX);
+        String tag = InputValidation.normalizeRequiredText(
+                req.getTag(), "分类", ValidationConstants.TAG_MAX);
+        String img = InputValidation.validateImageUrl(req.getImg(), "封面图");
+        String images = InputValidation.validateImagesJson(req.getImages());
+        String publishCity = InputValidation.normalizeOptionalText(
+                req.getPublishCity(), "城市", ValidationConstants.CITY_MAX);
+        Integer status = req.getStatus() == null ? 0 : req.getStatus();
+        if (status < 0 || status > 1) {
+            throw new BusinessException(400, "状态不正确");
+        }
+        if (req.getQuoteInspireId() != null) {
+            InputValidation.requirePositive(req.getQuoteInspireId(), "引用的灵感");
+        }
         InspireMain m = new InspireMain();
         m.setId(nextId()); m.setTitle(title);
-        m.setImg(req.getImg() != null ? req.getImg() : ""); m.setImages(req.getImages() != null ? req.getImages() : ""); m.setTag(req.getTag()); m.setUserId(userId);
+        m.setImg(img);
+        m.setImages(images);
+        m.setTag(tag);
+        m.setUserId(userId);
         if (req.getQuoteInspireId() != null) {
             Integer quoteExists = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM inspire_main WHERE id = ? AND deleted = 0 AND status = 1",
@@ -504,19 +533,19 @@ public class InspireServiceImpl implements InspireService {
         // 内容审核：命中敏感词设为待审核（2），否则用请求的status
         String reason = TextFilter.check(title);
         if (reason == null) {
-            reason = TextFilter.check(req.getContent());
+            reason = TextFilter.check(content);
         }
         if (reason != null) {
             log.warn("内容触发审核: title={}, userId={}, reason={}", req.getTitle(), userId, reason);
             m.setStatus(2);
         } else {
-            m.setStatus(req.getStatus() != null ? req.getStatus() : 0);
+            m.setStatus(status);
         }
-        m.setPublishCity(req.getPublishCity() != null ? req.getPublishCity() : "");
+        m.setPublishCity(publishCity == null ? "" : publishCity);
         m.setCreateTime(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")));
         m.setViewCount(0L); m.setLikeCount(0); m.setCollectCount(0); m.setHeat(0);
         mainMapper.insert(m);
-        InspireContent c = new InspireContent(); c.setInspireId(m.getId()); c.setContent(req.getContent());
+        InspireContent c = new InspireContent(); c.setInspireId(m.getId()); c.setContent(content);
         contentMapper.insert(c);
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_PUBLISH, java.util.Map.of("inspireId", m.getId(), "userId", userId, "title", m.getTitle(), "tag", m.getTag()));
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_RAG_SYNC,
@@ -563,6 +592,7 @@ public class InspireServiceImpl implements InspireService {
     @Override @Transactional
     public InspireMain update(Long id, InspireUpdateRequest req, Long userId) {
         checkUserExists(userId);
+        InputValidation.requirePositive(id, "灵感");
         InspireMain m = mainMapper.selectById(id);
         if (m == null || m.getDeleted() == 1) {
             throw new BusinessException("灵感不存在");
@@ -571,22 +601,28 @@ public class InspireServiceImpl implements InspireService {
             throw new BusinessException("只能修改自己的灵感");
         }
         if (req.getTitle() != null) {
-            m.setTitle(TitleUtil.truncate(req.getTitle()));
+            m.setTitle(InputValidation.normalizeRequiredText(
+                    req.getTitle(), "标题", ValidationConstants.TITLE_MAX));
         }
         if (req.getTag() != null) {
-            m.setTag(req.getTag());
+            m.setTag(InputValidation.normalizeRequiredText(
+                    req.getTag(), "分类", ValidationConstants.TAG_MAX));
         }
         if (req.getImg() != null) {
-            m.setImg(req.getImg());
+            m.setImg(InputValidation.validateImageUrl(req.getImg(), "封面图"));
         }
         if (req.getImages() != null) {
-            m.setImages(req.getImages());
+            m.setImages(InputValidation.validateImagesJson(req.getImages()));
         }
         if (req.getStatus() != null) {
+            if (req.getStatus() < 0 || req.getStatus() > 1) {
+                throw new BusinessException(400, "状态不正确");
+            }
             m.setStatus(req.getStatus());
         }
         if (req.getPublishCity() != null) {
-            m.setPublishCity(req.getPublishCity());
+            m.setPublishCity(InputValidation.normalizeOptionalText(
+                    req.getPublishCity(), "城市", ValidationConstants.CITY_MAX));
         }
         
         // 保存当前版本到历史（仅已发布的灵感）
@@ -610,9 +646,11 @@ public class InspireServiceImpl implements InspireService {
         }
         mainMapper.updateById(m);
         if (req.getContent() != null) {
+            String content = InputValidation.normalizeRequiredText(
+                    req.getContent(), "正文", ValidationConstants.CONTENT_MAX);
             InspireContent c = contentMapper.selectById(id);
-            if (c != null) { c.setContent(req.getContent()); contentMapper.updateById(c); }
-            else { InspireContent nc = new InspireContent(); nc.setInspireId(id); nc.setContent(req.getContent()); contentMapper.insert(nc); }
+            if (c != null) { c.setContent(content); contentMapper.updateById(c); }
+            else { InspireContent nc = new InspireContent(); nc.setInspireId(id); nc.setContent(content); contentMapper.insert(nc); }
         }
         esSyncService.sync(m);
         mqProducer.send(MqTopicConstants.TOPIC_INSPIRE_RAG_SYNC,

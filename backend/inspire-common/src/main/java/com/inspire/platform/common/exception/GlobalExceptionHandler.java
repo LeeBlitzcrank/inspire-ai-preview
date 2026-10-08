@@ -9,9 +9,11 @@ package com.inspire.platform.common.exception;
 
 import com.inspire.platform.common.model.ErrorCode;
 import com.inspire.platform.common.result.Result;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -68,13 +70,31 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleValidation(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
-                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .map(err -> err.getDefaultMessage() == null ? err.getField() + "参数不正确" : err.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         log.warn("参数校验失败: {}", msg);
         return Result.error(400, msg);
     }
 
-
+    @ExceptionHandler({BindException.class, ConstraintViolationException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleBoundValidation(Exception e) {
+        String msg;
+        if (e instanceof BindException bindException) {
+            msg = bindException.getBindingResult().getFieldErrors().stream()
+                    .map(err -> err.getDefaultMessage() == null ? err.getField() + "参数不正确" : err.getDefaultMessage())
+                    .collect(Collectors.joining("; "));
+        } else {
+            ConstraintViolationException violationException = (ConstraintViolationException) e;
+            msg = violationException.getConstraintViolations().stream()
+                    .map(violation -> violation.getMessage() == null
+                            ? violation.getPropertyPath() + "参数不正确"
+                            : violation.getMessage())
+                    .collect(Collectors.joining("; "));
+        }
+        log.warn("参数绑定失败: {}", msg);
+        return Result.error(400, msg);
+    }
 
     @ExceptionHandler({MissingServletRequestParameterException.class, TypeMismatchException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)

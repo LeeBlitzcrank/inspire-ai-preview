@@ -34,7 +34,10 @@ public enum ErrorCode {
     // ========== 403 权限不足 ==========
 
     /** 当前角色无接口访问权限 */
-    FORBIDDEN(403001, "当前角色无接口访问权限");
+    FORBIDDEN(403001, "当前角色无接口访问权限"),
+
+    /** 历史弱密码必须先完成升级 */
+    PASSWORD_UPGRADE_REQUIRED(403002, "请先修改弱密码后再继续使用");
 
     private final int code;
     private final String message;

@@ -8,8 +8,11 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.core.dto.AiCallLogRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,15 +33,16 @@ public class InternalController {
 
     @Operation(summary = "记录AI调用", hidden = true)
     @PostMapping("/ai/call")
-    public Result<Void> recordAiCall(@RequestBody java.util.Map<String, Object> body) {
+    public Result<Void> recordAiCall(@Valid @RequestBody AiCallLogRequest request) {
         try {
-            String keyword = (String) body.getOrDefault("keyword", "");
-            Number userId = (Number) body.getOrDefault("userId", 0);
+            String keyword = InputValidation.normalizeOptionalText(
+                    request.getKeyword(), "AI调用关键词", 100);
+            Long userId = request.getUserId();
             com.inspire.platform.core.entity.AiCallLog log = new com.inspire.platform.core.entity.AiCallLog();
   log.setId(com.inspire.platform.core.service.impl.InspireServiceImpl.nextId());
             log.setCallDate(LocalDate.now());
-            log.setKeyword(keyword);
-            log.setUserId(userId != null ? userId.longValue() : 0);
+            log.setKeyword(keyword == null ? "" : keyword);
+            log.setUserId(userId == null ? 0 : userId);
             aiCallLogMapper.insert(log);
         } catch (Exception e) {
             log.warn("记录AI调用失败: {}", e.getMessage());

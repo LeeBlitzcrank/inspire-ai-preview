@@ -147,7 +147,7 @@
               <input
                 v-model="replyText"
                 :placeholder="replyToUser ? `回复 @${replyToUser.nickname}` : '回复...'"
-                maxlength="200"
+                :maxlength="commentMax"
                 @input="onMentionInput($event, 'reply')"
                 @keydown.esc="closeMention"
               >
@@ -193,7 +193,7 @@
             v-model="quickCommentText"
             :readonly="!isLogin"
             placeholder="说点什么，回车发送"
-            maxlength="200"
+            :maxlength="commentMax"
             enterkeyhint="send"
             aria-label="快速评论"
             @focus="handleQuickCommentFocus"
@@ -219,6 +219,7 @@
 import {toRef, watch} from 'vue'
 import {useInspireComments} from '../composables/useInspireComments.js'
 import {formatCommentTime} from '@/utils/time.js'
+import {INPUT_LIMITS} from '@/utils/validation.js'
 
 const props = defineProps({
   detail: { type: Object, required: true },
@@ -228,6 +229,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['require-login', 'quote', 'like', 'collect'])
+const commentMax = INPUT_LIMITS.commentMax
 
 const {
   commentTotal,

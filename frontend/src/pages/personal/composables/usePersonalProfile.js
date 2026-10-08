@@ -5,11 +5,13 @@
  * 维护说明：注释解释文件边界和核心意图，具体业务规则以方法、组件和主文档说明为准。
  * INSPIRE_FILE_HEADER
  */
-import {nextTick, ref, watch} from 'vue'
+import {nextTick, onBeforeUnmount, ref, watch} from 'vue'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {changePassword, updateUserInfo} from '@/api/inspire.js'
-import {getIpLocation} from '@/api/auth.js'
+import {bindPhone, getIpLocation, sendSmsCode} from '@/api/auth.js'
 import {findCityPath} from '@/utils/cityData.js'
+import {validateNickname, validatePassword} from '@/utils/validation.js'
+import {clearAllTokens} from '@/utils/tokenStorage.js'
 
 export function usePersonalProfile(userInfo) {
   // 编辑资料
@@ -120,7 +122,72 @@ export function usePersonalProfile(userInfo) {
   const savingPwd = ref(false)
   const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
+  const bindForm = ref({ phone: '', code: '' })
+  const bindingPhone = ref(false)
+  const smsCodeSending = ref(false)
+  const smsCountdown = ref(0)
+  let smsTimer = null
+
+  const startSmsCountdown = (seconds = 60) => {
+    smsCountdown.value = Math.max(1, Number(seconds) || 60)
+    clearInterval(smsTimer)
+    smsTimer = setInterval(() => {
+      smsCountdown.value -= 1
+      if (smsCountdown.value <= 0) clearInterval(smsTimer)
+    }, 1000)
+  }
+
+  onBeforeUnmount(() => clearInterval(smsTimer))
+
+  const handleSendBindCode = async () => {
+    if (!/^1[3-9]\d{9}$/.test(bindForm.value.phone.trim())) {
+      return ElMessage.warning('请输入正确的11位手机号')
+    }
+    smsCodeSending.value = true
+    try {
+      const res = await sendSmsCode(bindForm.value.phone.trim(), 'bind')
+      if (res.code !== 200) return ElMessage.error(res.msg || '验证码发送失败')
+      if (res.data?.devCode) {
+        bindForm.value.code = res.data.devCode
+        ElMessage.success(`开发验证码 ${res.data.devCode} 已自动填入`)
+      } else {
+        ElMessage.success('验证码已发送')
+      }
+      startSmsCountdown(res.data?.cooldownSeconds)
+    } catch (e) {
+      // 请求层已提示
+    } finally {
+      smsCodeSending.value = false
+    }
+  }
+
+  const handleBindPhone = async () => {
+    if (!/^1[3-9]\d{9}$/.test(bindForm.value.phone.trim())) {
+      return ElMessage.warning('请输入正确的11位手机号')
+    }
+    if (!/^\d{6}$/.test(bindForm.value.code.trim())) {
+      return ElMessage.warning('请输入6位短信验证码')
+    }
+    bindingPhone.value = true
+    try {
+      const res = await bindPhone(bindForm.value.phone.trim(), bindForm.value.code.trim())
+      if (res.code === 200) {
+        userInfo.value.phone = bindForm.value.phone.trim()
+        bindForm.value = { phone: '', code: '' }
+        ElMessage.success('手机号绑定成功')
+      } else {
+        ElMessage.error(res.msg || '绑定失败')
+      }
+    } catch (e) {
+      // 请求层已提示
+    } finally {
+      bindingPhone.value = false
+    }
+  }
+
   const handleSaveProfile = async () => {
+    const nicknameError = validateNickname(editForm.value.nickname)
+    if (nicknameError) return ElMessage.warning(nicknameError)
     savingProfile.value = true
     try {
       const res = await updateUserInfo(editForm.value)
@@ -146,13 +213,22 @@ export function usePersonalProfile(userInfo) {
     if (!pwdForm.value.oldPassword) return ElMessage.warning('请输入旧密码')
     if (!pwdForm.value.newPassword) return ElMessage.warning('请输入新密码')
     if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) return ElMessage.warning('两次密码不一致')
+    const passwordError = validatePassword(pwdForm.value.newPassword, {
+      username: userInfo.value.username || '',
+      email: userInfo.value.email || ''
+    })
+    if (passwordError) return ElMessage.warning(passwordError)
     savingPwd.value = true
     try {
       const res = await changePassword(pwdForm.value)
       if (res.code === 200) {
-        ElMessage.success('密码修改成功')
+        ElMessage.success('密码修改成功，请重新登录')
         pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
         showPwdDialog.value = false
+        clearAllTokens()
+        window.setTimeout(() => {
+          window.location.href = '/#/login'
+        }, 600)
       } else {
         ElMessage.error(res.msg || '密码修改失败')
       }
@@ -176,6 +252,12 @@ export function usePersonalProfile(userInfo) {
     showPwdDialog,
     savingPwd,
     pwdForm,
+    bindForm,
+    bindingPhone,
+    smsCodeSending,
+    smsCountdown,
+    handleSendBindCode,
+    handleBindPhone,
     handleSaveProfile,
     handleChangePassword
   }

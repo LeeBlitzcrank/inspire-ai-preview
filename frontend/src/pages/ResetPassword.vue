@@ -17,8 +17,8 @@
     <div class="form-box">
       <h2 class="title">重置密码</h2>
       <p class="desc">请设置你的新密码</p>
-      <div class="input-group"><el-input v-model="form.password" placeholder="请输入新密码" show-password></el-input></div>
-      <div class="input-group"><el-input v-model="form.confirm" placeholder="请确认新密码" show-password></el-input></div>
+      <div class="input-group"><el-input v-model="form.password" placeholder="8-64位，不能使用纯数字" maxlength="64" show-password></el-input></div>
+      <div class="input-group"><el-input v-model="form.confirm" placeholder="请确认新密码" maxlength="64" show-password></el-input></div>
       <el-button class="btn" type="primary" :loading="loading" @click="handleSubmit">重置密码</el-button>
       <div class="tip" v-if="success">密码重置成功！<span class="link" @click="$router.push('/login')">前往登录</span></div>
       <div class="tip" v-if="!hasToken">请从邮件中的重置链接进入此页面</div>
@@ -32,6 +32,7 @@ import {ElMessage} from '@/utils/uiFeedback.js'
 import {resetPassword} from '@/api/inspire.js'
 import {saveTokens} from '@/utils/tokenStorage.js'
 import {useAuthStore} from '@/stores/auth'
+import {validatePassword} from '@/utils/validation.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,7 +54,8 @@ const handleSubmit = async () => {
   if (!hasToken.value) return ElMessage.warning('无效的重置链接')
   if (!password) return ElMessage.warning('请输入新密码')
   if (password !== confirm) return ElMessage.warning('两次密码不一致')
-  if (password.length < 6 || password.length > 16) return ElMessage.warning('密码长度6-16位')
+  const passwordError = validatePassword(password)
+  if (passwordError) return ElMessage.warning(passwordError)
   loading.value = true
   try {
     const res = await resetPassword({ token: form.value.token, newPassword: password })

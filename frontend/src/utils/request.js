@@ -201,6 +201,13 @@ service.interceptors.response.use(
       return Promise.reject(err)
     }
 
+    if (code === 403002) {
+      clearAllTokens()
+      ElMessage.error(data.msg || '请先修改弱密码后再继续使用')
+      redirectToLogin(path)
+      return Promise.reject(err)
+    }
+
     // ===== 通用错误 =====
     ElMessage.error(data.msg || '服务异常,请稍后重试')
     return Promise.reject(err)

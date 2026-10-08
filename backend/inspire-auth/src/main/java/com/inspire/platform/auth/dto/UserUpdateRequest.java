@@ -8,17 +8,23 @@
 package com.inspire.platform.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
+
+import static com.inspire.platform.common.validation.ValidationConstants.*;
 
 @Schema(description = "用户信息更新请求")
 public class UserUpdateRequest {
 
     @Schema(description = "用户昵称", example = "Alice魔法师")
+    @Size(min = NICKNAME_MIN, max = NICKNAME_MAX, message = "昵称长度需为2-20个字符")
     private String nickname;
 
     @Schema(description = "头像URL", example = "https://example.com/avatar.png")
+    @Size(max = AVATAR_MAX, message = "头像地址过长")
     private String avatar;
 
     @Schema(description = "所在城市", example = "上海")
+    @Size(max = CITY_MAX, message = "城市名称过长")
     private String city;
 
     public String getNickname() { return nickname; }

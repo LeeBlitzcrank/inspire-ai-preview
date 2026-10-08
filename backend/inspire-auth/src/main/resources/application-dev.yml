@@ -27,6 +27,13 @@ spring:
           max-idle: 8
           min-idle: 0
 
+inspire:
+  auth:
+    legacy-upgrade-exempt-users: ${INSPIRE_LEGACY_UPGRADE_EXEMPT_USERS:user001,user002,user003}
+  sms:
+    dev-return-code: true
+    log-code: true
+
 logging:
   level:
     com.inspire: debug

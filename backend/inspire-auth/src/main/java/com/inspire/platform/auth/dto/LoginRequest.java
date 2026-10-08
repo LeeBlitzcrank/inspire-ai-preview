@@ -9,25 +9,34 @@ package com.inspire.platform.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import static com.inspire.platform.common.validation.ValidationConstants.LOGIN_PASSWORD_MAX;
+import static com.inspire.platform.common.validation.ValidationConstants.USERNAME_MAX;
 
 @Schema(description = "用户登录请求")
 public class LoginRequest {
 
     @Schema(description = "登录用户名")
     @NotBlank(message = "用户名不能为空")
+    @Size(max = USERNAME_MAX, message = "账号长度不正确")
     private String username;
 
     @Schema(description = "登录密码")
     @NotBlank(message = "密码不能为空")
+    @Size(max = LOGIN_PASSWORD_MAX, message = "密码长度不正确")
     private String password;
 
     @Schema(description = "设备唯一标识")
+    @Size(max = 128, message = "设备标识过长")
     private String deviceId;
 
     @Schema(description = "图形验证码ID")
+    @Size(max = 64, message = "验证码ID过长")
     private String captchaId;
 
     @Schema(description = "图形验证码")
+    @Size(max = 10, message = "验证码长度不正确")
     private String captchaCode;
 
     public String getUsername() { return username; }

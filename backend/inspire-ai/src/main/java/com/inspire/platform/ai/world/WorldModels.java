@@ -8,9 +8,14 @@
 package com.inspire.platform.ai.world;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 import java.util.Map;
+
+import static com.inspire.platform.common.validation.ValidationConstants.*;
 
 public final class WorldModels {
 
@@ -108,24 +113,38 @@ public final class WorldModels {
     }
 
     public record GenerateSeedRequest(
+            @NotBlank(message = "原文名称不能为空")
+            @Size(max = WORLD_SOURCE_TITLE_MAX, message = "原文名称不能超过120个字符")
             String sourceTitle,
+            @Size(max = WORLD_SOURCE_AUTHOR_MAX, message = "作者名称不能超过80个字符")
             String sourceAuthor,
+            @NotBlank(message = "原文内容不能为空")
+            @Size(max = WORLD_SOURCE_TEXT_MAX, message = "原文内容不能超过6000个字符")
             String sourceText,
+            @Size(max = WORLD_GUIDANCE_MAX, message = "创作方向不能超过500个字符")
             String guidance
     ) {
     }
 
     public record GenerateChapterRequest(
+            @Positive(message = "世界线不正确")
             long lineId,
             Long branchId,
+            @NotBlank(message = "选择项不能为空")
+            @Size(max = WORLD_CHOICE_KEY_MAX, message = "选择项标识过长")
             String choiceKey,
+            @NotBlank(message = "选择内容不能为空")
+            @Size(max = WORLD_CHOICE_TEXT_MAX, message = "选择内容不能超过160个字符")
             String choiceText
     ) {
     }
 
     public record VoteRequest(
             long branchId,
+            @Positive(message = "世界线不正确")
             long lineId,
+            @NotBlank(message = "选择项不能为空")
+            @Size(max = WORLD_CHOICE_KEY_MAX, message = "选择项标识过长")
             String choiceKey
     ) {
     }

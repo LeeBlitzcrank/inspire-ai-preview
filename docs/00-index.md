@@ -35,6 +35,7 @@ backend/inspire-core/src/main/resources/db/migration/V*.sql
 | --- | --- |
 | 业务、安全与性能审计 | [项目业务安全与性能审计报告.md](current/项目业务安全与性能审计报告.md) |
 | 密钥泄露与 Git 清理 | [密钥泄露与Git清理清单.md](current/密钥泄露与Git清理清单.md) |
+| 输入校验与边界 | [生产输入校验与边界规范.md](current/生产输入校验与边界规范.md) |
 
 ## 4. 性能与可观测性
 
@@ -62,6 +63,7 @@ docs/current/性能压测问题与优化报告.md
 | --- | --- |
 | 测试与可观测性总览 | [可观测性与安全并发测试说明.md](current/可观测性与安全并发测试说明.md) |
 | Web Vitals 与冒烟测试 | [Playwright冒烟测试与WebVitals说明.md](current/Playwright冒烟测试与WebVitals说明.md) |
+| API 输入边界测试 | [生产输入校验与边界规范.md](current/生产输入校验与边界规范.md) |
 
 测试入口：
 

@@ -9,6 +9,7 @@ package com.inspire.platform.ai.world;
 
 import com.inspire.platform.ai.world.WorldModels.*;
 import com.inspire.platform.common.result.Result;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,7 +44,7 @@ public class WorldSeedController {
     public Result<WorldTaskView> generate(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            @RequestBody GenerateSeedRequest request) {
+            @Valid @RequestBody GenerateSeedRequest request) {
         return Result.success("世界生成任务已提交",
                 worldSeedService.submitSeedTask(request, userId == null ? 0 : userId, idempotencyKey));
     }
@@ -52,7 +53,7 @@ public class WorldSeedController {
     public Result<WorldTaskView> chapter(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            @RequestBody GenerateChapterRequest request) {
+            @Valid @RequestBody GenerateChapterRequest request) {
         return Result.success("章节生成任务已提交",
                 worldSeedService.submitChapterTask(request, userId == null ? 0 : userId, idempotencyKey));
     }
@@ -67,7 +68,7 @@ public class WorldSeedController {
     @PostMapping("/vote")
     public Result<Void> vote(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
-            @RequestBody VoteRequest request) {
+            @Valid @RequestBody VoteRequest request) {
         worldSeedService.vote(request, userId == null ? 0 : userId);
         return Result.success("投票成功", null);
     }

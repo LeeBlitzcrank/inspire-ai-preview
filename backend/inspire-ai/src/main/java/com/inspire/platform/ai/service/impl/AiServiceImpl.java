@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.ai.dto.*;
 import com.inspire.platform.ai.service.AiService;
 import com.inspire.platform.common.util.TitleUtil;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -56,7 +58,10 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public AiGenerateResponse generate(AiGenerateRequest request) {
-        String keyword = request.getKeyword().trim();
+        String keyword = InputValidation.normalizeRequiredText(
+                request.getKeyword(), "关键词", ValidationConstants.AI_KEYWORD_MAX);
+        request.setCity(InputValidation.normalizeOptionalText(
+                request.getCity(), "城市", ValidationConstants.CITY_MAX));
         AiExploreResponse resp = doExplore(keyword, null, false);
         if (resp.getOptions() != null && !resp.getOptions().isEmpty()) {
             AiExploreResponse.Option first = resp.getOptions().get(0);
@@ -74,10 +79,27 @@ public class AiServiceImpl implements AiService {
     }
 
     @Override public void select(AiSelectRequest request, Long userId) {
-        log.info("选中灵感: userId={}, keyword={}", userId, request.getKeyword());
+        InputValidation.requirePositive(userId, "用户");
+        String keyword = InputValidation.normalizeRequiredText(
+                request.getKeyword(), "关键词", ValidationConstants.AI_KEYWORD_MAX);
+        request.setSelectedTitle(InputValidation.normalizeOptionalText(
+                request.getSelectedTitle(), "标题", ValidationConstants.TITLE_MAX));
+        request.setCity(InputValidation.normalizeOptionalText(
+                request.getCity(), "城市", ValidationConstants.CITY_MAX));
+        log.info("选中灵感: userId={}, keyword={}", userId, keyword);
     }
 
     @Override public void publish(AiPublishRequest request, Long userId) {
+        InputValidation.requirePositive(userId, "用户");
+        request.setTitle(InputValidation.normalizeRequiredText(
+                request.getTitle(), "标题", ValidationConstants.TITLE_MAX));
+        request.setContent(InputValidation.normalizeRequiredText(
+                request.getContent(), "正文", ValidationConstants.CONTENT_MAX));
+        request.setTag(InputValidation.normalizeRequiredText(
+                request.getTag(), "分类", ValidationConstants.TAG_MAX));
+        request.setImg(InputValidation.validateImageUrl(request.getImg(), "封面图"));
+        request.setCity(InputValidation.normalizeOptionalText(
+                request.getCity(), "城市", ValidationConstants.CITY_MAX));
         log.info("发布灵感: userId={}, title={}", userId, request.getTitle());
     }
 
@@ -136,6 +158,10 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public AiExploreResponse explore(AiExploreRequest request) {
+        request.setKeyword(InputValidation.normalizeRequiredText(
+                request.getKeyword(), "关键词", ValidationConstants.AI_KEYWORD_MAX));
+        request.setPath(InputValidation.normalizeOptionalText(
+                request.getPath(), "探索路径", ValidationConstants.AI_PATH_MAX));
         int variants = request.getVariants() == null ? 3 : Math.max(1, Math.min(5, request.getVariants()));
         return doExplore(request.getKeyword(), request.getPath(), request.isRefresh(), variants);
     }

@@ -78,6 +78,23 @@ export function getLoginCaptcha() {
   return request.get('/auth/captcha')
 }
 
+export function sendSmsCode(phone, purpose = 'login') {
+  return request.post('/auth/sms/send', {phone, purpose})
+}
+
+export function loginBySms(phone, code) {
+  return request.post('/auth/sms/login', {phone, code}).then(res => {
+    if (res.code === 200 && res.data) {
+      saveTokens(res.data)
+    }
+    return res
+  })
+}
+
+export function bindPhone(phone, code) {
+  return request.post('/auth/sms/bind', {phone, code})
+}
+
 /**
  * 用户注册（自动登录并保存双Token）
  * 后端 /auth/register 返回的双Token结构与 login 一致

@@ -9,6 +9,9 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import com.inspire.platform.core.dto.CommentCreateRequest;
 import com.inspire.platform.core.dto.CommentVO;
 import com.inspire.platform.core.entity.InspireComment;
@@ -43,6 +46,11 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Page<CommentVO> listByInspireId(Long inspireId, Long userId, int page, int size, String sort) {
+        InputValidation.requirePositive(inspireId, "灵感");
+        InputValidation.requirePage(page, size);
+        if (!"hot".equalsIgnoreCase(sort) && !"time".equalsIgnoreCase(sort)) {
+            throw new BusinessException(400, "评论排序参数不正确");
+        }
         boolean hotSort = "hot".equalsIgnoreCase(sort);
         Page<InspireComment> rootPage;
         long total;
@@ -139,6 +147,12 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Page<CommentVO> listReplies(Long inspireId, Long parentId, Long userId,
                                        int page, int size, String sort) {
+        InputValidation.requirePositive(inspireId, "灵感");
+        InputValidation.requirePositive(parentId, "回复目标");
+        InputValidation.requirePage(page, size);
+        if (!"hot".equalsIgnoreCase(sort) && !"time".equalsIgnoreCase(sort)) {
+            throw new BusinessException(400, "回复排序参数不正确");
+        }
         boolean hotSort = "hot".equalsIgnoreCase(sort);
         Page<InspireComment> pg;
         long replyTotal;
@@ -261,6 +275,22 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public CommentVO create(Long userId, CommentCreateRequest request) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(request.getInspireId(), "灵感");
+        String content = InputValidation.normalizeRequiredText(
+                request.getContent(), "评论内容", ValidationConstants.COMMENT_MAX);
+        request.setContent(content);
+        if (request.getParentId() != null) {
+            InputValidation.requirePositive(request.getParentId(), "回复目标");
+        }
+        if (request.getReplyUserId() != null) {
+            InputValidation.requirePositive(request.getReplyUserId(), "回复用户");
+        }
+        if (request.getReplyUsername() != null) {
+            request.setReplyUsername(InputValidation.normalizeOptionalText(
+                    request.getReplyUsername(), "回复昵称", 60));
+        }
+
         String nickname = null;
         String avatar = request.getAvatar();
         try {
@@ -279,7 +309,7 @@ public class CommentServiceImpl implements CommentService {
         c.setUserId(userId);
         c.setAuthorNickname(nickname);
         c.setAvatar(avatar);
-        c.setContent(request.getContent());
+        c.setContent(content);
         c.setParentId(request.getParentId() != null ? request.getParentId() : 0L);
         c.setRootId(request.getParentId() != null && request.getParentId() > 0
                 ? request.getParentId() : c.getId());

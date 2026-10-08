@@ -51,17 +51,29 @@ public class JwtUtil {
 
     /** 生成 AccessToken（auth 签发用） */
     public String generateToken(Long userId, String userName, String role) {
-        return generateToken(userId, userName, role, expirationMs);
+        return generateToken(userId, userName, role, expirationMs, 0L);
     }
 
     /** 生成指定有效期的 AccessToken（白名单测试账号支持长期会话）。 */
     public String generateToken(Long userId, String userName, String role, long ttlMs) {
+        return generateToken(userId, userName, role, ttlMs, 0L);
+    }
+
+    /** 生成带用户令牌版本的 AccessToken，用于改密/重置/踢人后立即失效旧令牌。 */
+    public String generateToken(Long userId, String userName, String role, long ttlMs, long tokenVersion) {
+        return generateToken(userId, userName, role, ttlMs, tokenVersion, false);
+    }
+
+    public String generateToken(Long userId, String userName, String role, long ttlMs,
+                                long tokenVersion, boolean passwordUpgradeRequired) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + ttlMs);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("userName", userName)
                 .claim("role", role != null ? role : "user")
+                .claim("tokenVersion", Math.max(0L, tokenVersion))
+                .claim("passwordUpgradeRequired", passwordUpgradeRequired)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)

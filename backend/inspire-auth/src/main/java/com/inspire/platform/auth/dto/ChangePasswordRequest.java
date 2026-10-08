@@ -11,16 +11,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import static com.inspire.platform.common.validation.ValidationConstants.*;
+
 @Schema(description = "修改密码请求")
 public class ChangePasswordRequest {
 
-    @Schema(description = "旧密码，用于验证身份", example = "123456")
+    @Schema(description = "旧密码，用于验证身份", example = "OldPass123")
     @NotBlank(message = "旧密码不能为空")
+    @Size(max = LOGIN_PASSWORD_MAX, message = "旧密码长度不正确")
     private String oldPassword;
 
-    @Schema(description = "新密码，6-16位", example = "654321")
+    @Schema(description = "新密码，8-64位", example = "NewPass123")
     @NotBlank(message = "新密码不能为空")
-    @Size(min = 6, max = 16, message = "密码长度6-16位")
+    @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "密码长度需为8-64位")
     private String newPassword;
 
     public String getOldPassword() { return oldPassword; }

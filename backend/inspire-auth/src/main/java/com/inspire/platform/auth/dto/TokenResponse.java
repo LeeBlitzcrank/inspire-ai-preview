@@ -32,6 +32,9 @@ public class TokenResponse {
     @Schema(description = "是否为本地开发长登录会话")
     private Boolean longLived;
 
+    @Schema(description = "是否因历史弱密码需要在下次登录前完成升级")
+    private Boolean passwordUpgradeRequired;
+
     @Schema(description = "用户ID", example = "196312085385187329")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
@@ -55,6 +58,8 @@ public class TokenResponse {
     public void setExpiresIn(Long v) { this.expiresIn = v; }
     public Boolean getLongLived() { return longLived; }
     public void setLongLived(Boolean v) { this.longLived = v; }
+    public Boolean getPasswordUpgradeRequired() { return passwordUpgradeRequired; }
+    public void setPasswordUpgradeRequired(Boolean v) { this.passwordUpgradeRequired = v; }
     public Long getUserId() { return userId; }
     public void setUserId(Long v) { this.userId = v; }
     public String getUsername() { return username; }

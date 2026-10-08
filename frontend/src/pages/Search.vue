@@ -37,6 +37,7 @@
             v-model="keyword"
             data-search-input
             :placeholder="searched ? '继续搜索灵感' : '今天想找什么灵感？'"
+            maxlength="100"
             autocomplete="off"
             @keydown.enter.prevent="doSearch()"
           >

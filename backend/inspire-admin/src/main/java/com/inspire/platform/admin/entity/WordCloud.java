@@ -14,6 +14,10 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -29,15 +33,23 @@ public class WordCloud {
     private Long id;
 
     @Schema(description = "词条内容")
+    @NotBlank(message = "词条内容不能为空")
+    @Size(max = 50, message = "词条不能超过50个字符")
     private String word;
 
     @Schema(description = "权重，用于控制字号")
+    @Min(value = 1, message = "权重需为1-100")
+    @Max(value = 100, message = "权重需为1-100")
     private Integer weight;
 
     @Schema(description = "排序，越小越靠前")
+    @Min(value = 0, message = "排序不能小于0")
+    @Max(value = 9999, message = "排序不能大于9999")
     private Integer sortOrder;
 
     @Schema(description = "1启用 0停用")
+    @Min(value = 0, message = "状态不正确")
+    @Max(value = 1, message = "状态不正确")
     private Integer status;
 
     @TableLogic

@@ -10,29 +10,36 @@ package com.inspire.platform.auth.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import static com.inspire.platform.common.validation.ValidationConstants.*;
 
 @Schema(description = "用户注册请求")
 public class RegisterRequest {
 
     @Schema(description = "登录用户名")
-    @NotBlank(message = "用户名不能为空")
-    @Size(min = 2, max = 50, message = "用户名长度2-50位")
+    @NotBlank(message = "账号不能为空")
+    @Size(min = USERNAME_MIN, max = USERNAME_MAX, message = "账号长度需为4-20位")
+    @Pattern(regexp = USERNAME_PATTERN, message = "账号只能包含字母、数字和下划线")
     private String username;
     @Schema(description = "登录密码")
     @NotBlank(message = "密码不能为空")
-    @Size(min = 6, max = 16, message = "密码长度6-16位")
+    @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "密码长度需为8-64位")
     private String password;
     @Schema(description = "用户邮箱")
     @NotBlank(message = "邮箱不能为空")
+    @Size(max = EMAIL_MAX, message = "邮箱长度不能超过254位")
     @Email(message = "邮箱格式不正确")
     private String email;
     @Schema(description = "确认密码")
     @NotBlank(message = "确认密码不能为空")
     private String confirmPassword;
     @Schema(description = "随机昵称")
+    @Size(max = NICKNAME_MAX, message = "昵称不能超过20个字符")
     private String nickname;
     @Schema(description = "头像emoji")
+    @Size(max = AVATAR_MAX, message = "头像地址过长")
     private String avatar;
 
     public String getUsername() { return username; }

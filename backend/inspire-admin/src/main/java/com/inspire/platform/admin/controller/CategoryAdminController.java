@@ -13,6 +13,7 @@ import com.inspire.platform.admin.mapper.CategoryMapper;
 import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
@@ -75,7 +76,7 @@ public class CategoryAdminController {
     @Operation(summary = "新增分类", description = "parentId 为 0 时新增一级分类")
     @PostMapping
     @CacheEvict(value = { "categories", "publicList" }, allEntries = true)
-    public Result<Category> create(@RequestBody Category body) {
+    public Result<Category> create(@Valid @RequestBody Category body) {
         if (body.getName() == null || body.getName().isBlank()) {
             return Result.error("分类名称不能为空");
         }
@@ -91,7 +92,7 @@ public class CategoryAdminController {
     @Operation(summary = "更新分类", description = "按 id 更新名称、图标、排序、状态")
     @PutMapping
     @CacheEvict(value = { "categories", "publicList" }, allEntries = true)
-    public Result<Void> update(@RequestBody Category body) {
+    public Result<Void> update(@Valid @RequestBody Category body) {
         if (body.getId() == null) return Result.error("缺少分类 id");
         categoryMapper.updateById(body);
         return Result.success("更新成功", null);

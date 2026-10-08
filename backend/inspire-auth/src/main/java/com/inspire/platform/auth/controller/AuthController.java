@@ -11,6 +11,7 @@ import com.inspire.platform.auth.dto.*;
 import com.inspire.platform.auth.entity.User;
 import com.inspire.platform.auth.service.AuthService;
 import com.inspire.platform.auth.service.LoginRiskService;
+import com.inspire.platform.auth.service.SmsAuthService;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,10 +36,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final LoginRiskService loginRiskService;
+    private final SmsAuthService smsAuthService;
 
-    public AuthController(AuthService authService, LoginRiskService loginRiskService) {
+    public AuthController(AuthService authService,
+                          LoginRiskService loginRiskService,
+                          SmsAuthService smsAuthService) {
         this.authService = authService;
         this.loginRiskService = loginRiskService;
+        this.smsAuthService = smsAuthService;
     }
 
     @Operation(summary = "登录图形验证码")
@@ -60,6 +65,27 @@ public class AuthController {
     @PostMapping("/login")
     public Result<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.success("登录成功", authService.login(request));
+    }
+
+    @Operation(summary = "发送短信验证码", description = "用途支持 login 和 bind")
+    @PostMapping("/sms/send")
+    public Result<SmsSendResponse> sendSmsCode(@Valid @RequestBody SmsSendRequest request) {
+        return Result.success("验证码已发送", smsAuthService.sendCode(request));
+    }
+
+    @Operation(summary = "短信登录或自动注册")
+    @PostMapping("/sms/login")
+    public Result<TokenResponse> smsLogin(@Valid @RequestBody SmsCodeVerifyRequest request) {
+        return Result.success("登录成功", smsAuthService.loginOrRegister(request));
+    }
+
+    @Operation(summary = "绑定手机号")
+    @PostMapping("/sms/bind")
+    public Result<Void> bindPhone(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SmsCodeVerifyRequest request) {
+        smsAuthService.bindPhone(userId, request);
+        return Result.success("手机号绑定成功", null);
     }
 
     // ==================== 无感刷新（文档流程三） ====================
@@ -148,7 +174,7 @@ public class AuthController {
         return Result.success("更新成功", user);
     }
 
-    @Operation(summary = "修改密码", description = "验证旧密码后更新为新密码，密码长度6-16位")
+    @Operation(summary = "修改密码", description = "验证旧密码后更新为新密码，密码长度8-64位；成功后需重新登录")
     @PutMapping("/password")
     public Result<Void> changePassword(
             @Parameter(description = "用户ID（由网关从JWT中解析并注入）")

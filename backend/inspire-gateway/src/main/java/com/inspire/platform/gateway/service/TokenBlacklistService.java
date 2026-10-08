@@ -7,6 +7,7 @@
  */
 package com.inspire.platform.gateway.service;
 
+import com.inspire.platform.common.constant.RedisKeyConstant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
@@ -49,6 +50,28 @@ public class TokenBlacklistService {
                         log.warn("黑名单命中 token={}", maskToken(accessToken));
                     }
                 });
+    }
+
+    /**
+     * 校验 JWT 中的 tokenVersion 是否等于 Redis 当前用户版本。
+     * Redis 无版本值时按 0 处理，兼容本次升级前签发的令牌。
+     */
+    public Mono<Boolean> isTokenVersionValid(String userId, long tokenVersion) {
+        if (userId == null || userId.isBlank()) {
+            return Mono.just(false);
+        }
+        String key = RedisKeyConstant.userTokenVersionKey(Long.parseLong(userId));
+        return redisTemplate.opsForValue().get(key)
+                .defaultIfEmpty("0")
+                .map(value -> {
+                    try {
+                        return Long.parseLong(value) == tokenVersion;
+                    } catch (NumberFormatException e) {
+                        log.warn("令牌版本格式异常: userId={}, value={}", userId, value);
+                        return false;
+                    }
+                })
+                .onErrorReturn(false);
     }
 
     /**

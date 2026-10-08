@@ -10,6 +10,8 @@ package com.inspire.platform.ai.world;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.ai.world.WorldModels.*;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -124,10 +126,17 @@ public class WorldSeedService {
 
     public WorldTaskView submitSeedTask(GenerateSeedRequest request, long userId, String idempotencyKey) {
         if (userId <= 0) throw new BusinessException(401, "请先登录");
-        if (!StringUtils.hasText(request.sourceTitle()) || !StringUtils.hasText(request.sourceText())) {
-            throw new BusinessException(400, "原文名称和原文内容不能为空");
-        }
-        WorldTaskView task = taskService.createSeedTask(userId, request, idempotencyKey);
+        GenerateSeedRequest normalizedRequest = new GenerateSeedRequest(
+                InputValidation.normalizeRequiredText(
+                        request.sourceTitle(), "原文名称", ValidationConstants.WORLD_SOURCE_TITLE_MAX),
+                InputValidation.normalizeOptionalText(
+                        request.sourceAuthor(), "作者", ValidationConstants.WORLD_SOURCE_AUTHOR_MAX),
+                InputValidation.normalizeRequiredText(
+                        request.sourceText(), "原文内容", ValidationConstants.WORLD_SOURCE_TEXT_MAX),
+                InputValidation.normalizeOptionalText(
+                        request.guidance(), "创作方向", ValidationConstants.WORLD_GUIDANCE_MAX)
+        );
+        WorldTaskView task = taskService.createSeedTask(userId, normalizedRequest, idempotencyKey);
         if (WorldTaskService.STATUS_PENDING.equals(task.status())) {
             generationWorker.submit(Long.parseLong(task.id()));
         }
@@ -136,11 +145,19 @@ public class WorldSeedService {
 
     public WorldTaskView submitChapterTask(GenerateChapterRequest request, long userId, String idempotencyKey) {
         if (userId <= 0) throw new BusinessException(401, "请先登录");
-        if (request.lineId() <= 0 || !StringUtils.hasText(request.choiceKey())
-                || !StringUtils.hasText(request.choiceText())) {
-            throw new BusinessException(400, "世界线、选择和选择内容不能为空");
+        InputValidation.requirePositive(request.lineId(), "世界线");
+        if (request.branchId() != null) {
+            InputValidation.requirePositive(request.branchId(), "分支");
         }
-        WorldTaskView task = taskService.createChapterTask(userId, request, idempotencyKey);
+        GenerateChapterRequest normalizedRequest = new GenerateChapterRequest(
+                request.lineId(),
+                request.branchId(),
+                InputValidation.normalizeRequiredText(
+                        request.choiceKey(), "选择项", ValidationConstants.WORLD_CHOICE_KEY_MAX),
+                InputValidation.normalizeRequiredText(
+                        request.choiceText(), "选择内容", ValidationConstants.WORLD_CHOICE_TEXT_MAX)
+        );
+        WorldTaskView task = taskService.createChapterTask(userId, normalizedRequest, idempotencyKey);
         if (WorldTaskService.STATUS_PENDING.equals(task.status())) {
             generationWorker.submit(Long.parseLong(task.id()));
         }
@@ -155,9 +172,10 @@ public class WorldSeedService {
     public void vote(VoteRequest request, long userId) {
         if (userId <= 0) throw new BusinessException(401, "请先登录");
         long branchId = request.branchId() > 0 ? request.branchId() : request.lineId();
-        if (branchId <= 0 || !StringUtils.hasText(request.choiceKey())) {
-            throw new BusinessException(400, "投票参数不完整");
-        }
+        InputValidation.requirePositive(request.lineId(), "世界线");
+        InputValidation.requirePositive(branchId, "分支");
+        String choiceKey = InputValidation.normalizeRequiredText(
+                request.choiceKey(), "选择项", ValidationConstants.WORLD_CHOICE_KEY_MAX);
         BranchRef branch = jdbcTemplate.query("""
                 SELECT id, line_id, owner_user_id
                 FROM world_branch
@@ -174,7 +192,7 @@ public class WorldSeedService {
                 WHERE branch_id = ? AND user_id = ?
                 FOR UPDATE
                 """, rs -> rs.next() ? rs.getString(1) : null, branchId, userId);
-        String newChoice = normalizeChoice(request.choiceKey());
+        String newChoice = normalizeChoice(choiceKey);
         if (Objects.equals(oldChoice, newChoice)) return;
 
         if (oldChoice == null) {

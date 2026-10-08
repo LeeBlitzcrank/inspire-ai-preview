@@ -8,13 +8,20 @@
 package com.inspire.platform.admin.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 @Data @Schema(description = "管理员登录请求")
 public class LoginRequest {
     @Schema(description = "管理员账号", example = "admin")
-    @NotBlank private String username;
+    @NotBlank(message = "管理员账号不能为空")
+    @Size(max = 50, message = "管理员账号过长")
+    private String username;
     @Schema(description = "密码", example = "112233")
-    @NotBlank private String password;
+    @NotBlank(message = "管理员密码不能为空")
+    @Size(max = 128, message = "管理员密码过长")
+    private String password;
     @Schema(description = "TOTP 动态验证码")
+    @Pattern(regexp = "^$|\\d{6}", message = "动态验证码必须为6位数字")
     private String mfaCode;
 }

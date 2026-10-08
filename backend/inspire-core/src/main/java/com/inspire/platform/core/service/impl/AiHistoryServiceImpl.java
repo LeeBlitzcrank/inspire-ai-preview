@@ -10,6 +10,9 @@ package com.inspire.platform.core.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.core.dto.AiHistorySaveRequest;
 import com.inspire.platform.core.entity.UserAiHistory;
 import com.inspire.platform.core.mapper.UserAiHistoryMapper;
 import com.inspire.platform.core.service.AiHistoryService;
@@ -34,7 +37,9 @@ public class AiHistoryServiceImpl implements AiHistoryService {
 
     @Override
     public List<Map<String, Object>> list(Long userId, int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, 50));
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePage(1, limit);
+        int safeLimit = limit;
         return historyMapper.selectList(Wrappers.lambdaQuery(UserAiHistory.class)
                         .eq(UserAiHistory::getUserId, userId)
                         .eq(UserAiHistory::getDeleted, 0)
@@ -47,21 +52,31 @@ public class AiHistoryServiceImpl implements AiHistoryService {
 
     @Override
     @Transactional
-    public Map<String, Object> save(Long userId, Map<String, Object> body) {
+    public Map<String, Object> save(Long userId, AiHistorySaveRequest request) {
+        InputValidation.requirePositive(userId, "用户");
+        String keyword = InputValidation.normalizeRequiredText(
+                request.getKeyword(), "探索关键词", 100);
+        String path = InputValidation.normalizeOptionalText(request.getPath(), "探索路径", 1000);
+        String cacheKey = InputValidation.normalizeOptionalText(request.getCacheKey(), "缓存标识", 600);
+        String resultJson;
+        try {
+            resultJson = objectMapper.writeValueAsString(request.getResult());
+        } catch (Exception e) {
+            throw new BusinessException(400, "探索结果格式错误");
+        }
+        if (InputValidation.codePointCount(resultJson) > 100_000) {
+            throw new BusinessException(400, "探索结果数据过大");
+        }
         UserAiHistory history = new UserAiHistory();
         history.setId(InspireServiceImpl.nextId());
         history.setUserId(userId);
-        history.setKeyword(String.valueOf(body.getOrDefault("keyword", "")));
-        history.setPath(String.valueOf(body.getOrDefault("path", "")));
-        history.setCacheKey(String.valueOf(body.getOrDefault("cacheKey", "")));
+        history.setKeyword(keyword);
+        history.setPath(path == null ? "" : path);
+        history.setCacheKey(cacheKey == null ? "" : cacheKey);
         history.setSelectedIndex(-1);
         history.setSelectedTitle("");
         history.setStatus("generated");
-        try {
-            history.setResultJson(objectMapper.writeValueAsString(body.get("result")));
-        } catch (Exception e) {
-            throw new IllegalArgumentException("探索结果格式错误");
-        }
+        history.setResultJson(resultJson);
         LocalDateTime now = LocalDateTime.now(ZONE);
         history.setCreateTime(now);
         history.setUpdateTime(now);
@@ -73,13 +88,16 @@ public class AiHistoryServiceImpl implements AiHistoryService {
     @Override
     @Transactional
     public void selectVariant(Long userId, Long id, Integer selectedIndex, String selectedTitle) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(id, "历史记录");
+        String safeTitle = InputValidation.normalizeOptionalText(selectedTitle, "标题", 16);
         UserAiHistory history = historyMapper.selectOne(Wrappers.lambdaQuery(UserAiHistory.class)
                 .eq(UserAiHistory::getId, id)
                 .eq(UserAiHistory::getUserId, userId)
                 .eq(UserAiHistory::getDeleted, 0));
         if (history == null) return;
         history.setSelectedIndex(selectedIndex == null ? -1 : selectedIndex);
-        history.setSelectedTitle(selectedTitle == null ? "" : selectedTitle);
+        history.setSelectedTitle(safeTitle == null ? "" : safeTitle);
         history.setStatus("selected");
         history.setUpdateTime(LocalDateTime.now(ZONE));
         historyMapper.updateById(history);
@@ -88,6 +106,8 @@ public class AiHistoryServiceImpl implements AiHistoryService {
     @Override
     @Transactional
     public void delete(Long userId, Long id) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(id, "历史记录");
         historyMapper.delete(Wrappers.lambdaQuery(UserAiHistory.class)
                 .eq(UserAiHistory::getId, id)
                 .eq(UserAiHistory::getUserId, userId));

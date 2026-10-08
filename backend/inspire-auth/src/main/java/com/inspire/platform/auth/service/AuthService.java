@@ -54,4 +54,7 @@ public interface AuthService {
      * @return 新签发的双Token，前端可直接自动登录
      */
     TokenResponse resetPassword(String token, String newPassword);
+
+    /** 为已认证用户签发新的双Token会话。 */
+    TokenResponse issueTokens(User user);
 }

@@ -35,6 +35,8 @@ public class RedisSessionUtil {
     private static final String REFRESH_PREFIX = RedisKeyConstant.REFRESH_PREFIX;
     private static final String USER_SESSIONS_PREFIX = "user_sessions:";
     private static final String BLACKLIST_PREFIX = RedisKeyConstant.BLACKLIST_PREFIX;
+    private static final String USER_TOKEN_VERSION_PREFIX = RedisKeyConstant.USER_TOKEN_VERSION_PREFIX;
+    private static final String PASSWORD_UPGRADE_PREFIX = "user_password_upgrade:";
 
     private final StringRedisTemplate redisTemplate;
 
@@ -129,7 +131,45 @@ public class RedisSessionUtil {
             tokens.forEach(this::deleteRefreshToken);
         }
         redisTemplate.delete(key);
-        log.info("用户全部会话已清理: userId={}, count={}", userId, tokens == null ? 0 : tokens.size());
+        long version = bumpTokenVersion(userId);
+        log.info("用户全部会话已清理: userId={}, count={}, tokenVersion={}",
+                userId, tokens == null ? 0 : tokens.size(), version);
+    }
+
+    /** 获取用户当前 AccessToken 版本。 */
+    public long getTokenVersion(Long userId) {
+        if (userId == null) return 0L;
+        String value = redisTemplate.opsForValue().get(USER_TOKEN_VERSION_PREFIX + userId);
+        if (value == null || value.isBlank()) return 0L;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            log.warn("令牌版本格式异常，按0处理: userId={}, value={}", userId, value);
+            return 0L;
+        }
+    }
+
+    /** 递增用户 AccessToken 版本，使所有已签发令牌立即失效。 */
+    public long bumpTokenVersion(Long userId) {
+        if (userId == null) return 0L;
+        Long version = redisTemplate.opsForValue()
+                .increment(USER_TOKEN_VERSION_PREFIX + userId);
+        return version == null ? 1L : version;
+    }
+
+    public boolean isPasswordUpgradeRequired(Long userId) {
+        return userId != null && Boolean.TRUE.equals(
+                redisTemplate.hasKey(PASSWORD_UPGRADE_PREFIX + userId));
+    }
+
+    public void setPasswordUpgradeRequired(Long userId, boolean required) {
+        if (userId == null) return;
+        String key = PASSWORD_UPGRADE_PREFIX + userId;
+        if (required) {
+            redisTemplate.opsForValue().set(key, "1", java.time.Duration.ofDays(7));
+        } else {
+            redisTemplate.delete(key);
+        }
     }
 
     // ========== 单点登录（文档 4.1.2 第6步） ==========

@@ -95,23 +95,36 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         // 白名单接口直接放行，跳过鉴权
         // ==================================================================
         if (isWhiteList(path)) {
-            String userId = null;
-            String role = null;
+            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+                log.debug("[鉴权] 白名单放行: {}", path);
+                return chain.filter(exchange.mutate().request(withoutInternalIdentity(request)).build());
+            }
+            String optionalToken = authHeader.substring(7);
             try {
-                String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-                if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-                    Claims claims = jwtUtil.parseToken(authHeader.substring(7));
-                    if (claims != null) {
-                        userId = claims.getSubject();
-                        role = claims.get("role", String.class);
-                    }
-                }
+                Claims claims = jwtUtil.parseToken(optionalToken);
+                String userId = claims.getSubject();
+                String role = claims.get("role", String.class);
+                ServerHttpRequest originalRequest = request;
+                return blacklistService.isBlacklisted(optionalToken)
+                        .flatMap(blacklisted -> {
+                            if (Boolean.TRUE.equals(blacklisted)) {
+                                return chain.filter(exchange.mutate()
+                                        .request(withoutInternalIdentity(originalRequest))
+                                        .build());
+                            }
+                            return blacklistService.isTokenVersionValid(userId, tokenVersion(claims))
+                                    .flatMap(valid -> {
+                                        ServerHttpRequest next = Boolean.TRUE.equals(valid)
+                                                ? withInternalIdentity(originalRequest, userId, role)
+                                                : withoutInternalIdentity(originalRequest);
+                                        return chain.filter(exchange.mutate().request(next).build());
+                                    });
+                        });
             } catch (Exception e) {
                 log.debug("[鉴权] 白名单可选令牌无效: {}", path);
+                return chain.filter(exchange.mutate().request(withoutInternalIdentity(request)).build());
             }
-            request = withInternalIdentity(request, userId, role);
-            log.debug("[鉴权] 白名单放行: {}", path);
-            return chain.filter(exchange.mutate().request(request).build());
         }
 
         // ==================================================================
@@ -163,16 +176,29 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                         // ======================================================
                         String userId = claims.getSubject();
                         String role = claims.get("role", String.class);
+                        return blacklistService.isTokenVersionValid(userId, tokenVersion(claims))
+                                .flatMap(valid -> {
+                                    if (!Boolean.TRUE.equals(valid)) {
+                                        log.warn("[鉴权] 令牌版本已失效: userId={}, path={}", userId, path);
+                                        return unauthorizedResponse(response, ErrorCode.TOKEN_INVALIDATED);
+                                    }
+                                    if (Boolean.TRUE.equals(claims.get(
+                                            "passwordUpgradeRequired", Boolean.class))
+                                            && !isPasswordUpgradeAllowed(path)) {
+                                        log.warn("[鉴权] 弱密码账号访问受限: userId={}, path={}", userId, path);
+                                        return forbiddenResponse(response, ErrorCode.PASSWORD_UPGRADE_REQUIRED);
+                                    }
 
-                        ServerHttpRequest mutatedRequest = withInternalIdentity(
-                                finalRequest, userId, role);
+                                    ServerHttpRequest mutatedRequest = withInternalIdentity(
+                                            finalRequest, userId, role);
 
-                        log.debug("[鉴权] 通过: userId={}, role={}, path={}", userId, role, path);
+                                    log.debug("[鉴权] 通过: userId={}, role={}, path={}", userId, role, path);
 
-                        // ======================================================
-                        // 步骤⑦：转发请求至业务微服务 —— 文档 4.2.2 第7步
-                        // ======================================================
-                        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                                    // ======================================================
+                                    // 步骤⑦：转发请求至业务微服务 —— 文档 4.2.2 第7步
+                                    // ======================================================
+                                    return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                                });
 
                     } catch (ExpiredJwtException e) {
                         // 文档 4.2.2 第5步：过期 → 401004
@@ -243,9 +269,41 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
         }).build();
     }
 
+    private ServerHttpRequest withoutInternalIdentity(ServerHttpRequest request) {
+        return request.mutate().headers(headers -> {
+            headers.remove(InternalAuthUtil.USER_ID_HEADER);
+            headers.remove(InternalAuthUtil.USER_ROLE_HEADER);
+            headers.remove(InternalAuthUtil.TIMESTAMP_HEADER);
+            headers.remove(InternalAuthUtil.SIGNATURE_HEADER);
+        }).build();
+    }
+
     private String downstreamPath(String path) {
         int nextSlash = path == null ? -1 : path.indexOf('/', 1);
         return nextSlash < 0 ? "/" : path.substring(nextSlash);
+    }
+
+    private long tokenVersion(Claims claims) {
+        Object raw = claims.get("tokenVersion");
+        if (raw instanceof Number number) {
+            return Math.max(0L, number.longValue());
+        }
+        if (raw != null) {
+            try {
+                return Math.max(0L, Long.parseLong(String.valueOf(raw)));
+            } catch (NumberFormatException ignored) {
+                return 0L;
+            }
+        }
+        return 0L;
+    }
+
+    private boolean isPasswordUpgradeAllowed(String path) {
+        return path.endsWith("/auth/password")
+                || path.endsWith("/auth/userinfo")
+                || path.endsWith("/auth/logout")
+                || path.endsWith("/auth/refresh")
+                || path.endsWith("/auth/ip-location");
     }
 
     /**
@@ -266,6 +324,22 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             bytes = ("{\"code\":" + errorCode.getCode()
                     + ",\"msg\":\"" + errorCode.getMessage()
                     + "\",\"data\":null}").getBytes(StandardCharsets.UTF_8);
+        }
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        return response.writeWith(Mono.just(buffer));
+    }
+
+    private Mono<Void> forbiddenResponse(ServerHttpResponse response, ErrorCode errorCode) {
+        response.setStatusCode(HttpStatus.FORBIDDEN);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        Result<?> result = Result.error(errorCode.getCode(), errorCode.getMessage());
+        byte[] bytes;
+        try {
+            bytes = objectMapper.writeValueAsBytes(result);
+        } catch (JsonProcessingException e) {
+            bytes = ("{\"code\":" + errorCode.getCode() + ",\"msg\":\""
+                    + errorCode.getMessage() + "\",\"data\":null}")
+                    .getBytes(StandardCharsets.UTF_8);
         }
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));

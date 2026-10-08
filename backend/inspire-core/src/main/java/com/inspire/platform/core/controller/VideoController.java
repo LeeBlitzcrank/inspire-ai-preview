@@ -8,8 +8,12 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.VideoCompressRequest;
+import com.inspire.platform.core.dto.VideoProbeRequest;
+import com.inspire.platform.core.dto.VideoTrimRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,9 +68,8 @@ public class VideoController {
         }
     }
 
-    private boolean keepOriginal(Map<String, String> body) {
-        String flag = body.get("keepOriginal");
-        return flag == null || "true".equalsIgnoreCase(flag);
+    private boolean keepOriginal(Boolean flag) {
+        return flag == null || Boolean.TRUE.equals(flag);
     }
 
     private String ffprobe(File video, String entries, String stream) {
@@ -122,8 +125,8 @@ public class VideoController {
 
     @Operation(summary = "探测视频信息", description = "返回时长、体积、分辨率，用于前端展示与裁剪范围")
     @PostMapping("/probe")
-    public Result<Map<String, Object>> probe(@RequestBody Map<String, String> body) {
-        File video = resolve(body.get("url"));
+    public Result<Map<String, Object>> probe(@Valid @RequestBody VideoProbeRequest body) {
+        File video = resolve(body.getUrl());
         if (video == null) return Result.error("视频不存在");
         Map<String, Object> data = describe(video);
         String wh = ffprobe(video, "stream=width,height", "v:0").replace("\n", "x");
@@ -133,13 +136,10 @@ public class VideoController {
 
     @Operation(summary = "压缩视频", description = "H.264 + CRF 质量压缩，体积通常可降到原来的 30%-60%")
     @PostMapping("/compress")
-    public Result<Map<String, Object>> compress(@RequestBody Map<String, String> body) {
-        File video = resolve(body.get("url"));
+    public Result<Map<String, Object>> compress(@Valid @RequestBody VideoCompressRequest body) {
+        File video = resolve(body.getUrl());
         if (video == null) return Result.error("视频不存在");
-        int crf = 28;
-        try {
-            if (body.get("crf") != null) crf = Math.max(18, Math.min(34, Integer.parseInt(body.get("crf"))));
-        } catch (Exception ignored) {}
+        int crf = body.getCrf() == null ? 28 : body.getCrf();
 
         String name = UUID.randomUUID().toString().replace("-", "") + ".mp4";
         File out = new File(uploadDir, name);
@@ -158,23 +158,17 @@ public class VideoController {
                 out.getAbsolutePath()));
         boolean ok = ffmpeg(args, out);
         if (!ok) return Result.error("压缩失败，请确认服务端已安装 ffmpeg");
-        deleteOriginal(video, keepOriginal(body));
+        deleteOriginal(video, keepOriginal(body.getKeepOriginal()));
         return Result.success(describe(out));
     }
 
     @Operation(summary = "裁剪视频", description = "按起止时间截取片段（-c copy 快速截取，不重新编码）")
     @PostMapping("/trim")
-    public Result<Map<String, Object>> trim(@RequestBody Map<String, String> body) {
-        File video = resolve(body.get("url"));
+    public Result<Map<String, Object>> trim(@Valid @RequestBody VideoTrimRequest body) {
+        File video = resolve(body.getUrl());
         if (video == null) return Result.error("视频不存在");
-        double start;
-        double duration;
-        try {
-            start = Math.max(0, Double.parseDouble(body.getOrDefault("start", "0")));
-            duration = Double.parseDouble(body.getOrDefault("duration", "0"));
-        } catch (Exception e) {
-            return Result.error("起止时间格式不正确");
-        }
+        double start = body.getStart() == null ? 0D : body.getStart();
+        double duration = body.getDuration();
         if (duration <= 0) return Result.error("请选择需要保留的时长");
 
         String name = UUID.randomUUID().toString().replace("-", "") + ".mp4";
@@ -183,7 +177,7 @@ public class VideoController {
                 "-t", String.valueOf(duration), "-c", "copy", "-movflags", "+faststart",
                 out.getAbsolutePath()), out);
         if (!ok) return Result.error("裁剪失败，请确认服务端已安装 ffmpeg");
-        deleteOriginal(video, keepOriginal(body));
+        deleteOriginal(video, keepOriginal(body.getKeepOriginal()));
         return Result.success(describe(out));
     }
 }

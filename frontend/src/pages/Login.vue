@@ -41,17 +41,57 @@
         <p class="greeting">欢迎回来 👋</p>
         <p class="subtitle">登录继续你的创作</p>
 
-        <div class="input-group">
-          <label>账号</label>
-          <el-input v-model="form.account" placeholder="请输入账号" clearable></el-input>
+        <div class="login-mode-tabs">
+          <button
+            type="button"
+            :class="{ active: loginMode === 'password' }"
+            @click="switchLoginMode('password')"
+          >账号密码</button>
+          <button
+            type="button"
+            :class="{ active: loginMode === 'sms' }"
+            @click="switchLoginMode('sms')"
+          >手机号验证码</button>
         </div>
 
-        <div class="input-group">
-          <label>密码</label>
-          <el-input v-model="form.password" placeholder="请输入密码" show-password></el-input>
-        </div>
+        <template v-if="loginMode === 'password'">
+          <div class="input-group">
+            <label>账号</label>
+            <el-input v-model="form.account" placeholder="请输入账号" maxlength="20" clearable></el-input>
+          </div>
 
-        <div v-if="captchaRequired" class="input-group">
+          <div class="input-group">
+            <label>密码</label>
+            <el-input v-model="form.password" placeholder="请输入密码" maxlength="128" show-password></el-input>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="input-group">
+            <label>手机号</label>
+            <el-input v-model="form.phone" placeholder="请输入11位手机号" maxlength="11" clearable></el-input>
+          </div>
+          <div class="input-group">
+            <label>短信验证码</label>
+            <div class="sms-code-row">
+              <el-input
+                v-model="form.smsCode"
+                placeholder="6位验证码"
+                maxlength="6"
+                @keyup.enter="handleLogin"
+              ></el-input>
+              <button
+                class="sms-send-button"
+                type="button"
+                :disabled="smsCountdown > 0 || smsSending"
+                @click="handleSendSms"
+              >{{ smsButtonText }}</button>
+            </div>
+          </div>
+          <div class="sms-tip">未注册手机号验证成功后将自动创建账号</div>
+        </template>
+
+        <div v-if="loginMode === 'password' && captchaRequired" class="input-group">
           <label>验证码</label>
           <div class="captcha-row">
             <el-input
@@ -81,16 +121,40 @@
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="forcePasswordDialog" title="请先升级密码" width="90%" :close-on-click-modal="false"
+               :close-on-press-escape="false" :show-close="false" append-to-body>
+      <div class="force-password-copy">
+        当前账号使用的是历史上的弱密码。修改成功后需要使用新密码重新登录。
+      </div>
+      <div class="input-group">
+        <label>新密码</label>
+        <el-input v-model="forcePwdForm.newPassword" maxlength="64" show-password
+                  placeholder="8-64位，不能使用纯数字" />
+      </div>
+      <div class="input-group">
+        <label>确认新密码</label>
+        <el-input v-model="forcePwdForm.confirmPassword" maxlength="64" show-password
+                  placeholder="再次输入新密码" />
+      </div>
+      <template #footer>
+        <el-button type="primary" :loading="forcePwdLoading" @click="handleForcePassword">
+          修改并重新登录
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import {ref} from 'vue'
+import {computed, onBeforeUnmount, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {ElMessage} from '@/utils/uiFeedback.js'
-import {getLoginCaptcha, login} from '@/api/auth.js'
-import {setRememberMe} from '@/utils/tokenStorage.js'
+import {getLoginCaptcha, login, loginBySms, sendSmsCode} from '@/api/auth.js'
+import {clearAllTokens, setRememberMe} from '@/utils/tokenStorage.js'
 import {useAuthStore} from '@/stores/auth'
+import {changePassword} from '@/api/inspire.js'
+import {validatePassword} from '@/utils/validation.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -101,7 +165,43 @@ const loading = ref(false)
 const remember = ref(false)
 const captchaRequired = ref(false)
 const captchaImage = ref('')
-const form = ref({ account: '', password: '', captchaId: '', captchaCode: '' })
+const loginMode = ref('password')
+const form = ref({
+  account: '',
+  password: '',
+  captchaId: '',
+  captchaCode: '',
+  phone: '',
+  smsCode: ''
+})
+const smsSending = ref(false)
+const smsCountdown = ref(0)
+const forcePasswordDialog = ref(false)
+const forcePwdLoading = ref(false)
+const forcePwdForm = ref({ newPassword: '', confirmPassword: '' })
+let smsTimer = null
+
+const smsButtonText = computed(() => {
+  if (smsSending.value) return '发送中'
+  if (smsCountdown.value > 0) return `${smsCountdown.value}s`
+  return '获取验证码'
+})
+
+const switchLoginMode = (mode) => {
+  loginMode.value = mode
+  if (mode === 'password' && captchaRequired.value && !captchaImage.value) loadCaptcha()
+}
+
+const startSmsCountdown = (seconds = 60) => {
+  smsCountdown.value = Math.max(1, Number(seconds) || 60)
+  clearInterval(smsTimer)
+  smsTimer = setInterval(() => {
+    smsCountdown.value -= 1
+    if (smsCountdown.value <= 0) clearInterval(smsTimer)
+  }, 1000)
+}
+
+onBeforeUnmount(() => clearInterval(smsTimer))
 
 const loadCaptcha = async () => {
   try {
@@ -116,55 +216,125 @@ const loadCaptcha = async () => {
   }
 }
 
+const handleSendSms = async () => {
+  const phone = form.value.phone.trim()
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    return ElMessage.warning('请输入正确的11位手机号')
+  }
+  smsSending.value = true
+  try {
+    const res = await sendSmsCode(phone, 'login')
+    if (res?.code !== 200) {
+      return ElMessage.error(res?.msg || '验证码发送失败')
+    }
+    const devCode = res.data?.devCode
+    if (devCode) {
+      form.value.smsCode = devCode
+      ElMessage.success(`开发验证码 ${devCode} 已自动填入`)
+    } else {
+      ElMessage.success('验证码已发送')
+    }
+    startSmsCountdown(res.data?.cooldownSeconds)
+  } catch (e) {
+    // request 拦截器已提示
+  } finally {
+    smsSending.value = false
+  }
+}
+
+const completeLogin = async (res, fallbackAccount) => {
+  const data = res?.data || {}
+  if (res?.code !== 200 || !data.accessToken) {
+    ElMessage.error(res?.msg || '登录失败')
+    return false
+  }
+  sessionStorage.removeItem('adminToken')
+  sessionStorage.removeItem('adminUser')
+  sessionStorage.setItem('token', data.accessToken)
+  sessionStorage.setItem('isLogin', '1')
+  sessionStorage.setItem('userAccount', data.username || fallbackAccount || '')
+  sessionStorage.setItem('userNickname', data.nickname || '灵感用户')
+  if (data.avatar) sessionStorage.setItem('userAvatar', data.avatar)
+
+  const userId = data.userId || parseJwtUserId(data.accessToken)
+  if (userId) sessionStorage.setItem('userId', String(userId))
+
+  auth.setLoggedIn()
+  if (data.passwordUpgradeRequired) {
+    forcePasswordDialog.value = true
+    ElMessage.warning('当前账号必须先升级密码')
+    return false
+  }
+  ElMessage.success('登录成功')
+  const redirect = sessionStorage.getItem('redirectPath')
+  sessionStorage.removeItem('redirectPath')
+  await router.replace(redirect || '/')
+  return true
+}
+
+const handleForcePassword = async () => {
+  const {newPassword, confirmPassword} = forcePwdForm.value
+  if (newPassword !== confirmPassword) return ElMessage.warning('两次密码不一致')
+  const error = validatePassword(newPassword, {
+    username: form.value.account,
+    email: ''
+  })
+  if (error) return ElMessage.warning(error)
+  forcePwdLoading.value = true
+  try {
+    const res = await changePassword({
+      oldPassword: form.value.password,
+      newPassword
+    })
+    if (res.code === 200) {
+      clearAllTokens()
+      forcePasswordDialog.value = false
+      forcePwdForm.value = {newPassword: '', confirmPassword: ''}
+      form.value.password = ''
+      ElMessage.success('密码已升级，请使用新密码重新登录')
+    } else {
+      ElMessage.error(res.msg || '密码修改失败')
+    }
+  } catch (e) {
+    // 请求层已提示
+  } finally {
+    forcePwdLoading.value = false
+  }
+}
+
 const handleLogin = async () => {
-  if (!form.value.account.trim()) return ElMessage.warning('请输入账号')
-  if (!form.value.password.trim()) return ElMessage.warning('请输入密码')
-  if (captchaRequired.value && !form.value.captchaCode.trim()) return ElMessage.warning('请输入验证码')
+  if (loginMode.value === 'sms') {
+    if (!/^1[3-9]\d{9}$/.test(form.value.phone.trim())) {
+      return ElMessage.warning('请输入正确的11位手机号')
+    }
+    if (!/^\d{6}$/.test(form.value.smsCode.trim())) {
+      return ElMessage.warning('请输入6位短信验证码')
+    }
+  } else {
+    if (!form.value.account.trim()) return ElMessage.warning('请输入账号')
+    if (!form.value.password.trim()) return ElMessage.warning('请输入密码')
+    if (captchaRequired.value && !form.value.captchaCode.trim()) return ElMessage.warning('请输入验证码')
+  }
 
   loading.value = true
   try {
     // 必须在发起登录前设置记住账号状态，login() 内部才能按约定持久化 AccessToken。
     setRememberMe(remember.value)
 
-    const res = await login({
-      username: form.value.account,
-      password: form.value.password,
-      captchaId: captchaRequired.value ? form.value.captchaId : undefined,
-      captchaCode: captchaRequired.value ? form.value.captchaCode : undefined
-    })
-
-    const data = res?.data || {}
-    if (res?.code === 200 && data.accessToken) {
-      // 先写本地登录信息，再更新 Pinia 状态，确保首页首次挂载时能同步读取到用户 ID。
-      sessionStorage.removeItem('adminToken')
-      sessionStorage.removeItem('adminUser')
-      sessionStorage.setItem('token', data.accessToken)
-      sessionStorage.setItem('isLogin', '1')
-      sessionStorage.setItem('userAccount', data.username || form.value.account)
-      sessionStorage.setItem('userNickname', data.nickname || '灵感用户')
-      if (data.avatar) sessionStorage.setItem('userAvatar', data.avatar)
-
-      const userId = data.userId || parseJwtUserId(data.accessToken)
-      if (userId) sessionStorage.setItem('userId', String(userId))
-
-      auth.setLoggedIn()
-      ElMessage.success('登录成功')
-
-      const redirect = sessionStorage.getItem('redirectPath')
-      sessionStorage.removeItem('redirectPath')
-      await router.replace(redirect || '/')
-    } else {
-      ElMessage.error(res?.msg || '登录失败')
-      if (!String(res?.msg || '').includes('锁定')) {
-        captchaRequired.value = true
-        await loadCaptcha()
-      }
-    }
+    const res = loginMode.value === 'sms'
+      ? await loginBySms(form.value.phone.trim(), form.value.smsCode.trim())
+      : await login({
+          username: form.value.account,
+          password: form.value.password,
+          captchaId: captchaRequired.value ? form.value.captchaId : undefined,
+          captchaCode: captchaRequired.value ? form.value.captchaCode : undefined
+        })
+    await completeLogin(res, loginMode.value === 'sms' ? form.value.phone.trim() : form.value.account)
   } catch (e) {
     // 错误已由 request.js 拦截器处理
     console.error('[登录异常]', e)
     const msg = e?.response?.data?.msg || ''
-    if (!msg.includes('锁定')) {
+    if (loginMode.value === 'password' && !msg.includes('锁定')) {
       captchaRequired.value = true
       await loadCaptcha()
     }
@@ -330,8 +500,64 @@ const parseJwtUserId = (token) => {
   font-size: 14px;
   color: #6b7280;
 }
+.login-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: #f2f8f6;
+}
+.login-mode-tabs button {
+  height: 38px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #6b7f7b;
+  font-size: 14px;
+  cursor: pointer;
+}
+.login-mode-tabs button.active {
+  background: #ffffff;
+  color: #0f766e;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, .1);
+}
 .input-group {
   margin-bottom: 18px;
+}
+.sms-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  gap: 10px;
+}
+.sms-send-button {
+  height: 46px;
+  border: 1px solid #9fd8cd;
+  border-radius: 12px;
+  background: #eaf8f5;
+  color: #0f766e;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sms-send-button:disabled {
+  cursor: default;
+  opacity: .55;
+}
+.sms-tip {
+  margin: -8px 0 14px;
+  color: #7b8e8a;
+  font-size: 12px;
+}
+.force-password-copy {
+  margin-bottom: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a5b16;
+  font-size: 13px;
+  line-height: 1.6;
 }
 .input-group label {
   display: block;

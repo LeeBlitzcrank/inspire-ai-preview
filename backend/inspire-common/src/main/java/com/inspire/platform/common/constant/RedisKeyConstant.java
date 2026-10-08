@@ -24,6 +24,9 @@ public final class RedisKeyConstant {
     /** 用户ID → 当前刷新令牌，TTL=7天，用于单点登录/踢人 */
     public static final String USER_REFRESH_PREFIX = "user_refresh:";
 
+    /** 用户ID → AccessToken 版本号；每次全局失效会话时递增 */
+    public static final String USER_TOKEN_VERSION_PREFIX = "user_token_version:";
+
     // ========== 黑名单 ==========
 
     /** 失效 AccessToken 黑名单，TTL=JWT剩余秒 */
@@ -37,6 +40,10 @@ public final class RedisKeyConstant {
 
     public static String userRefreshKey(Long userId) {
         return USER_REFRESH_PREFIX + userId;
+    }
+
+    public static String userTokenVersionKey(Long userId) {
+        return USER_TOKEN_VERSION_PREFIX + userId;
     }
 
     public static String blacklistKey(String accessToken) {

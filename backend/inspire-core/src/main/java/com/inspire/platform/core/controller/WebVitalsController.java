@@ -8,7 +8,9 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.WebVitalRequest;
 import com.inspire.platform.core.service.impl.InspireServiceImpl;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,8 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @RestController
@@ -25,37 +25,28 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class WebVitalsController {
 
-    private static final Set<String> METRICS = Set.of("FCP", "LCP", "CLS", "INP", "TTFB");
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
 
     private final JdbcTemplate jdbcTemplate;
 
     @PostMapping("/vitals")
-    public Result<Void> record(@RequestBody Map<String, Object> body,
+    public Result<Void> record(@Valid @RequestBody WebVitalRequest request,
                                @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         try {
-            String name = text(body.get("name"), 16);
-            if (!METRICS.contains(name)) {
-                return Result.success();
-            }
-            double value = number(body.get("value"));
-            if (!Double.isFinite(value) || value < 0 || value > 300_000) {
-                return Result.success();
-            }
             jdbcTemplate.update(
                     "INSERT INTO web_vital_metric(id,metric_name,metric_value,metric_rating,metric_delta,"
                             + "navigation_type,page_path,device_type,browser,app_version,user_id,create_time) "
                             + "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                     InspireServiceImpl.nextId(),
-                    name,
-                    value,
-                    text(body.get("rating"), 16),
-                    number(body.get("delta")),
-                    text(body.get("navigationType"), 32),
-                    text(body.get("path"), 255),
-                    text(body.get("device"), 32),
-                    text(body.get("browser"), 64),
-                    text(body.get("appVersion"), 64),
+                    request.getName(),
+                    request.getValue(),
+                    text(request.getRating(), 16),
+                    request.getDelta(),
+                    text(request.getNavigationType(), 32),
+                    text(request.getPath(), 255),
+                    text(request.getDevice(), 32),
+                    text(request.getBrowser(), 64),
+                    text(request.getAppVersion(), 64),
                     userId,
                     LocalDateTime.now(ZONE));
         } catch (Exception e) {
@@ -69,14 +60,4 @@ public class WebVitalsController {
         return text.length() > maxLength ? text.substring(0, maxLength) : text;
     }
 
-    private double number(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        try {
-            return Double.parseDouble(String.valueOf(value));
-        } catch (Exception e) {
-            return 0d;
-        }
-    }
 }

@@ -49,6 +49,8 @@ inspire:
       /api/auth/logout,
       /api/auth/forgot-password,
       /api/auth/reset-password,
+      /api/auth/sms/send,
+      /api/auth/sms/login,
       /api/admin/login,
       /api/file/poster-cover,
       /api/file/view,

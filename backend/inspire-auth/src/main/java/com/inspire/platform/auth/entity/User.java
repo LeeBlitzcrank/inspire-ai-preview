@@ -25,6 +25,10 @@ public class User {
     private String password;
     @Schema(description = "用户邮箱")
     private String email;
+    @Schema(description = "绑定手机号")
+    private String phone;
+    @Schema(description = "手机号是否已验证")
+    private Integer phoneVerified;
     @Schema(description = "头像URL")
     @TableField(fill = FieldFill.INSERT)
     private String avatar;
@@ -58,6 +62,10 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public Integer getPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(Integer phoneVerified) { this.phoneVerified = phoneVerified; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
     public String getNickname() { return nickname; }

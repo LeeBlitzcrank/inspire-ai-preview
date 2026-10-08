@@ -7,6 +7,7 @@
  */
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {createInspire, updateInspire} from '@/api/inspire.js'
+import {INPUT_LIMITS} from '@/utils/validation.js'
 
 export function useCreateSubmission({
   router,
@@ -32,6 +33,9 @@ export function useCreateSubmission({
     if (titleLength.value > TITLE_MAX_LENGTH) return ElMessage.warning(`标题不能超过 ${TITLE_MAX_LENGTH} 个字`)
     if (!form.value.tag) return ElMessage.warning('请选择分类')
     if (!contentLen.value) return ElMessage.warning('请填写灵感详情')
+    if (contentLen.value > INPUT_LIMITS.contentMax) {
+      return ElMessage.warning(`正文不能超过 ${INPUT_LIMITS.contentMax} 个字`)
+    }
     loading.value = true
     try {
       let payload = { ...form.value, status: status !== undefined ? status : 1 }

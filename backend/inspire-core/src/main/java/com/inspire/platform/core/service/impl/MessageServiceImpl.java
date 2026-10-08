@@ -9,6 +9,8 @@ package com.inspire.platform.core.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import com.inspire.platform.core.entity.ConversationMember;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
@@ -54,17 +56,21 @@ public class MessageServiceImpl implements MessageService {
 
     @Override @Transactional
     public Message sendMessage(Long fromUserId, Long toUserId, String content, String type, String extraJson) {
+        InputValidation.requirePositive(fromUserId, "发送人");
+        InputValidation.requirePositive(toUserId, "接收人");
         if (fromUserId.equals(toUserId)) {
-            throw new RuntimeException("不能给自己发消息");
+            throw new BusinessException(400, "不能给自己发消息");
         }
         String safeType = type == null || type.isBlank() ? "text" : type.trim();
         if (!MESSAGE_TYPES.contains(safeType)) {
-            throw new RuntimeException("不支持的消息类型");
+            throw new BusinessException(400, "不支持的消息类型");
         }
-        String safeContent = content == null ? "" : content.trim();
-        if (safeContent.isEmpty()) {
-            throw new RuntimeException("消息内容不能为空");
+        String safeContent = InputValidation.normalizeRequiredText(
+                content, "消息内容", ValidationConstants.MESSAGE_MAX);
+        if ("image".equals(safeType)) {
+            safeContent = InputValidation.validateImageUrl(safeContent, "图片消息");
         }
+        String safeExtraJson = InputValidation.validateMessageExtraJson(extraJson);
         
         // 确保 user1_id < user2_id 用于唯一约束
         long uid1 = Math.min(fromUserId, toUserId);
@@ -93,7 +99,7 @@ public class MessageServiceImpl implements MessageService {
         msg.setToUserId(toUserId);
         msg.setContent(safeContent);
         msg.setType(safeType);
-        msg.setExtraJson(extraJson);
+        msg.setExtraJson(safeExtraJson);
         msg.setIsRead(0);
         msg.setCreateTime(now);
         msg.setUpdateTime(now);
@@ -146,11 +152,14 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public List<Message> getMessages(Long userId, Long conversationId, int page, int size) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(conversationId, "会话");
+        InputValidation.requirePage(page, size);
         Integer member = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
                 Integer.class, conversationId, userId);
         if (member == null || member == 0) {
-            throw new RuntimeException("无权查看此会话");
+            throw new BusinessException(403, "无权查看此会话");
         }
         ConversationMember memberState = conversationMemberMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationMember.class)
@@ -167,6 +176,8 @@ public class MessageServiceImpl implements MessageService {
 
     @Override @Transactional
     public int markAsRead(Long userId, Long conversationId) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(conversationId, "会话");
         jdbcTemplate.update(
                 "UPDATE message SET is_read = 1, update_time = ? "
                         + "WHERE conversation_id = ? AND to_user_id = ? AND is_read = 0",
@@ -190,11 +201,13 @@ public class MessageServiceImpl implements MessageService {
 
     @Override @Transactional
     public void deleteConversation(Long userId, Long conversationId) {
+        InputValidation.requirePositive(userId, "用户");
+        InputValidation.requirePositive(conversationId, "会话");
         Integer member = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM conversation_member WHERE conversation_id = ? AND user_id = ?",
                 Integer.class, conversationId, userId);
         if (member == null || member == 0) {
-            throw new RuntimeException("无权删除此会话");
+            throw new BusinessException(403, "无权删除此会话");
         }
         LocalDateTime now = LocalDateTime.now(ZONE);
         Long lastMessageId = jdbcTemplate.queryForObject(

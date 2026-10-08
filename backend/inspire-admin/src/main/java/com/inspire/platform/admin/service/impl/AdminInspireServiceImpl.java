@@ -14,6 +14,8 @@ import com.inspire.platform.admin.mapper.InspireMainMapper;
 import com.inspire.platform.admin.mapper.InspireMainRow;
 import com.inspire.platform.admin.service.AdminInspireService;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,12 +30,20 @@ public class AdminInspireServiceImpl implements AdminInspireService {
     private final InspireMainMapper inspireMainMapper;
     @Override
     public Map<String, Object> list(String keyword, String tag, Integer status, int page, int size) {
-        LambdaQueryWrapper<InspireMainRow> w = Wrappers.lambdaQuery();
-        if (keyword != null && !keyword.isEmpty()) {
-            w.like(InspireMainRow::getTitle, keyword);
+        InputValidation.requirePage(page, size);
+        String safeKeyword = InputValidation.normalizeOptionalText(
+                keyword, "搜索关键词", ValidationConstants.AI_KEYWORD_MAX);
+        String safeTag = InputValidation.normalizeOptionalText(
+                tag, "分类", ValidationConstants.TAG_MAX);
+        if (status != null && (status < 0 || status > 3)) {
+            throw new BusinessException(400, "灵感状态不正确");
         }
-        if (tag != null && !tag.isEmpty()) {
-            w.eq(InspireMainRow::getTag, tag);
+        LambdaQueryWrapper<InspireMainRow> w = Wrappers.lambdaQuery();
+        if (safeKeyword != null && !safeKeyword.isEmpty()) {
+            w.like(InspireMainRow::getTitle, safeKeyword);
+        }
+        if (safeTag != null && !safeTag.isEmpty()) {
+            w.eq(InspireMainRow::getTag, safeTag);
         }
         if (status != null) {
             w.eq(InspireMainRow::getStatus, status);
@@ -98,6 +108,7 @@ public class AdminInspireServiceImpl implements AdminInspireService {
 
     @Override
     public Map<String, Object> listPending(int page, int size) {
+        InputValidation.requirePage(page, size);
         LambdaQueryWrapper<InspireMainRow> w = Wrappers.lambdaQuery();
         w.eq(InspireMainRow::getStatus, 2).eq(InspireMainRow::getDeleted, 0);
         w.orderByDesc(InspireMainRow::getCreateTime);

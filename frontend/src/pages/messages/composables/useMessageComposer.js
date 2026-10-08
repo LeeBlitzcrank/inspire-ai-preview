@@ -9,6 +9,7 @@ import {ref} from 'vue'
 import {ElMessage} from '@/utils/uiFeedback.js'
 import {getMyInspires, uploadFile} from '@/api/inspire.js'
 import {recallMessage, sendMessage} from '@/api/message.js'
+import {INPUT_LIMITS, textLength} from '@/utils/validation.js'
 
 export function useMessageComposer({
   activeConversation,
@@ -39,6 +40,10 @@ export function useMessageComposer({
   const sendMsg = async (inputMsg) => {
     const content = inputMsg.value.trim()
     if (!content || sending.value) return
+    if (textLength(content) > INPUT_LIMITS.messageMax) {
+      ElMessage.warning(`消息不能超过 ${INPUT_LIMITS.messageMax} 个字符`)
+      return
+    }
     const otherId = resolveOtherId(activeConversation.value)
     if (!otherId) {
       ElMessage.error('会话信息不完整，请从左侧会话列表重新进入')

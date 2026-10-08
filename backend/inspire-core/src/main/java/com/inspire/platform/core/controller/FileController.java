@@ -8,8 +8,10 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.UploadFromUrlRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -284,11 +286,8 @@ public class FileController {
 
     @Operation(summary = "从URL上传图片", description = "传入外部图片URL，服务端下载后存储，避免CORS")
     @PostMapping("/upload-from-url")
-    public Result<Map<String, String>> uploadFromUrl(@RequestBody Map<String, String> body) {
-        String urlStr = body.get("url");
-        if (urlStr == null || urlStr.isBlank()) {
-            return Result.error("url 参数为空");
-        }
+    public Result<Map<String, String>> uploadFromUrl(@Valid @RequestBody UploadFromUrlRequest request) {
+        String urlStr = request.getUrl();
         try {
             URI uri = new URI(urlStr);
             if (!isAllowedRemoteUri(uri)) {

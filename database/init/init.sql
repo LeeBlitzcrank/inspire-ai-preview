@@ -10,7 +10,7 @@
 CREATE TABLE IF NOT EXISTS `inspire_main` (
   `id` BIGINT NOT NULL,
   `title` VARCHAR(120) NOT NULL COMMENT '灵感标题',
-  `img` VARCHAR(255) DEFAULT '' COMMENT '封面图',
+  `img` VARCHAR(2048) DEFAULT '' COMMENT '封面图',
   `images` TEXT DEFAULT NULL COMMENT '多图JSON数组',
   `tag` VARCHAR(30) NOT NULL COMMENT '分类',
   `category_id` BIGINT DEFAULT NULL COMMENT '一级分类ID',
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS `inspire_series` (
   `user_id` BIGINT NOT NULL,
   `name` VARCHAR(50) NOT NULL,
   `description` VARCHAR(300) DEFAULT '',
-  `cover` VARCHAR(255) DEFAULT '',
+  `cover` VARCHAR(2048) DEFAULT '',
   `status` TINYINT DEFAULT 1,
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `inspire_comment` (
   `inspire_id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
   `author_nickname` VARCHAR(60) NOT NULL,
-  `avatar` VARCHAR(255) DEFAULT '',
+  `avatar` VARCHAR(2048) DEFAULT '',
   `parent_id` BIGINT DEFAULT 0,
   `root_id` BIGINT DEFAULT 0,
   `reply_user_id` BIGINT DEFAULT 0,
@@ -255,8 +255,10 @@ CREATE TABLE IF NOT EXISTS `user` (
   `id` BIGINT NOT NULL COMMENT '雪花用户ID',
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号，唯一不可重复',
   `password` VARCHAR(100) NOT NULL COMMENT 'BCrypt加密密码',
-  `email` VARCHAR(100) DEFAULT '' COMMENT '用户邮箱（必填，用于找回密码）',
-  `avatar` VARCHAR(255) DEFAULT '' COMMENT '用户头像URL',
+  `email` VARCHAR(254) DEFAULT NULL COMMENT '用户邮箱（用于找回密码）',
+  `phone` VARCHAR(20) DEFAULT NULL COMMENT '绑定手机号',
+  `phone_verified` TINYINT DEFAULT 0 COMMENT '手机号是否已验证',
+  `avatar` VARCHAR(2048) DEFAULT '' COMMENT '用户头像URL',
   `nickname` VARCHAR(50) DEFAULT '' COMMENT '用户昵称',
   `role` VARCHAR(20) DEFAULT 'user' COMMENT '角色: admin/core/user',
   `city` VARCHAR(32) DEFAULT '' COMMENT '常居城市',
@@ -268,12 +270,13 @@ CREATE TABLE IF NOT EXISTS `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
   UNIQUE KEY `uk_nickname` (`nickname`),
-  UNIQUE KEY `uk_email` (`email`)
+  UNIQUE KEY `uk_email` (`email`),
+  UNIQUE KEY `uk_phone` (`phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户主表';
 CREATE TABLE IF NOT EXISTS `password_reset` (
   `id` BIGINT NOT NULL COMMENT '雪花ID',
   `user_id` BIGINT NOT NULL COMMENT '用户ID',
-  `email` VARCHAR(100) NOT NULL COMMENT '接收重置邮件的邮箱',
+  `email` VARCHAR(254) NOT NULL COMMENT '接收重置邮件的邮箱',
   `token` VARCHAR(64) NOT NULL COMMENT '重置令牌（UUID）',
   `expiry_time` DATETIME NOT NULL COMMENT '令牌过期时间',
   `used` TINYINT DEFAULT 0 COMMENT '是否已使用 0未使用 1已使用',
@@ -301,6 +304,23 @@ CREATE TABLE IF NOT EXISTS `admin_config` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `uk_config_key` (`config_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营配置表';
+
+CREATE TABLE IF NOT EXISTS `admin_audit_log` (
+  `id` BIGINT NOT NULL,
+  `admin_user_id` BIGINT DEFAULT NULL,
+  `method` VARCHAR(10) NOT NULL,
+  `path` VARCHAR(255) NOT NULL,
+  `request_body` TEXT,
+  `response_status` INT DEFAULT 0,
+  `success` TINYINT DEFAULT 0,
+  `ip` VARCHAR(64) DEFAULT '',
+  `user_agent` VARCHAR(512) DEFAULT '',
+  `duration_ms` BIGINT DEFAULT 0,
+  `create_time` DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_time` (`admin_user_id`, `create_time`),
+  KEY `idx_path_time` (`path`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='后台操作审计日志';
 
 -- ========== 以下表由应用代码创建，Docker 初始化时补充 ==========
 
@@ -333,7 +353,7 @@ CREATE TABLE IF NOT EXISTS `inspire_version` (
   `version_number` INT NOT NULL DEFAULT 0,
   `title` VARCHAR(120) DEFAULT '',
   `content` TEXT,
-  `img` VARCHAR(255) DEFAULT '' COMMENT '封面图',
+  `img` VARCHAR(2048) DEFAULT '' COMMENT '封面图',
   `images` TEXT,
   `tag` VARCHAR(30) DEFAULT '',
   `change_summary` VARCHAR(500) DEFAULT '',

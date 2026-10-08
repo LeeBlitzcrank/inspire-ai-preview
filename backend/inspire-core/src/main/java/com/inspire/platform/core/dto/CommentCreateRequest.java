@@ -8,15 +8,31 @@
 package com.inspire.platform.core.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import static com.inspire.platform.common.validation.ValidationConstants.AVATAR_MAX;
+import static com.inspire.platform.common.validation.ValidationConstants.COMMENT_MAX;
 
 @Data
 public class CommentCreateRequest {
+    @Positive(message = "灵感ID不正确")
     private Long inspireId;
-    @NotBlank
+
+    @NotBlank(message = "评论内容不能为空")
+    @Size(max = COMMENT_MAX, message = "评论不能超过500个字符")
     private String content;
+
+    @Size(max = AVATAR_MAX, message = "头像地址过长")
     private String avatar;
+
+    @Positive(message = "回复目标不正确")
     private Long parentId;
+
+    @Positive(message = "回复用户不正确")
     private Long replyUserId;
+
+    @Size(max = 60, message = "回复昵称过长")
     private String replyUsername;
 }

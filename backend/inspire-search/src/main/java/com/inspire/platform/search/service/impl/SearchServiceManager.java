@@ -10,6 +10,8 @@ package com.inspire.platform.search.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import com.inspire.platform.search.dto.SearchResultVO;
 import com.inspire.platform.search.service.SearchService;
 import jakarta.annotation.PostConstruct;
@@ -55,15 +57,21 @@ public class SearchServiceManager implements SearchService {
 
     @Override
     public List<SearchResultVO> search(String keyword, String tag, int page, int size, String searchAfter) {
+        String safeKeyword = InputValidation.normalizeRequiredText(
+                keyword, "搜索关键词", ValidationConstants.AI_KEYWORD_MAX);
+        String safeTag = InputValidation.normalizeOptionalText(
+                tag, "分类", ValidationConstants.TAG_MAX);
+        String safeSearchAfter = InputValidation.normalizeOptionalText(
+                searchAfter, "搜索游标", 200);
         int safePage = Math.max(1, page);
         int safeSize = Math.max(1, Math.min(size, 50));
-        String cacheKey = cacheKey(keyword, tag, safePage, safeSize, searchAfter);
+        String cacheKey = cacheKey(safeKeyword, safeTag, safePage, safeSize, safeSearchAfter);
         List<SearchResultVO> cached = readCache(cacheKey);
         if (cached != null) {
             return cached;
         }
 
-        List<SearchResultVO> results = doSearch(keyword, tag, safePage, safeSize, searchAfter);
+        List<SearchResultVO> results = doSearch(safeKeyword, safeTag, safePage, safeSize, safeSearchAfter);
         writeCache(cacheKey, results);
         return results;
     }

@@ -232,6 +232,7 @@
           v-model="inputMsg"
           data-message-input
           placeholder="输入消息，回车发送"
+          maxlength="1000"
           autocomplete="off"
           @keydown.enter.exact.prevent="sendMsg"
         >

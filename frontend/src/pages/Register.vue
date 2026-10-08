@@ -49,22 +49,38 @@
 
         <div class="input-group">
           <label>账号</label>
-          <el-input v-model="form.account" placeholder="请设置账号" clearable></el-input>
+          <el-input
+            v-model="form.account"
+            placeholder="4-20位字母、数字或下划线"
+            maxlength="20"
+            clearable
+          ></el-input>
+          <div class="field-hint">仅用于登录，其他用户看不到账号</div>
         </div>
 
         <div class="input-group">
           <label>邮箱</label>
-          <el-input v-model="form.email" placeholder="请填写邮箱（用于找回密码）" clearable></el-input>
+          <el-input
+            v-model="form.email"
+            placeholder="请填写邮箱（用于找回密码）"
+            maxlength="254"
+            clearable
+          ></el-input>
         </div>
 
         <div class="input-group">
           <label>密码</label>
-          <el-input v-model="form.pwd" placeholder="请设置密码" show-password></el-input>
+          <el-input
+            v-model="form.pwd"
+            placeholder="8-64位，不能使用纯数字"
+            maxlength="64"
+            show-password
+          ></el-input>
         </div>
 
         <div class="input-group">
           <label>确认密码</label>
-          <el-input v-model="form.rePwd" placeholder="请确认密码" show-password></el-input>
+          <el-input v-model="form.rePwd" placeholder="请确认密码" maxlength="64" show-password></el-input>
         </div>
 
         <el-button class="register-btn" :loading="loading" @click="handleRegister">
@@ -87,6 +103,7 @@ import {ElMessage} from '@/utils/uiFeedback.js'
 import {register} from '@/api/auth.js'
 import {randomNickname} from '@/utils/nickname.js'
 import {useAuthStore} from '@/stores/auth'
+import {validateEmail, validatePassword, validateUsername} from '@/utils/validation.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -114,13 +131,17 @@ const refreshPreview = () => {
 }
 
 const handleRegister = async () => {
-  if (!form.value.account.trim()) return ElMessage.warning('请输入账号')
-  if (!form.value.email.trim()) return ElMessage.warning('请输入邮箱')
-  if (!form.value.pwd.trim()) return ElMessage.warning('请输入密码')
+  const accountError = validateUsername(form.value.account)
+  if (accountError) return ElMessage.warning(accountError)
+  const emailError = validateEmail(form.value.email)
+  if (emailError) return ElMessage.warning(emailError)
+  if (!form.value.pwd) return ElMessage.warning('请输入密码')
   if (form.value.pwd !== form.value.rePwd) return ElMessage.warning('两次密码不一致')
-  if (form.value.pwd.length < 6 || form.value.pwd.length > 16) {
-    return ElMessage.warning('密码长度需为6-16位')
-  }
+  const passwordError = validatePassword(form.value.pwd, {
+    username: form.value.account,
+    email: form.value.email,
+  })
+  if (passwordError) return ElMessage.warning(passwordError)
 
   loading.value = true
   try {
@@ -343,6 +364,12 @@ const handleRegister = async () => {
   font-weight: 600;
   color: #374151;
   margin-bottom: 6px;
+}
+.field-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8a9a97;
 }
 ::v-deep .el-input__wrapper {
   border-radius: 14px;

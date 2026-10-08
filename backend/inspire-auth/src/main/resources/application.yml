@@ -68,6 +68,15 @@ inspire:
   session:
     # RefreshToken 有效期（文档4.1.2节）：7天
     refresh-token-expiration: 604800000
+  sms:
+    webhook-url: ${INSPIRE_SMS_WEBHOOK_URL:}
+    webhook-token: ${INSPIRE_SMS_WEBHOOK_TOKEN:}
+    code-expire-seconds: 300
+    cooldown-seconds: 60
+    daily-limit: 10
+    max-attempts: 5
+    dev-return-code: false
+    log-code: false
   app:
     frontend-url: ${INSPIRE_APP_FRONTEND_URL:http://localhost:5173}
 

@@ -69,7 +69,7 @@
           </div>
 
           <div class="cloud-bar">
-            <input :value="aiKeyword" placeholder="输入关键词，重新探索…" @input="setAiKeyword($event.target.value)" @keyup.enter="handleExplore" />
+            <input :value="aiKeyword" maxlength="100" placeholder="输入关键词，重新探索…" @input="setAiKeyword($event.target.value)" @keyup.enter="handleExplore" />
             <button :disabled="exploring" @click="handleExplore">✨ 探索</button>
           </div>
         </div>

@@ -8,7 +8,9 @@
 package com.inspire.platform.core.controller;
 
 import com.inspire.platform.common.result.Result;
+import com.inspire.platform.core.dto.MessageReadRequest;
 import com.inspire.platform.core.dto.MessageSendRequest;
+import com.inspire.platform.core.dto.MessageStartRequest;
 import com.inspire.platform.core.entity.Message;
 import com.inspire.platform.core.entity.MessageConversation;
 import com.inspire.platform.core.service.MessageService;
@@ -92,15 +94,12 @@ public class MessageController {
 
     @PostMapping("/read")
     @Operation(summary = "标记已读")
-    public Result<Void> markRead(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+    public Result<Void> markRead(@Valid @RequestBody MessageReadRequest payload, HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        Long conversationId = body.get("conversationId") != null ? Long.valueOf(body.get("conversationId").toString()) : null;
-        if (conversationId == null) {
-            return Result.error(400, "参数缺失");
-        }
+        Long conversationId = payload.getConversationId();
         messageService.markAsRead(userId, conversationId);
         messageStreamService.emitToUsers(
                 jdbcTemplate.queryForList(
@@ -156,14 +155,14 @@ public class MessageController {
 
     @PostMapping("/start")
     @Operation(summary = "创建或获取会话（按userId）")
-    public Result<MessageConversation> startConversation(@RequestBody Map<String, Object> body,
+    public Result<MessageConversation> startConversation(@Valid @RequestBody MessageStartRequest payload,
                                                           HttpServletRequest request) {
         Long userId = getUserId(request);
         if (userId == null) {
             return Result.error(401, "未登录");
         }
-        Long toUserId = body.get("toUserId") != null ? Long.valueOf(body.get("toUserId").toString()) : null;
-        if (toUserId == null || userId.equals(toUserId)) {
+        Long toUserId = payload.getToUserId();
+        if (userId.equals(toUserId)) {
             return Result.error(400, "无效的用户");
         }
         MessageConversation conv = messageService.startConversation(userId, toUserId);

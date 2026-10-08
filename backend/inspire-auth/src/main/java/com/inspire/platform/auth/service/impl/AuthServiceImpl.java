@@ -22,6 +22,7 @@ import com.inspire.platform.auth.service.email.EmailService;
 import com.inspire.platform.auth.util.RedisSessionUtil;
 import com.inspire.platform.common.exception.BusinessException;
 import com.inspire.platform.common.util.JwtUtil;
+import com.inspire.platform.common.validation.InputValidation;
 import com.inspire.platform.mq.constant.MqTopicConstants;
 import com.inspire.platform.mq.producer.MqProducer;
 import io.jsonwebtoken.Claims;
@@ -62,6 +63,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${inspire.session.long-lived-refresh-expiration:315360000000}")
     private long longLivedRefreshTokenTtlMs;
+
+    @Value("${inspire.auth.legacy-upgrade-exempt-users:}")
+    private String legacyUpgradeExemptUsers;
 
     public AuthServiceImpl(LoginLogMapper loginLogMapper, UserMapper userMapper,
                            PasswordResetMapper passwordResetMapper, EmailService emailService,
@@ -109,28 +113,40 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public TokenResponse register(RegisterRequest request) {
-        if (!request.getPassword().equals(request.getConfirmPassword())) {
+        String username = InputValidation.normalizeUsername(request.getUsername());
+        String email = InputValidation.normalizeEmail(request.getEmail());
+        String password = InputValidation.normalizePassword(request.getPassword());
+        String confirmPassword = InputValidation.normalizePassword(request.getConfirmPassword());
+        InputValidation.validatePassword(password, username, email);
+        if (!password.equals(confirmPassword)) {
             throw new BusinessException("两次密码输入不一致");
         }
-        if (findByUsername(request.getUsername()) != null) {
+        if (findByUsername(username) != null) {
             throw new BusinessException("用户名已被注册");
         }
-        if (findByEmail(request.getEmail()) != null) {
+        if (findByEmail(email) != null) {
             throw new BusinessException("该邮箱已被注册");
         }
 
         User user = new User();
         user.setId(generateSnowflakeId());
-        user.setUsername(request.getUsername());
-        user.setPassword(PASSWORD_ENCODER.encode(request.getPassword()));
-        user.setEmail(request.getEmail());
-        user.setNickname(request.getNickname() != null && !request.getNickname().isEmpty()
-                ? request.getNickname() : generateRandomNickname());
-        if (findByNickname(user.getNickname()) != null) {
-            throw new BusinessException("昵称已被使用，请换一个");
+        user.setUsername(username);
+        user.setPassword(PASSWORD_ENCODER.encode(password));
+        user.setEmail(email);
+        String requestedNickname = request.getNickname();
+        if (requestedNickname != null && !requestedNickname.isBlank()) {
+            String nickname = InputValidation.normalizeNickname(requestedNickname);
+            if (findByNickname(nickname) != null) {
+                throw new BusinessException("昵称已被使用，请换一个");
+            }
+            user.setNickname(nickname);
+        } else {
+            user.setNickname(generateUniqueNickname());
         }
-        user.setAvatar(request.getAvatar() != null && !request.getAvatar().isEmpty()
-                ? request.getAvatar() : generateRandomAvatar());
+        String avatar = request.getAvatar() == null || request.getAvatar().isBlank()
+                ? generateRandomAvatar()
+                : InputValidation.normalizeOptionalText(request.getAvatar(), "头像", 2048);
+        user.setAvatar(avatar);
         user.setRole("user"); // 默认普通用户角色
         user.setStatus(1);    // 正常状态
         user.setCity("");
@@ -142,8 +158,8 @@ public class AuthServiceImpl implements AuthService {
         TokenResponse tokenResp = createDualTokenSession(user);
 
         mqProducer.send(MqTopicConstants.TOPIC_USER_REGISTER,
-                java.util.Map.of("userId", user.getId(), "username", user.getUsername(), "email", user.getEmail()));
-        log.info("用户注册成功: userId={}, username={}, email={}", user.getId(), user.getUsername(), user.getEmail());
+                java.util.Map.of("userId", user.getId(), "username", username, "email", email));
+        log.info("用户注册成功: userId={}, username={}, email={}", user.getId(), username, email);
         return tokenResp;
     }
 
@@ -151,7 +167,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest request) {
-        String username = request.getUsername().trim();
+        String username = InputValidation.normalizeLoginUsername(request.getUsername());
+        String password = InputValidation.normalizePassword(request.getPassword());
+        InputValidation.validateLoginPassword(password);
         if (loginRiskService.isLocked(username)) {
             saveLoginLog(null, username, 0, "账号临时锁定", "password");
             throw new BusinessException(429, "登录失败次数过多，账号已临时锁定 30 分钟");
@@ -161,10 +179,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // ① 查询用户 & 校验
-        User user = findByUsername(request.getUsername());
+        User user = findByUsername(username);
         if (user == null) {
-            log.warn("登录失败: 账号不存在 username={}", request.getUsername());
-            saveLoginLog(null, request.getUsername(), 0, "账号或密码错误", "password");
+            log.warn("登录失败: 账号不存在 username={}", username);
+            saveLoginLog(null, username, 0, "账号或密码错误", "password");
             loginRiskService.recordFailure(username);
             throw new BusinessException("账号或密码错误");
         }
@@ -172,20 +190,25 @@ public class AuthServiceImpl implements AuthService {
         // ② 校验账号状态（文档4.1.2 校验账号是否冻结）
         if (user.getStatus() != null && user.getStatus() == 0) {
             log.warn("登录失败: 账号已冻结 userId={}", user.getId());
-            saveLoginLog(user.getId(), request.getUsername(), 0, "账号已冻结", "password");
+            saveLoginLog(user.getId(), username, 0, "账号已冻结", "password");
             throw new BusinessException("账号已被冻结，请联系管理员");
         }
 
         // ③ 密码校验
-        if (!PASSWORD_ENCODER.matches(request.getPassword(), user.getPassword())) {
+        if (!PASSWORD_ENCODER.matches(password, user.getPassword())) {
             log.warn("登录失败: 密码错误 userId={}", user.getId());
-            saveLoginLog(user.getId(), request.getUsername(), 0, "密码错误", "password");
+            saveLoginLog(user.getId(), username, 0, "密码错误", "password");
             loginRiskService.recordFailure(username);
             throw new BusinessException("账号或密码错误");
         }
 
         // ④ 创建双Token会话（含SSO挤旧逻辑 + Redis缓存入库）
+        boolean passwordUpgradeRequired = !InputValidation.isPasswordCompliant(
+                password, user.getUsername(), user.getEmail())
+                && !isLegacyUpgradeExempt(user.getUsername());
+        redisSessionUtil.setPasswordUpgradeRequired(user.getId(), passwordUpgradeRequired);
         TokenResponse tokenResp = createDualTokenSession(user);
+        tokenResp.setPasswordUpgradeRequired(passwordUpgradeRequired);
 
         // ⑤ 记录登录成功日志
         saveLoginLog(user.getId(), user.getUsername(), 1, "", "password");
@@ -230,8 +253,11 @@ public class AuthServiceImpl implements AuthService {
 
         // ④ 生成全新 AccessToken（不更新 RefreshToken）
         long accessTtl = isLongLived(user.getUsername()) ? longLivedAccessExpirationMs : jwtUtil.getExpirationMs();
+        long tokenVersion = redisSessionUtil.getTokenVersion(user.getId());
+        boolean passwordUpgradeRequired = redisSessionUtil.isPasswordUpgradeRequired(user.getId());
         String newAccessToken = jwtUtil.generateToken(
-                user.getId(), user.getUsername(), user.getRole(), accessTtl);
+                user.getId(), user.getUsername(), user.getRole(), accessTtl,
+                tokenVersion, passwordUpgradeRequired);
 
         // ⑤ 记录日志
         saveLoginLog(user.getId(), user.getUsername(), 1, "", "refresh");
@@ -248,6 +274,7 @@ public class AuthServiceImpl implements AuthService {
         resp.setNickname(user.getNickname());
         resp.setAvatar(user.getAvatar());
         resp.setRole(user.getRole());
+        resp.setPasswordUpgradeRequired(passwordUpgradeRequired);
         return resp;
     }
 
@@ -325,7 +352,7 @@ public class AuthServiceImpl implements AuthService {
     public User updateUserInfo(Long userId, UserUpdateRequest request) {
         User user = getUserById(userId);
         if (request.getNickname() != null) {
-            String nickname = request.getNickname().isEmpty() ? user.getUsername() : request.getNickname();
+            String nickname = InputValidation.normalizeNickname(request.getNickname());
             User sameNickname = findByNickname(nickname);
             if (sameNickname != null && !sameNickname.getId().equals(userId)) {
                 throw new BusinessException("昵称已被使用，请换一个");
@@ -333,10 +360,10 @@ public class AuthServiceImpl implements AuthService {
             user.setNickname(nickname);
         }
         if (request.getAvatar() != null) {
-            user.setAvatar(request.getAvatar());
+            user.setAvatar(InputValidation.normalizeOptionalText(request.getAvatar(), "头像", 2048));
         }
         if (request.getCity() != null) {
-            user.setCity(request.getCity());
+            user.setCity(InputValidation.normalizeOptionalText(request.getCity(), "城市", 32));
         }
         userMapper.updateById(user);
         log.info("用户信息更新: userId={}", userId);
@@ -348,12 +375,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void changePassword(Long userId, ChangePasswordRequest request) {
         User user = getUserById(userId);
-        if (!PASSWORD_ENCODER.matches(request.getOldPassword(), user.getPassword())) {
+        String oldPassword = InputValidation.normalizePassword(request.getOldPassword());
+        String newPassword = InputValidation.normalizePassword(request.getNewPassword());
+        InputValidation.validateLoginPassword(oldPassword);
+        InputValidation.validatePassword(newPassword, user.getUsername(), user.getEmail());
+        if (oldPassword.equals(newPassword)) {
+            throw new BusinessException("新密码不能与旧密码相同");
+        }
+        if (!PASSWORD_ENCODER.matches(oldPassword, user.getPassword())) {
             throw new BusinessException("旧密码不正确");
         }
-        user.setPassword(PASSWORD_ENCODER.encode(request.getNewPassword()));
+        user.setPassword(PASSWORD_ENCODER.encode(newPassword));
         userMapper.updateById(user);
-        log.info("密码修改成功: userId={}", userId);
+        redisSessionUtil.setPasswordUpgradeRequired(userId, false);
+        redisSessionUtil.invalidateAllSessions(userId);
+        log.info("密码修改成功，旧刷新会话已清理: userId={}", userId);
     }
 
     // ==================== 忘记密码（保持不变） ====================
@@ -361,9 +397,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        User user = findByEmail(email);
+        String normalizedEmail = InputValidation.normalizeEmail(email);
+        User user = findByEmail(normalizedEmail);
         if (user == null) {
-            throw new BusinessException("该邮箱未注册");
+            log.info("密码重置请求未匹配账号，按安全策略静默返回");
+            return;
         }
 
         // 生成UUID令牌，30分钟过期
@@ -371,7 +409,7 @@ public class AuthServiceImpl implements AuthService {
         PasswordReset record = new PasswordReset();
         record.setId(generateSnowflakeId());
         record.setUserId(user.getId());
-        record.setEmail(email);
+        record.setEmail(normalizedEmail);
         record.setToken(token);
         record.setExpiryTime(LocalDateTime.now().plusMinutes(30));
         record.setUsed(0);
@@ -379,14 +417,16 @@ public class AuthServiceImpl implements AuthService {
         passwordResetMapper.insert(record);
 
         // 发送邮件（SMTP或控制台兜底）
-        emailService.sendPasswordResetEmail(email, token);
+        emailService.sendPasswordResetEmail(normalizedEmail, token);
     }
 
     @Override
     @Transactional
     public TokenResponse resetPassword(String token, String newPassword) {
+        String normalizedToken = InputValidation.normalizeRequiredText(token, "重置令牌", 64);
+        String normalizedPassword = InputValidation.normalizePassword(newPassword);
         LambdaQueryWrapper<PasswordReset> wrapper = Wrappers.lambdaQuery();
-        wrapper.eq(PasswordReset::getToken, token);
+        wrapper.eq(PasswordReset::getToken, normalizedToken);
         wrapper.eq(PasswordReset::getUsed, 0);
         PasswordReset record = passwordResetMapper.selectOne(wrapper);
 
@@ -399,8 +439,14 @@ public class AuthServiceImpl implements AuthService {
 
         // 更新密码
         User user = getUserById(record.getUserId());
-        user.setPassword(PASSWORD_ENCODER.encode(newPassword));
+        InputValidation.validatePassword(normalizedPassword, user.getUsername(), user.getEmail());
+        if (PASSWORD_ENCODER.matches(normalizedPassword, user.getPassword())) {
+            throw new BusinessException("新密码不能与旧密码相同");
+        }
+        user.setPassword(PASSWORD_ENCODER.encode(normalizedPassword));
         userMapper.updateById(user);
+        redisSessionUtil.setPasswordUpgradeRequired(user.getId(), false);
+        redisSessionUtil.invalidateAllSessions(user.getId());
 
         // 标记令牌已使用
         record.setUsed(1);
@@ -409,6 +455,14 @@ public class AuthServiceImpl implements AuthService {
         log.info("密码重置成功: userId={}", user.getId());
 
         // 重置成功后自动创建双Token会话，实现免密自动登录
+        return createDualTokenSession(user);
+    }
+
+    @Override
+    public TokenResponse issueTokens(User user) {
+        if (user == null || user.getId() == null) {
+            throw new BusinessException(400, "用户信息不正确");
+        }
         return createDualTokenSession(user);
     }
 
@@ -437,6 +491,16 @@ public class AuthServiceImpl implements AuthService {
         return userMapper.selectOne(wrapper);
     }
 
+    private String generateUniqueNickname() {
+        for (int i = 0; i < 8; i++) {
+            String nickname = InputValidation.normalizeNickname(generateRandomNickname());
+            if (findByNickname(nickname) == null) {
+                return nickname;
+            }
+        }
+        throw new BusinessException("系统生成昵称冲突，请手动设置昵称");
+    }
+
     // ==================== 双Token会话创建（登录/注册复用） ====================
 
     /**
@@ -455,8 +519,11 @@ public class AuthServiceImpl implements AuthService {
         long refreshTtl = longLived ? longLivedRefreshTokenTtlMs : 604800000L;
 
         // ① 生成 AccessToken
+        long tokenVersion = redisSessionUtil.getTokenVersion(user.getId());
+        boolean passwordUpgradeRequired = redisSessionUtil.isPasswordUpgradeRequired(user.getId());
         String accessToken = jwtUtil.generateToken(
-                user.getId(), user.getUsername(), user.getRole(), accessTtl);
+                user.getId(), user.getUsername(), user.getRole(), accessTtl,
+                tokenVersion, passwordUpgradeRequired);
 
         // ② 生成 32位随机字符串 RefreshToken
         String refreshToken = generateRefreshToken();
@@ -478,12 +545,21 @@ public class AuthServiceImpl implements AuthService {
         resp.setNickname(user.getNickname());
         resp.setAvatar(user.getAvatar());
         resp.setRole(user.getRole());
+        resp.setPasswordUpgradeRequired(passwordUpgradeRequired);
         return resp;
     }
 
     private boolean isLongLived(String username) {
         if (username == null || longLivedUsers == null) return false;
         for (String item : longLivedUsers.split(",")) {
+            if (username.equalsIgnoreCase(item.trim())) return true;
+        }
+        return false;
+    }
+
+    private boolean isLegacyUpgradeExempt(String username) {
+        if (username == null || legacyUpgradeExemptUsers == null) return false;
+        for (String item : legacyUpgradeExemptUsers.split(",")) {
             if (username.equalsIgnoreCase(item.trim())) return true;
         }
         return false;
@@ -570,7 +646,7 @@ public class AuthServiceImpl implements AuthService {
     private static final long SNOWFLAKE_WORKER_ID = 1L;
     private static final long SNOWFLAKE_DATACENTER_ID = 1L;
 
-    private static synchronized long generateSnowflakeId() {
+    public static synchronized long generateSnowflakeId() {
         long timestamp = System.currentTimeMillis();
         if (timestamp < snowflakeLastTimestamp) {
             timestamp = snowflakeLastTimestamp;

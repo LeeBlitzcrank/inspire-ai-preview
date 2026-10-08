@@ -17,7 +17,7 @@
     <div class="form-box">
       <h2 class="title">找回密码</h2>
       <p class="desc">输入注册邮箱，我们将发送重置链接</p>
-      <div class="input-group"><el-input v-model="email" placeholder="请输入注册邮箱"></el-input></div>
+      <div class="input-group"><el-input v-model="email" placeholder="请输入注册邮箱" maxlength="254"></el-input></div>
       <el-button class="btn" type="primary" :loading="loading" @click="handleSubmit">发送重置邮件</el-button>
       <div class="tip" v-if="sent">重置链接已发送至您的邮箱，请查收（如未收到请查看垃圾邮件）</div>
       <div class="tip">已有账号？<span class="link" @click="$router.push('/login')">前往登录</span></div>

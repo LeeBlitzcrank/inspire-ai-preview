@@ -29,6 +29,7 @@
         <module>inspire-search</module>
         <module>inspire-admin</module>
         <module>inspire-rag</module>
+        <module>flink-jobs</module>
     </modules>
 
     <parent>

@@ -275,6 +275,31 @@
           <div v-if="detectCity && !cityPath.length" class="detect-hint">📍 检测到您可能在
             <el-link type="primary" @click="applyDetectedCity">{{ detectCity }}</el-link>，点击使用</div>
         </div>
+        <div class="form-row">
+          <label>手机号</label>
+          <div v-if="userInfo.phone" class="phone-bound">
+            已绑定 {{ maskPhone(userInfo.phone) }}
+          </div>
+          <div v-else class="phone-bind-box">
+            <el-input v-model="bindForm.phone" maxlength="11" placeholder="11位手机号" clearable />
+            <div class="phone-code-row">
+              <el-input v-model="bindForm.code" maxlength="6" placeholder="6位验证码" />
+              <button
+                type="button"
+                class="phone-code-button"
+                :disabled="smsCodeSending || smsCountdown > 0"
+                @click="handleSendBindCode"
+              >{{ smsCountdown > 0 ? `${smsCountdown}s` : (smsCodeSending ? '发送中' : '获取验证码') }}</button>
+            </div>
+            <el-button
+              class="phone-bind-button"
+              type="primary"
+              size="small"
+              :loading="bindingPhone"
+              @click="handleBindPhone"
+            >绑定手机号</el-button>
+          </div>
+        </div>
       </div>
       <template #footer>
         <el-button @click="setProfileDialog(false)">取消</el-button>
@@ -407,6 +432,12 @@ const {
   cityPath,
   autoDetecting,
   detectCity,
+  bindForm,
+  bindingPhone,
+  smsCodeSending,
+  smsCountdown,
+  handleSendBindCode,
+  handleBindPhone,
   onCityChange,
   detectLocation,
   applyDetectedCity,
@@ -422,6 +453,7 @@ const setProfileDialog = (value) => { showProfileDialog.value = value }
 const openPasswordDialog = () => { showPwdDialog.value = true }
 const setPasswordDialog = (value) => { showPwdDialog.value = value }
 const setCityPath = (value) => { cityPath.value = value }
+const maskPhone = (phone) => String(phone || '').replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2')
 const closeFolder = () => { activeFolder.value = null }
 
 onMounted(async () => {

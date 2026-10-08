@@ -13,6 +13,8 @@ import com.inspire.platform.admin.entity.AdminUserRow;
 import com.inspire.platform.admin.mapper.AdminUserRowMapper;
 import com.inspire.platform.admin.service.AdminUserQueryService;
 import com.inspire.platform.common.exception.BusinessException;
+import com.inspire.platform.common.validation.InputValidation;
+import com.inspire.platform.common.validation.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,11 +25,14 @@ public class AdminUserQueryServiceImpl implements AdminUserQueryService {
 
     @Override
     public List<AdminUserRow> search(String keyword, int page, int size) {
+        InputValidation.requirePage(page, size);
+        String safeKeyword = InputValidation.normalizeOptionalText(
+                keyword, "搜索关键词", ValidationConstants.AI_KEYWORD_MAX);
         LambdaQueryWrapper<AdminUserRow> w = Wrappers.lambdaQuery();
-        if (keyword != null && !keyword.isEmpty()) {
-            w.like(AdminUserRow::getUsername, keyword).or()
-             .like(AdminUserRow::getEmail, keyword).or()
-             .like(AdminUserRow::getNickname, keyword);
+        if (safeKeyword != null && !safeKeyword.isEmpty()) {
+            w.like(AdminUserRow::getUsername, safeKeyword).or()
+             .like(AdminUserRow::getEmail, safeKeyword).or()
+             .like(AdminUserRow::getNickname, safeKeyword);
         }
         w.eq(AdminUserRow::getDeleted, 0);
         w.orderByDesc(AdminUserRow::getCreateTime);
@@ -37,6 +42,7 @@ public class AdminUserQueryServiceImpl implements AdminUserQueryService {
 
     @Override
     public AdminUserRow detail(Long id) {
+        InputValidation.requirePositive(id, "用户");
         AdminUserRow user = userRowMapper.selectById(id);
         if (user == null) {
             throw new BusinessException("用户不存在");

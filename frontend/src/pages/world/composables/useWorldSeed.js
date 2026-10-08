@@ -9,6 +9,7 @@ import {computed, onBeforeUnmount, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useAuthStore} from '@/stores/auth'
 import {ElMessage} from '@/utils/uiFeedback.js'
+import {INPUT_LIMITS} from '@/utils/validation.js'
 import {
     clearWorldSeedCache,
     getWorldChapters,
@@ -243,6 +244,20 @@ export function useWorldSeed() {
       router.push('/login')
       return
     }
+    if (!form.value.sourceTitle.trim()) return ElMessage.warning('请填写作品名称')
+    if (textLength(form.value.sourceTitle) > INPUT_LIMITS.worldSourceTitleMax) {
+      return ElMessage.warning(`作品名称不能超过${INPUT_LIMITS.worldSourceTitleMax}个字符`)
+    }
+    if (textLength(form.value.sourceAuthor) > INPUT_LIMITS.worldSourceAuthorMax) {
+      return ElMessage.warning(`作者名称不能超过${INPUT_LIMITS.worldSourceAuthorMax}个字符`)
+    }
+    if (!form.value.sourceText.trim()) return ElMessage.warning('请填写原文内容')
+    if (textLength(form.value.sourceText) > INPUT_LIMITS.worldSourceTextMax) {
+      return ElMessage.warning(`原文内容不能超过${INPUT_LIMITS.worldSourceTextMax}个字符`)
+    }
+    if (textLength(form.value.guidance) > INPUT_LIMITS.worldGuidanceMax) {
+      return ElMessage.warning(`创作方向不能超过${INPUT_LIMITS.worldGuidanceMax}个字符`)
+    }
     creating.value = true
     try {
       const submitted = await submitWorldSeed(form.value, createIdempotencyKey())
@@ -275,6 +290,9 @@ export function useWorldSeed() {
     if (!line || !branch) return
     const selected = choiceOptions.find(item => item.key === selectedChoiceKey.value)
     const choiceText = customChoice.value.trim() || selected?.label || '顺着当前线索继续'
+    if (textLength(choiceText) > INPUT_LIMITS.worldChoiceTextMax) {
+      return ElMessage.warning(`选择内容不能超过${INPUT_LIMITS.worldChoiceTextMax}个字符`)
+    }
     const choiceKey = selectedChoiceKey.value || 'continue'
     generating.value = true
     try {

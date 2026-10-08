@@ -7,12 +7,14 @@
  */
 package com.inspire.platform.core.service;
 
+import com.inspire.platform.core.dto.AiHistorySaveRequest;
+
 import java.util.List;
 import java.util.Map;
 
 public interface AiHistoryService {
     List<Map<String, Object>> list(Long userId, int limit);
-    Map<String, Object> save(Long userId, Map<String, Object> body);
+    Map<String, Object> save(Long userId, AiHistorySaveRequest request);
     void selectVariant(Long userId, Long id, Integer selectedIndex, String selectedTitle);
     void delete(Long userId, Long id);
 }
